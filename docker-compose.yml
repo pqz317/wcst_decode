@@ -1,0 +1,6 @@
+version: '3.4'
+services:
+  notebook:
+    build: .
+    volumes:
+      - .:/src/wcst_decode
