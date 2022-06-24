@@ -2,5 +2,10 @@ version: '3.4'
 services:
   notebook:
     build: .
+    ports:
+      - "${JUPYTER_PORT:-8888}:8888"  
+    environment:
+      - "JUPYTER_PASSWORD=${JUPYTER_PASSWORD:-simple}"
     volumes:
       - .:/src/wcst_decode
+      - $HOME/.aws/credentials:/root/.aws/credentials:ro

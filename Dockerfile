@@ -1,6 +1,10 @@
-FROM walkerlab/pytorch:python3.8-torch1.9.1-cuda11.1.1-dj0.12.7
+FROM walkerlab/pytorch:python3.10-torch1.11.0-cuda11.7.0
 
-RUN pip3 install git+https://github.com/learning-2-learn/lfp_tools.git
+RUN git clone https://github.com/learning-2-learn/lfp_tools /src/lfp_tools &&\
+        pip3 install -e /src/lfp_tools
+
+RUN git clone https://github.com/learning-2-learn/spike_tools.git /src/spike_tools &&\
+        pip3 install -e /src/spike_tools
 
 ADD . /src/wcst_decode
-RUN pip install -e /src/wcst_decode
+RUN pip3 install -e /src/wcst_decode
