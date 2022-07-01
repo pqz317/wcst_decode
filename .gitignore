@@ -6,3 +6,6 @@ __pycache__/
 
 # scrap notebook that doesn't need to be commited.
 notebooks/scrap.ipynb
+
+# any intermediate data locally
+data/
