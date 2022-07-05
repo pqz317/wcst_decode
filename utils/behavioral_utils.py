@@ -4,7 +4,13 @@ import pandas as pd
 def get_trial_intervals(behavioral_data, event="FeedbackOnset", pre_interval=0, post_interval=0):
     """
     Per trial, finds time interval surrounding some event in the behavioral data
-    Returns: DataFrame with num_trials length, columns: TrialNumber, IntervalStartTime, IntervalEndTime
+
+    :param behavioral_data: Dataframe describing each trial, 
+        must contain columns: TrialNumber, whatever 'event' param describes
+    :param event: name of event to align around, must be present as a column name in behavioral_data Dataframe
+    :param pre_interval: number of miliseconds before event
+    :param post_interval: number of miliseconds after event
+    :returns: DataFrame with num_trials length, columns: TrialNumber, IntervalStartTime, IntervalEndTime
     """
     trial_event_times = behavioral_data[["TrialNumber", event]]
 
@@ -18,9 +24,12 @@ def get_trial_intervals(behavioral_data, event="FeedbackOnset", pre_interval=0, 
 def get_selection_features(behavioral_data):
     """
     Per trial, gets the Color, Shape Pattern of the selected card
-    Returns: DataFrame with TrialNumber, Color, Pattern, Shape columns
+
+    :param behavioral_data: Dataframe describing each trial, must contain columns: 
+        - ItemChosen, either 0, 1, 2, 3, index of item that was chosen that trial
+        - For each idx 0, 1, 2, 3, columns 'Item<idx><feature>', where feature is 'Color', 'Pattern' or 'Shape'
+    :returns: DataFrame with num_trials length, columns: TrialNumber, Color, Pattern, Shape
     """
-    # columns: TrialNumber, Color, Shape, Pattern
     selections = []
     for _, row in behavioral_data.iterrows():
         item_chosen = int(row["ItemChosen"])

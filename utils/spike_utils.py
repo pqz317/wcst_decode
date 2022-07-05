@@ -3,29 +3,18 @@ import pandas as pd
 
 
 def get_spikes_by_trial_interval(spike_times, intervals):
-    def spikes_times_in_interval(interval):
-        print(interval.IntervalStartTime)
-        print(interval)
-        start_time = interval["IntervalStartTime"]
-        end_time = interval["IntervalEndTime"]
-        spikes_in_interval = spike_times[ \
-            (spike_times["SpikeTime"] >= start_time) & \
-            (spike_times["SpikeTime"] < end_time) \
-        ]
-        spikes_in_interval["TrialNumber"] = interval["TrialNumber"]
-        spikes_in_interval["SpikeTimeFromStart"] = spike_times["SpikeTime"] - start_time
-    applied = intervals.apply(spikes_times_in_interval, axis=1)
-    return applied
+    """
+    Finds all the spikes within a series of time intervals
 
-
-def get_spikes_by_trial_interval(spike_times, intervals):
+    :param spike_times: Dataframe with columns: SpikeTime, UnitID
+    :param intervals: Dataframe with columns: TrialNumber, IntervalStartTime, IntervalEndTime
+    :returns: DataFrame with columns: TrialNumber, UnitID, SpikeTime, SpikeTimeFromStart
+    """
     # columns: TrialNumber, UnitID, SpikeTime, SpikeTimeFromStart
     spikes_by_trial = []
     # make sure both dfs are sorted by time
     spike_times = spike_times.sort_values(by=["SpikeTime"])
     intervals = intervals.sort_values(by=["IntervalStartTime"])
-
-    print("Finished sorting, entering loop")
 
     # enter looping
     interval_idx = 0
