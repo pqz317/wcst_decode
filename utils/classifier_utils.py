@@ -27,35 +27,27 @@ def transform_to_label_data(feature_selections, trials_filter=None):
     return inputs
 
 
-# classsifier utils
-def evaluate_classifier(clf, firing_rates, feature_selections, num_runs=20):
+def evaluate_classifier(clf, firing_rates, feature_selections, trial_splitter):
     test_accs = []
     train_accs = []
     shuffled_accs = []
     models = []
-    trials = feature_selections["TrialNumber"].unique()
-    for i in range(num_runs):
-        print(f"Run {i}")
-        train_trials, test_trials = train_test_split(trials, test_size=0.2)
+    for train_trials, test_trials in trial_splitter:
         X_train = transform_to_input_data(firing_rates, trials_filter=train_trials)
         y_train = transform_to_label_data(feature_selections, trials_filter=train_trials)
 
         X_test = transform_to_input_data(firing_rates, trials_filter=test_trials)
         y_test = transform_to_label_data(feature_selections, trials_filter=test_trials)
         clf = clf.fit(X_train, y_train)
-        # train_pred = clf.predict(X_train)
-        train_acc = clf.score(X_train, y_train)
 
-        # test_pred = clf.predict(X_test)
+        train_acc = clf.score(X_train, y_train)
         test_acc = clf.score(X_test, y_test)
 
         train_accs.append(train_acc)
         test_accs.append(test_acc)
-        
 
         y_test_shuffle = y_test
         np.random.shuffle(y_test_shuffle)
-        # shuffled_acc = sum(test_pred==y_test_shuffle)/len(y_test_shuffle)
         shuffled_acc = clf.score(X_test, y_test_shuffle)
         shuffled_accs.append(shuffled_acc)
         
