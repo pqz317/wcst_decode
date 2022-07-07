@@ -3,12 +3,16 @@ import pandas as pd
 
 
 def get_spikes_by_trial_interval(spike_times, intervals):
-    """
-    Finds all the spikes within a series of time intervals
+    """Finds all the spikes within a series of time intervals
 
-    :param spike_times: Dataframe with columns: SpikeTime, UnitID
-    :param intervals: Dataframe with columns: TrialNumber, IntervalStartTime, IntervalEndTime
-    :returns: DataFrame with columns: TrialNumber, UnitID, SpikeTime, SpikeTimeFromStart
+    Args:
+        spike_times: Dataframe with columns: SpikeTime, UnitID
+        intervals: Dataframe with columns: TrialNumber,
+            IntervalStartTime, IntervalEndTime
+
+    Returns:
+        DataFrame with columns: TrialNumber, UnitID, SpikeTime,
+        SpikeTimeFromStart
     """
     # columns: TrialNumber, UnitID, SpikeTime, SpikeTimeFromStart
     spikes_by_trial = []
@@ -26,10 +30,14 @@ def get_spikes_by_trial_interval(spike_times, intervals):
         interval_start = interval_row.IntervalStartTime
         interval_end = interval_row.IntervalEndTime
         if spike_time < interval_start:
-            # spike not in current interval, move to next spike
+            # spike before current interval, move to next spike
             spike_times_idx += 1
-            continue
-        if spike_time >= interval_start and spike_time < interval_end:
+        elif spike_time >= interval_end:
+            # spike later than interval, move on to next interval
+            # don't move on to next spike
+            interval_idx +=1
+        else:
+            # spike time within interval
             # add spike, move on to next spike
             spikes_by_trial.append([
                 interval_row.TrialNumber, 
@@ -38,9 +46,6 @@ def get_spikes_by_trial_interval(spike_times, intervals):
                 spike_time - interval_start
             ])
             spike_times_idx += 1
-        if spike_time >= interval_end:
-            # spike later than interval, move on to next interval
-            # don't move on to next spike
-            interval_idx +=1
+
     return pd.DataFrame(spikes_by_trial, columns=["TrialNumber", "UnitID", "SpikeTime", "SpikeTimeFromStart"])
 
