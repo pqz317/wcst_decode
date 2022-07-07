@@ -3,12 +3,16 @@ import pandas as pd
 
 
 def get_spikes_by_trial_interval(spike_times, intervals):
-    """
-    Finds all the spikes within a series of time intervals
+    """Finds all the spikes within a series of time intervals
 
-    :param spike_times: Dataframe with columns: SpikeTime, UnitID
-    :param intervals: Dataframe with columns: TrialNumber, IntervalStartTime, IntervalEndTime
-    :returns: DataFrame with columns: TrialNumber, UnitID, SpikeTime, SpikeTimeFromStart
+    Args:
+        spike_times: Dataframe with columns: SpikeTime, UnitID
+        intervals: Dataframe with columns: TrialNumber,
+            IntervalStartTime, IntervalEndTime
+
+    Returns:
+        DataFrame with columns: TrialNumber, UnitID, SpikeTime,
+        SpikeTimeFromStart
     """
     # columns: TrialNumber, UnitID, SpikeTime, SpikeTimeFromStart
     spikes_by_trial = []
