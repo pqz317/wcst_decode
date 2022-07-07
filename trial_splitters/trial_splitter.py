@@ -4,8 +4,7 @@ from typing import Tuple, List
 from abc import ABC, abstractmethod
 
 class TrialSplitter(ABC): 
-    """
-    An abstract class for a trial splitter. 
+    """An abstract class for a trial splitter.
     Provides a way to query for train/test splits on trials
     Subclasses should extend this interace and implement the methods
     """

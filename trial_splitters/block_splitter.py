@@ -6,10 +6,9 @@ from trial_splitters.trial_splitter import TrialSplitter
 import pandas as pd
 
 class BlockSplitter(TrialSplitter): 
-    """
-    Splits trials into train/test sets by block
-    On each iteration, holds one block out as the test set, the rest 
-    trials as the training set. 
+    """Splits trials into train/test sets by block
+    On each iteration, holds one block out as the test set, the rest
+    trials as the training set.
     """
 
     def __init__(self, trials_with_blocks: pd.Series) -> None:

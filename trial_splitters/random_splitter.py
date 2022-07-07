@@ -5,9 +5,7 @@ from sklearn.model_selection import train_test_split
 from trial_splitters.trial_splitter import TrialSplitter
 
 class RandomSplitter(TrialSplitter):
-    """
-    Splits trials into train/test sets randomly on each iteration
-    """
+    """Splits trials into train/test sets randomly on each iteration"""
     def __init__(self, trial_numbers: List[int], num_runs: int, test_size: float) -> None:
         self.trial_numbers = trial_numbers
         self.num_runs = num_runs
