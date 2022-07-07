@@ -1,10 +1,16 @@
 import numpy as np
 from sklearn.model_selection import train_test_split
+from trial_splitters.trial_splitter import TrialSplitter
+import pandas as pd
 
 def transform_to_input_data(firing_rates, trials_filter=None):
     """
     Transform DataFrame with columns TrialNumber, UnitID, TimeBins, Value
     to a num_trials x num_inputs numpy array for classifier input
+
+    :param firing_rates: Dataframe with columns: TrialNumber, UnitID, TimeBins, Value
+    :param trials_filter: List of trial numbers, which trials to filter on. 
+    :returns: np array of num_trials x num_inputs
     """
     df = firing_rates
     if trials_filter is not None: 
@@ -19,6 +25,13 @@ def transform_to_input_data(firing_rates, trials_filter=None):
 
 
 def transform_to_label_data(feature_selections, trials_filter=None):
+    """
+    Transform DataFrame with columns TrialNumber, Feature into numpy array of features
+
+    :param feature_selections: Dataframe with columns: TrialNumber, Feature
+    :param trials_filter: List of trial numbers, which trials to filter on. 
+    :returns: np array of num_trials x 1
+    """
     df = feature_selections
     if trials_filter is not None:
         df = df[df["TrialNumber"].isin(trials_filter)]
@@ -28,6 +41,13 @@ def transform_to_label_data(feature_selections, trials_filter=None):
 
 
 def evaluate_classifier(clf, firing_rates, feature_selections, trial_splitter):
+    """
+    Given classifier, inputs, and labels, evaluate it with the trial splitter. 
+
+    :param firing_rates: Dataframe with columns: TrialNumber, UnitID, TimeBins, Value, used as inputs. 
+    :param feature_selections: Dataframe with columns: TrialNumber, Feature, used as labels
+    :returns: Tuple of Lists, including test accuracies, training accuracies, shuffled accuracies and models. 
+    """
     test_accs = []
     train_accs = []
     shuffled_accs = []

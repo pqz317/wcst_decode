@@ -8,7 +8,7 @@ class RandomSplitter(TrialSplitter):
     """
     Splits trials into train/test sets randomly on each iteration
     """
-    def __init__(self, trial_numbers: npt.ArrayLike, num_runs: int, test_size: float) -> None:
+    def __init__(self, trial_numbers: List[int], num_runs: int, test_size: float) -> None:
         self.trial_numbers = trial_numbers
         self.num_runs = num_runs
         self.test_size = test_size
