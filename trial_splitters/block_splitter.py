@@ -28,3 +28,6 @@ class BlockSplitter(TrialSplitter):
             return (train, test)
         else: 
             raise StopIteration
+
+    def __len__(self) -> int:
+        return len(self.blocks)

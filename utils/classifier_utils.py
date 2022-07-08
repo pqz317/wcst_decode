@@ -65,7 +65,6 @@ def evaluate_classifier(clf, firing_rates, feature_selections, trial_splitter):
     for train_trials, test_trials in trial_splitter:
         X_train = transform_to_input_data(firing_rates, trials_filter=train_trials)
         y_train = transform_to_label_data(feature_selections, trials_filter=train_trials)
-
         X_test = transform_to_input_data(firing_rates, trials_filter=test_trials)
         y_test = transform_to_label_data(feature_selections, trials_filter=test_trials)
         clf = clf.fit(X_train, y_train)
@@ -84,3 +83,18 @@ def evaluate_classifier(clf, firing_rates, feature_selections, trial_splitter):
         models.append(clf)
         
     return train_accs, test_accs, shuffled_accs, models
+
+def evaluate_classifiers_by_time_bins(clf, inputs, labels, time_bins, splitter):
+    test_accs_by_bin = np.empty((len(time_bins), len(splitter)))
+    shuffled_accs_by_bin = np.empty((len(time_bins), len(splitter)))
+    for i, bin in enumerate(time_bins):
+            print(f"Evaluating for {bin}")
+            # need isclose because the floats get stored weird
+            inputs_for_bin = inputs[np.isclose(inputs["TimeBins"], bin)]
+            train_accs, test_accs, shuffled_accs, models = evaluate_classifier(
+                clf, inputs_for_bin, labels, splitter
+            )
+            test_accs_by_bin[i, :] = test_accs
+            shuffled_accs_by_bin[i, :] = shuffled_accs
+    return test_accs_by_bin, shuffled_accs_by_bin
+

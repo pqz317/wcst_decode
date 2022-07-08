@@ -15,3 +15,7 @@ class TrialSplitter(ABC):
     @abstractmethod
     def __next__(self) -> Tuple[List[int], List[int]]:
         raise NotImplementedError
+
+    @abstractmethod
+    def __len__(self) -> int:
+        raise NotImplementedError
