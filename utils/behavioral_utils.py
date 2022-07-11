@@ -47,3 +47,19 @@ def get_selection_features(behavioral_data):
         pattern = row[f"Item{item_chosen}Pattern"]
         selections.append([row["TrialNumber"], color, shape, pattern])
     return pd.DataFrame(selections, columns=["TrialNumber", "Color", "Shape", "Pattern"])
+
+def exclude_first_block(behavioral_data):
+    pass
+
+
+def get_figured_out_trials(behavioral_data):
+    pass
+
+def get_not_figured_out_trials(behavioral_data):
+    pass
+
+def get_first_n_in_blocks(behavioral_data):
+    pass
+
+def get_last_n_in_blocks(behavioral_data):
+    pass

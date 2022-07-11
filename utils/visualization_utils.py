@@ -1,7 +1,14 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-def visualize_accuracy_across_time_bins(accuracies, pre_interval, post_interval, interval_size, ax):
+def visualize_accuracy_across_time_bins(
+    accuracies, 
+    pre_interval, 
+    post_interval, 
+    interval_size, 
+    ax,
+    label=None
+):
     """Plots accuracies across time bins as a shaded line plot
 
     Args:
@@ -16,8 +23,6 @@ def visualize_accuracy_across_time_bins(accuracies, pre_interval, post_interval,
     means = np.mean(accuracies, axis=1)
     stds = np.std(accuracies, axis=1)
     x = np.arange(-pre_interval, post_interval, interval_size)
-    print(len(means))
-    print(len(x))
-    ax.plot(x, means)
+    ax.plot(x, means, label=label)
     ax.fill_between(x, means - stds, means + stds, alpha=0.5)
 

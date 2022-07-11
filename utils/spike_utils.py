@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
-
+from spike_tools import (
+    general as spike_general,
+)
 
 def get_spikes_by_trial_interval(spike_times, intervals):
     """Finds all the spikes within a series of time intervals
@@ -49,3 +51,12 @@ def get_spikes_by_trial_interval(spike_times, intervals):
 
     return pd.DataFrame(spikes_by_trial, columns=["TrialNumber", "UnitID", "SpikeTime", "SpikeTimeFromStart"])
 
+
+def get_temporal_drive_unit_ids(fs, subject, session):
+    unit_info = spike_general.list_session_units(fs, subject, session)
+    return unit_info[~unit_info["Channel"].str.contains("a")].UnitID.unique().astype(int)
+
+    
+def get_anterior_drive_unit_ids(fs, subject, session):
+    unit_info = spike_general.list_session_units(fs, subject, session)
+    return unit_info[unit_info["Channel"].str.contains("a")].UnitID.unique().astype(int)
