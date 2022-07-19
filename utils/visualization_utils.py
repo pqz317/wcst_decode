@@ -16,9 +16,6 @@ def visualize_accuracy_across_time_bins(
         pre_interval: int, in miliseconds
         post_interval: int, in miliseconds
         interval_size: int, in miliseconds
-    Returns:
-        DataFrame with num_trials length, columns: TrialNumber, Color,
-        Pattern, Shape
     """
     means = np.mean(accuracies, axis=1)
     stds = np.std(accuracies, axis=1)
@@ -26,3 +23,7 @@ def visualize_accuracy_across_time_bins(
     ax.plot(x, means, label=label)
     ax.fill_between(x, means - stds, means + stds, alpha=0.5)
 
+
+def plot_hist_of_selections(feature_selections, feature_dim, ax):
+    dist = feature_selections[feature_dim]
+    ax.hist(dist)
