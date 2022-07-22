@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Tuple, List
 
 from sklearn.model_selection import train_test_split
-from trial_splitters.trial_splitter import TrialSplitter
+from .trial_splitter import TrialSplitter
 import pandas as pd
 
 class BlockSplitter(TrialSplitter): 
@@ -26,5 +26,4 @@ class BlockSplitter(TrialSplitter):
             train = self.trials_with_blocks[self.trials_with_blocks["BlockNumber"] != block].TrialNumber.unique()
             self.block_idx += 1
             return (train, test)
-        else: 
-            raise StopIteration
+        raise StopIteration
