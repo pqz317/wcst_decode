@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Tuple, List
 import numpy.typing as npt
 from sklearn.model_selection import train_test_split
-from trial_splitters.trial_splitter import TrialSplitter
+from .trial_splitter import TrialSplitter
 
 class RandomSplitter(TrialSplitter):
     """Splits trials into train/test sets randomly on each iteration"""
@@ -20,8 +20,7 @@ class RandomSplitter(TrialSplitter):
             train, test = train_test_split(self.trial_numbers, test_size=self.test_size)
             self.n += 1
             return (train, test)
-        else: 
-            raise StopIteration
+        raise StopIteration
 
     def __len__(self) -> int:
         return self.num_runs
