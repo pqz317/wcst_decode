@@ -47,3 +47,47 @@ def get_selection_features(behavioral_data):
         pattern = row[f"Item{item_chosen}Pattern"]
         selections.append([row["TrialNumber"], color, shape, pattern])
     return pd.DataFrame(selections, columns=["TrialNumber", "Color", "Shape", "Pattern"])
+
+
+def get_fixation_features(behavioral_data, raw_fixation_times):
+    """Given behavioral data and fixation times, constructs table
+    with fixation times and features of card fixating on. 
+
+    Args:
+        behavioral_data: dataframe of num_trials length, containing 
+            Item{0/1/2/3}{Shape/Color/Pattern} columns, and ItemChosen column
+        raw_fixation_times: np.array of num trials length, with each element 
+            as a separate np array describing every fixation during the trial 
+
+    Returns:
+        dataframe where each row is a card fixation with columns:
+            TrialNumber, ItemNumber, Shape, Color, Pattern, FixationStart, FixationEnd
+    """
+    fixation_features = []
+    for trial_idx, trial_fixations in enumerate(raw_fixation_times):
+        # trial numbers indexed by 1
+        trial_num = trial_idx + 1
+        if len(trial_fixations) == 0:
+            # trial's empty, skip
+            continue
+        for fixation in trial_fixations[0]:
+            if len(fixation) == 0:
+                # fixation's empty, skip
+                continue
+            item_idx = int(fixation[0])
+            fixation_start = fixation[1]
+            fixation_end = fixation[2]
+            trial_beh = behavioral_data[behavioral_data["TrialNumber"] == trial_num]
+            color = np.squeeze(trial_beh[f"Item{item_idx}Color"])
+            shape = np.squeeze(trial_beh[f"Item{item_idx}Shape"])
+            pattern = np.squeeze(trial_beh[f"Item{item_idx}Pattern"])
+            fixation_features.append({
+                "TrialNumber": trial_num, 
+                "ItemNumber": item_idx, 
+                "Color": color, 
+                "Shape": shape, 
+                "Pattern": pattern, 
+                "FixationStart": fixation_start, 
+                "FixationEnd": fixation_end
+            })
+    return pd.DataFrame(fixation_features)
