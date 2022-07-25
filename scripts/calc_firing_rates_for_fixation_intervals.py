@@ -35,7 +35,8 @@ def main():
 
     fixation_features = behavioral_utils.get_fixation_features(behavior_data, raw_fixation_times)
 
-
+    fixation_features = fixation_features[fixation_features["TrialNumber"].isin(trial_numbers)]
+    fixation_features = fixation_features.loc[~(fixation_features["ItemChosen"] == fixation_features["ItemNumber"])]
 
 
     intervals = behavioral_utils.get_trial_intervals(valid_beh, "FeedbackOnset", pre_interval, post_interval)
