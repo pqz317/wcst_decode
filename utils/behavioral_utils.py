@@ -60,7 +60,7 @@ def get_fixation_features(behavioral_data, raw_fixation_times):
 
     Returns:
         dataframe where each row is a card fixation with columns:
-            TrialNumber, ItemNumber, Shape, Color, Pattern, FixationStart, FixationEnd
+            TrialNumber, ItemChosen, ItemNumber, Shape, Color, Pattern, FixationStart, FixationEnd
     """
     fixation_features = []
     for trial_idx, trial_fixations in enumerate(raw_fixation_times):
@@ -77,11 +77,13 @@ def get_fixation_features(behavioral_data, raw_fixation_times):
             fixation_start = fixation[1]
             fixation_end = fixation[2]
             trial_beh = behavioral_data[behavioral_data["TrialNumber"] == trial_num]
+            item_chosen = np.squeeze(trial_beh["ItemChosen"])
             color = np.squeeze(trial_beh[f"Item{item_idx}Color"])
             shape = np.squeeze(trial_beh[f"Item{item_idx}Shape"])
             pattern = np.squeeze(trial_beh[f"Item{item_idx}Pattern"])
             fixation_features.append({
                 "TrialNumber": trial_num, 
+                "ItemChosen": item_chosen,
                 "ItemNumber": item_idx, 
                 "Color": color, 
                 "Shape": shape, 
