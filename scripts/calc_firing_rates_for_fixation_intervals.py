@@ -36,20 +36,23 @@ def main():
     fixation_features = behavioral_utils.get_fixation_features(behavior_data, raw_fixation_times)
 
     fixation_features = fixation_features[fixation_features["TrialNumber"].isin(trial_numbers)]
-    fixation_features = fixation_features.loc[~(fixation_features["ItemChosen"] == fixation_features["ItemNumber"])]
+    valids = fixation_features.loc[~(fixation_features["ItemChosen"] == fixation_features["ItemNumber"])]
 
+    # finds intervals aligned on fixation start
+    intervals = pd.DataFrame(columns=["IntervalID", "IntervalStartTime", "IntervalEndTime"])
+    intervals["IntervalID"] = valids["FixationNum"]
+    intervals["IntervalStartTime"] = valids["FixationEnd"] - pre_interval
+    intervals["IntervalEndTime"] = valids["FixationEnd"] + post_interval
 
-    intervals = behavioral_utils.get_trial_intervals(valid_beh, "FeedbackOnset", pre_interval, post_interval)
-    spike_by_trial_interval = spike_utils.get_spikes_by_trial_interval(spike_times, intervals)
+    spike_by_trial_interval = spike_utils.get_spikes_by_interval(spike_times, intervals)
+
     end_bin = (pre_interval + post_interval) / 1000 + 0.1
-
     print("Calculating Firing Rates")
-    firing_rates = spike_analysis.firing_rate(spike_by_trial_interval, bins=np.arange(0, end_bin, 0.1), smoothing=1)
-    spike_by_trial_interval = spike_utils.get_spikes_by_trial_interval(spike_times, intervals)
+    firing_rates = spike_utils.get_firing_rates_by_interval(spike_by_trial_interval, bins=np.arange(0, end_bin, 0.1), smoothing=1)
 
     print("Saving")
-    firing_rates.to_pickle(f"/src/wcst_decode/data/firing_rates_{pre_interval}_fb_{post_interval}.pickle")
-    spike_by_trial_interval.to_pickle(f"/src/wcst_decode/data/spike_by_trial_interval_{pre_interval}_fb_{post_interval}.pickle")
+    firing_rates.to_pickle(f"/src/wcst_decode/data/firing_rates_{pre_interval}_fixationend_{post_interval}.pickle")
+    spike_by_trial_interval.to_pickle(f"/src/wcst_decode/data/spike_by_trial_interval_{pre_interval}_fixationend_{post_interval}.pickle")
 
 if __name__ == "__main__":
     main()

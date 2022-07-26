@@ -86,6 +86,7 @@ def evaluate_classifiers_by_time_bins(clf, inputs, labels, time_bins, splitter):
     test_accs_by_bin = np.empty((len(time_bins), len(splitter)))
     shuffled_accs_by_bin = np.empty((len(time_bins), len(splitter)))
     for i, bin in enumerate(time_bins):
+        print("Evaluating for bin {bin}")
         # need isclose because the floats get stored weird
         inputs_for_bin = inputs[np.isclose(inputs["TimeBins"], bin)]
         train_accs, test_accs, shuffled_accs, models = evaluate_classifier(
@@ -94,3 +95,23 @@ def evaluate_classifiers_by_time_bins(clf, inputs, labels, time_bins, splitter):
         test_accs_by_bin[i, :] = test_accs
         shuffled_accs_by_bin[i, :] = shuffled_accs
     return test_accs_by_bin, shuffled_accs_by_bin
+
+
+def evaluate_classifiers_by_time_bins(clf, inputs, labels, time_bins, splitter):
+    test_accs_by_bin = np.empty((len(time_bins), len(splitter)))
+    shuffled_accs_by_bin = np.empty((len(time_bins), len(splitter)))
+    models_by_bin = np.empty((len(time_bins), len(splitter)))
+
+    # ensure that every time bin has the same set of train/test splits, 
+    splits = [(train, test) for train, test in splitter]    
+    for i, bin in enumerate(time_bins):
+        print("Evaluating for bin {bin}")
+        # need isclose because the floats get stored weird
+        inputs_for_bin = inputs[np.isclose(inputs["TimeBins"], bin)]
+        train_accs, test_accs, shuffled_accs, models = evaluate_classifier(
+            clf, inputs_for_bin, labels, splits
+        )
+        test_accs_by_bin[i, :] = test_accs
+        shuffled_accs_by_bin[i, :] = shuffled_accs
+        models_by_bin[i, :] = models
+    return test_accs_by_bin, shuffled_accs_by_bin, models_by_bin, splits

@@ -91,7 +91,10 @@ def get_fixation_features(behavioral_data, raw_fixation_times):
                 "FixationStart": fixation_start, 
                 "FixationEnd": fixation_end
             })
-    return pd.DataFrame(fixation_features)
+    fixation_features = pd.DataFrame(fixation_features)
+    # add a new column that's a numbering of rows, used as an ID later. 
+    fixation_features["FixationNum"] = fixation_features.reset_index().index
+    return fixation_features
 
 def exclude_first_block(behavioral_data):
     pass
