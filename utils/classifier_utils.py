@@ -2,6 +2,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from trial_splitters.trial_splitter import TrialSplitter
 import pandas as pd
+import copy
 
 def transform_to_input_data(firing_rates, trials_filter=None):
     """Transform DataFrame with columns TrialNumber, UnitID, TimeBins, Value
@@ -78,34 +79,34 @@ def evaluate_classifier(clf, firing_rates, feature_selections, trial_splitter, s
         shuffled_acc = clf.score(x_test, y_test_shuffle)
         shuffled_accs.append(shuffled_acc)
         
-        models.append(clf)
+        models.append(copy.deepcopy(clf))
         
     return np.array(train_accs), np.array(test_accs), np.array(shuffled_accs), np.array(models)
 
-def evaluate_classifiers_by_time_bins(clf, inputs, labels, time_bins, splitter):
-    test_accs_by_bin = np.empty((len(time_bins), len(splitter)))
-    shuffled_accs_by_bin = np.empty((len(time_bins), len(splitter)))
-    for i, bin in enumerate(time_bins):
-        print("Evaluating for bin {bin}")
-        # need isclose because the floats get stored weird
-        inputs_for_bin = inputs[np.isclose(inputs["TimeBins"], bin)]
-        train_accs, test_accs, shuffled_accs, models = evaluate_classifier(
-            clf, inputs_for_bin, labels, splitter
-        )
-        test_accs_by_bin[i, :] = test_accs
-        shuffled_accs_by_bin[i, :] = shuffled_accs
-    return test_accs_by_bin, shuffled_accs_by_bin
+# def evaluate_classifiers_by_time_bins(clf, inputs, labels, time_bins, splitter):
+#     test_accs_by_bin = np.empty((len(time_bins), len(splitter)))
+#     shuffled_accs_by_bin = np.empty((len(time_bins), len(splitter)))
+#     for i, bin in enumerate(time_bins):
+#         print("Evaluating for bin {bin}")
+#         # need isclose because the floats get stored weird
+#         inputs_for_bin = inputs[np.isclose(inputs["TimeBins"], bin)]
+#         train_accs, test_accs, shuffled_accs, models = evaluate_classifier(
+#             clf, inputs_for_bin, labels, splitter
+#         )
+#         test_accs_by_bin[i, :] = test_accs
+#         shuffled_accs_by_bin[i, :] = shuffled_accs
+#     return test_accs_by_bin, shuffled_accs_by_bin
 
 
 def evaluate_classifiers_by_time_bins(clf, inputs, labels, time_bins, splitter):
     test_accs_by_bin = np.empty((len(time_bins), len(splitter)))
     shuffled_accs_by_bin = np.empty((len(time_bins), len(splitter)))
-    models_by_bin = np.empty((len(time_bins), len(splitter)))
+    models_by_bin = np.empty((len(time_bins), len(splitter)), dtype=object)
 
     # ensure that every time bin has the same set of train/test splits, 
-    splits = [(train, test) for train, test in splitter]    
+    splits = [(train, test) for train, test in splitter]
     for i, bin in enumerate(time_bins):
-        print("Evaluating for bin {bin}")
+        print(f"Evaluating for bin {bin}")
         # need isclose because the floats get stored weird
         inputs_for_bin = inputs[np.isclose(inputs["TimeBins"], bin)]
         train_accs, test_accs, shuffled_accs, models = evaluate_classifier(
@@ -114,4 +115,25 @@ def evaluate_classifiers_by_time_bins(clf, inputs, labels, time_bins, splitter):
         test_accs_by_bin[i, :] = test_accs
         shuffled_accs_by_bin[i, :] = shuffled_accs
         models_by_bin[i, :] = models
+
     return test_accs_by_bin, shuffled_accs_by_bin, models_by_bin, splits
+
+def cross_evaluate_by_time_bins(models_by_bin, inputs, labels, splits, bins):
+    """
+    returns np array of num_time_bins x num_time_bins
+    """
+    cross_accs = np.empty((len(bins), len(bins)))
+    for model_bin_idx in range(len(bins)):
+        models = models_by_bin[model_bin_idx, :]
+        for test_bin_idx, timebin in enumerate(bins):
+            accs = []
+            inputs_for_bin = inputs[np.isclose(inputs["TimeBins"], timebin)]
+            for split_idx, model in enumerate(models):
+                # assumes models, splits are ordered the same
+                _, tests = splits[split_idx]
+                x_test = transform_to_input_data(inputs_for_bin, trials_filter=tests)
+                y_test = transform_to_label_data(labels, trials_filter=tests)
+                accs.append(model.score(x_test, y_test))
+            avg_acc = np.mean(accs)
+            cross_accs[model_bin_idx, test_bin_idx] = avg_acc
+    return cross_accs

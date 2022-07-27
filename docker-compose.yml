@@ -8,4 +8,4 @@ services:
       - "JUPYTER_PASSWORD=${JUPYTER_PASSWORD:-simple}"
     volumes:
       - .:/src/wcst_decode
-      - $HOME/.aws/credentials:/root/.aws/credentials:ro
+      - $HOME/aws_personal/credentials:/root/.aws/credentials:ro

@@ -1,4 +1,4 @@
-FROM walkerlab/pytorch:python3.10-torch1.11.0-cuda11.7.0
+FROM walkerlab/pytorch:python3.8-torch1.11.0-cuda11.2.1
 
 RUN git clone https://github.com/learning-2-learn/lfp_tools /src/lfp_tools &&\
         pip3 install -e /src/lfp_tools
