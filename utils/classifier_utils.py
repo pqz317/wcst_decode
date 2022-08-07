@@ -79,26 +79,29 @@ def evaluate_classifier(clf, firing_rates, feature_selections, trial_splitter, s
         shuffled_acc = clf.score(x_test, y_test_shuffle)
         shuffled_accs.append(shuffled_acc)
         
+        # needed so that every element in models is 
+        # from a different instance of the model
         models.append(copy.deepcopy(clf))
         
     return np.array(train_accs), np.array(test_accs), np.array(shuffled_accs), np.array(models)
 
-# def evaluate_classifiers_by_time_bins(clf, inputs, labels, time_bins, splitter):
-#     test_accs_by_bin = np.empty((len(time_bins), len(splitter)))
-#     shuffled_accs_by_bin = np.empty((len(time_bins), len(splitter)))
-#     for i, bin in enumerate(time_bins):
-#         print("Evaluating for bin {bin}")
-#         # need isclose because the floats get stored weird
-#         inputs_for_bin = inputs[np.isclose(inputs["TimeBins"], bin)]
-#         train_accs, test_accs, shuffled_accs, models = evaluate_classifier(
-#             clf, inputs_for_bin, labels, splitter
-#         )
-#         test_accs_by_bin[i, :] = test_accs
-#         shuffled_accs_by_bin[i, :] = shuffled_accs
-#     return test_accs_by_bin, shuffled_accs_by_bin
-
 
 def evaluate_classifiers_by_time_bins(clf, inputs, labels, time_bins, splitter):
+    """For every time bin, separately trains/tests classifiers based on the splitter, 
+    And returns back a distribution of accuracies for that time bin. 
+    Args:
+        clf: classifier to perform classification with
+        inputs: df with columns: TimeBins, TrialNumber, UnitID, Value
+        labels: df with columns: TrialNumber, Feature
+        time_bins: bins to evaluate across, units matching TimeBins column in inputs
+        splitter: method of splitting data points into training/test
+
+    Returns:
+        test_accuracies_by_bin: np array of num_time_bins x num_splits 
+        shuffled_accuracies_by_bin: np array of num_time_bins x num_splits 
+        trained_models_by_bin: np array of num_time_bins x num_splits of model objects
+        splits: list of tuples, each element containing train and test lists of IDs
+    """
     test_accs_by_bin = np.empty((len(time_bins), len(splitter)))
     shuffled_accs_by_bin = np.empty((len(time_bins), len(splitter)))
     models_by_bin = np.empty((len(time_bins), len(splitter)), dtype=object)
@@ -109,7 +112,7 @@ def evaluate_classifiers_by_time_bins(clf, inputs, labels, time_bins, splitter):
         print(f"Evaluating for bin {bin}")
         # need isclose because the floats get stored weird
         inputs_for_bin = inputs[np.isclose(inputs["TimeBins"], bin)]
-        train_accs, test_accs, shuffled_accs, models = evaluate_classifier(
+        _, test_accs, shuffled_accs, models = evaluate_classifier(
             clf, inputs_for_bin, labels, splits
         )
         test_accs_by_bin[i, :] = test_accs
@@ -120,7 +123,18 @@ def evaluate_classifiers_by_time_bins(clf, inputs, labels, time_bins, splitter):
 
 def cross_evaluate_by_time_bins(models_by_bin, inputs, labels, splits, bins):
     """
-    returns np array of num_time_bins x num_time_bins
+    For each time bin, evaluate models trained on that time bin against 
+    data in other time bins 
+    Args:
+        models_by_bin: np array of num_time_bins x num_splits of model objects
+        inputs: df with columns: TimeBins, TrialNumber, UnitID, Value
+        labels: df with columns: TrialNumber, Feature
+        splits: list of tuples, each element containing train and test lists of IDs
+        bins: bins to evaluate across, units matching TimeBins column in inputs
+
+    Returns:
+        cross_accs: np array of num_time_bins x num_time_bins, average accuracy of
+            models in row time bin evaluated on data from column time bin
     """
     cross_accs = np.empty((len(bins), len(bins)))
     for model_bin_idx in range(len(bins)):
