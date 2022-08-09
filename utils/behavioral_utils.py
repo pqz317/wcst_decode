@@ -96,6 +96,54 @@ def get_fixation_features(behavioral_data, raw_fixation_times):
     fixation_features["FixationNum"] = fixation_features.reset_index().index
     return fixation_features
 
+
+def get_first_fixations_for_cards(fixation_features):
+    """In fixation_features, consecutive fixations onto the same card 
+    get logged as separate fixations. in these cases, only subselect the
+    first fixation per card. 
+
+    Args:
+        fixation_features: df with TrialNumber, ItemNumber, FixationNum
+    Returns:
+        A filtered fixation_features where only the first fixation within a 
+        consective series of fixations for a card is included
+    """
+    df = fixation_features.copy()
+    df["PrevItemNumber"] = df["ItemNumber"].shift()
+    df["PrevTrialNumber"] = df["TrialNumber"].shift()
+    df["SameCardFixation"] = (~( 
+        (df["ItemNumber"] == df["PrevItemNumber"]) & 
+        (df["PrevTrialNumber"] == df["TrialNumber"]) 
+    )).cumsum()
+    same_card_grouped = df.groupby(["SameCardFixation"], as_index=False)
+    first_fixations = same_card_grouped.apply(lambda x: x.iloc[0])
+    return first_fixations
+
+
+def remove_selected_fixation(first_fixations_for_cards):
+    """For a df of first fixations of cards, removes the fixation deemed as the selection. 
+
+    Args:
+        first_fixations_for_cards: df with TrialNumber, ItemNumber, FixationNum, 
+            first fixation for a card of consecutive fixations
+    
+    Returns:
+        A filtered first_fixations_for_cards where the fixation deemed as a selection
+        is removed
+    """
+    def removed_selected_card(fixated_cards_per_trial):
+        # finds last card in this trial
+        last_card = fixated_cards_per_trial.iloc[-1]
+        if last_card.ItemChosen == last_card.ItemNumber:
+            # last card fixated on is indeed selected card
+            return fixated_cards_per_trial[0:-1]
+        else:
+            return fixated_cards_per_trial
+
+    trials_grouped = first_fixations_for_cards.groupby(["TrialNumber"], as_index=False)
+    return trials_grouped.apply(removed_selected_card).reset_index()
+
+
 def exclude_first_block(behavioral_data):
     pass
 

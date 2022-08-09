@@ -7,7 +7,8 @@ def visualize_accuracy_across_time_bins(
     post_interval, 
     interval_size, 
     ax,
-    label=None
+    label=None,
+    right_align=False,
 ):
     """Plots accuracies across time bins as a shaded line plot
 
@@ -20,6 +21,9 @@ def visualize_accuracy_across_time_bins(
     means = np.mean(accuracies, axis=1)
     stds = np.std(accuracies, axis=1)
     x = np.arange(-pre_interval, post_interval, interval_size)
+    if right_align:
+        # every x timepoint indicates the right of the bin
+        x = x + interval_size
     ax.plot(x, means, label=label)
     ax.fill_between(x, means - stds, means + stds, alpha=0.5)
 

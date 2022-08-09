@@ -35,8 +35,12 @@ def main():
 
     fixation_features = behavioral_utils.get_fixation_features(behavior_data, raw_fixation_times)
 
-    fixation_features = fixation_features[fixation_features["TrialNumber"].isin(trial_numbers)]
-    valids = fixation_features.loc[~(fixation_features["ItemChosen"] == fixation_features["ItemNumber"])]
+    # fixation_features = fixation_features[fixation_features["TrialNumber"].isin(trial_numbers)]
+    # valids = fixation_features.loc[~(fixation_features["ItemChosen"] == fixation_features["ItemNumber"])]
+
+    first_fixations = behavioral_utils.get_first_fixations_for_cards(fixation_features)
+    no_selected_fixations = behavioral_utils.remove_selected_fixation(first_fixations)
+    valids = no_selected_fixations[no_selected_fixations["TrialNumber"].isin(trial_numbers)]
 
     # finds intervals aligned on fixation start
     intervals = pd.DataFrame(columns=["IntervalID", "IntervalStartTime", "IntervalEndTime"])
@@ -51,8 +55,8 @@ def main():
     firing_rates = spike_utils.get_firing_rates_by_interval(spike_by_trial_interval, bins=np.arange(0, end_bin, 0.1), smoothing=1)
 
     print("Saving")
-    firing_rates.to_pickle(f"/src/wcst_decode/data/firing_rates_{pre_interval}_fixationend_{post_interval}.pickle")
-    spike_by_trial_interval.to_pickle(f"/src/wcst_decode/data/spike_by_trial_interval_{pre_interval}_fixationend_{post_interval}.pickle")
+    firing_rates.to_pickle(fs.open(f"l2l.pqz317.scratch/firing_rates_{pre_interval}_filtered_fixationend_{post_interval}.pickle", "wb"))
+    spike_by_trial_interval.to_pickle(fs.open(f"l2l.pqz317.scratch/spike_by_trial_interval_{pre_interval}_filtered_fixationend_{post_interval}.pickle", "wb"))
 
 if __name__ == "__main__":
     main()
