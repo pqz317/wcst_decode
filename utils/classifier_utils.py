@@ -151,3 +151,25 @@ def cross_evaluate_by_time_bins(models_by_bin, inputs, labels, splits, bins):
             avg_acc = np.mean(accs)
             cross_accs[model_bin_idx, test_bin_idx] = avg_acc
     return cross_accs
+
+def evaluate_models_by_time_bins(models_by_bin, inputs, labels, bins):
+    """
+    For each time bin, evaluate models trained on that time bin against a specific set of inputs/labels
+    Args:
+        models_by_bin: np array of num_time_bins x num_splits of model objects
+        inputs: df with columns: TrialNumber, UnitID, Value
+        labels: df with columns: TrialNumber, Feature
+        bins: bins to evaluate across, units matching TimeBins column in inputs
+
+    Returns:
+        accs: np array of num_time_bins x num_models, accuracies of models in time bin evaluated on input/labels
+    """  
+    accs = np.empty((len(bins), models_by_bin.shape[1]))
+    for model_bin_idx in range(len(bins)):
+        models = models_by_bin[model_bin_idx, :]
+        for idx, model in enumerate(models):
+            # assumes models, splits are ordered the same
+            x_test = transform_to_input_data(inputs)
+            y_test = transform_to_label_data(labels)
+            accs[model_bin_idx, idx] = model.score(x_test, y_test)
+    return accs
