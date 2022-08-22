@@ -22,7 +22,7 @@ def transform_to_input_data(firing_rates, trials_filter=None):
     num_units = len(firing_rates["UnitID"].unique())
     num_trials = len(firing_rates["TrialNumber"].unique())
     num_inputs = num_time_bins * num_units
-    sorted_by_trial = firing_rates.sort_values(by=["TrialNumber"])
+    sorted_by_trial = firing_rates.sort_values(by=["TrialNumber", "UnitID"])
     return sorted_by_trial["Value"].to_numpy().reshape((num_trials, num_inputs))
 
 
@@ -121,32 +121,37 @@ def evaluate_classifiers_by_time_bins(clf, inputs, labels, time_bins, splitter):
 
     return test_accs_by_bin, shuffled_accs_by_bin, models_by_bin, splits
 
-def cross_evaluate_by_time_bins(models_by_bin, inputs, labels, splits, bins):
+def cross_evaluate_by_time_bins(models_by_bin, inputs, labels, splits, input_bins):
     """
     For each time bin, evaluate models trained on that time bin against 
     data in other time bins 
     Args:
-        models_by_bin: np array of num_time_bins x num_splits of model objects
+        models_by_bin: np array of num_model_time_bins x num_splits of model objects
         inputs: df with columns: TimeBins, TrialNumber, UnitID, Value
         labels: df with columns: TrialNumber, Feature
         splits: list of tuples, each element containing train and test lists of IDs
-        bins: bins to evaluate across, units matching TimeBins column in inputs
+        input_bins: bins to evaluate across, units matching TimeBins column in inputs
 
     Returns:
-        cross_accs: np array of num_time_bins x num_time_bins, average accuracy of
+        cross_accs: np array of num_model_time_bins x num_input_time_bins, average accuracy of
             models in row time bin evaluated on data from column time bin
     """
-    cross_accs = np.empty((len(bins), len(bins)))
-    for model_bin_idx in range(len(bins)):
+    num_model_time_bins = models_by_bin.shape[0]
+    cross_accs = np.empty((num_model_time_bins, len(input_bins)))
+    for model_bin_idx in range(num_model_time_bins):
         models = models_by_bin[model_bin_idx, :]
-        for test_bin_idx, timebin in enumerate(bins):
+        for test_bin_idx, timebin in enumerate(input_bins):
             accs = []
             inputs_for_bin = inputs[np.isclose(inputs["TimeBins"], timebin)]
             for split_idx, model in enumerate(models):
                 # assumes models, splits are ordered the same
-                _, tests = splits[split_idx]
-                x_test = transform_to_input_data(inputs_for_bin, trials_filter=tests)
-                y_test = transform_to_label_data(labels, trials_filter=tests)
+                if splits:
+                    _, tests = splits[split_idx]
+                    trials_filter = tests
+                else:
+                    trials_filter = None
+                x_test = transform_to_input_data(inputs_for_bin, trials_filter=trials_filter)
+                y_test = transform_to_label_data(labels, trials_filter=trials_filter)
                 accs.append(model.score(x_test, y_test))
             avg_acc = np.mean(accs)
             cross_accs[model_bin_idx, test_bin_idx] = avg_acc

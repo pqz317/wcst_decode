@@ -22,7 +22,10 @@ def get_trial_intervals(behavioral_data, event="FeedbackOnset", pre_interval=0, 
     intervals[:, 0] = trial_event_times["TrialNumber"]
     intervals[:, 1] = trial_event_times[event] - pre_interval
     intervals[:, 2] = trial_event_times[event] + post_interval
-    intervals_df = pd.DataFrame(intervals, columns=["TrialNumber", "IntervalStartTime", "IntervalEndTime"])
+    intervals_df = pd.DataFrame(columns=["TrialNumber", "IntervalStartTime", "IntervalEndTime"])
+    intervals_df["TrialNumber"] = trial_event_times["TrialNumber"].astype(int)
+    intervals_df["IntervalStartTime"] = trial_event_times[event] - pre_interval
+    intervals_df["IntervalEndTime"] = trial_event_times[event] + post_interval
     return intervals_df
 
 def get_selection_features(behavioral_data):

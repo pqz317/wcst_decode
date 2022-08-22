@@ -41,22 +41,24 @@ def main():
     first_fixations = behavioral_utils.get_first_fixations_for_cards(fixation_features)
     no_selected_fixations = behavioral_utils.remove_selected_fixation(first_fixations)
     valids = no_selected_fixations[no_selected_fixations["TrialNumber"].isin(trial_numbers)]
+    print(f"Number of valid fixations: {len(valids.FixationNum.unique())}")
 
     # finds intervals aligned on fixation start
     intervals = pd.DataFrame(columns=["IntervalID", "IntervalStartTime", "IntervalEndTime"])
     intervals["IntervalID"] = valids["FixationNum"]
-    intervals["IntervalStartTime"] = valids["FixationEnd"] - pre_interval
-    intervals["IntervalEndTime"] = valids["FixationEnd"] + post_interval
+    intervals["IntervalStartTime"] = valids["FixationStart"] - pre_interval
+    intervals["IntervalEndTime"] = valids["FixationStart"] + post_interval
 
     spike_by_trial_interval = spike_utils.get_spikes_by_interval(spike_times, intervals)
-
+    print(f"Number of valid spike intervals: {len(spike_by_trial_interval.IntervalID.unique())}")
     end_bin = (pre_interval + post_interval) / 1000 + 0.1
     print("Calculating Firing Rates")
     firing_rates = spike_utils.get_firing_rates_by_interval(spike_by_trial_interval, bins=np.arange(0, end_bin, 0.1), smoothing=1)
+    print(f"Number of valid firing rate intervals: {len(firing_rates.IntervalID.unique())}")
 
     print("Saving")
-    firing_rates.to_pickle(fs.open(f"l2l.pqz317.scratch/firing_rates_{pre_interval}_filtered_fixationend_{post_interval}.pickle", "wb"))
-    spike_by_trial_interval.to_pickle(fs.open(f"l2l.pqz317.scratch/spike_by_trial_interval_{pre_interval}_filtered_fixationend_{post_interval}.pickle", "wb"))
+    firing_rates.to_pickle(fs.open(f"l2l.pqz317.scratch/firing_rates_{pre_interval}_filtered_fixationstart_{post_interval}.pickle", "wb"))
+    spike_by_trial_interval.to_pickle(fs.open(f"l2l.pqz317.scratch/spike_by_trial_interval_{pre_interval}_filtered_fixationstart_{post_interval}.pickle", "wb"))
 
 if __name__ == "__main__":
     main()

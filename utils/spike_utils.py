@@ -6,7 +6,7 @@ from spike_tools import (
 from scipy.ndimage import gaussian_filter1d
 
 
-def get_spikes_by_trial_interval(spike_times, intervals):
+def get_spikes_by_trial_interval_DEPRECATED(spike_times, intervals):
     """Finds all the spikes within a series of time intervals
 
     Args:
@@ -51,7 +51,7 @@ def get_spikes_by_trial_interval(spike_times, intervals):
             ])
             spike_times_idx += 1
 
-    return pd.DataFrame(spikes_by_trial, columns=["TrialNumber", "UnitID", "SpikeTime", "SpikeTimeFromStart"])
+    return pd.DataFrame(spikes_by_trial, columns=["TrialNumber", "UnitID", "SpikeTime", "SpikeTimeFromStart"])    
 
 
 def get_spikes_by_interval(spike_times, intervals):
@@ -82,6 +82,26 @@ def get_spikes_by_interval(spike_times, intervals):
 
     interval_spikes = intervals.apply(find_spikes_for_interval, axis=1)
     return pd.concat(interval_spikes.tolist())
+
+
+def get_spikes_by_trial_interval(spike_times, trial_intervals):
+    """Hacky workaround. Uses the get_spikes_by_interval implementation which is faster, 
+    but preserves the 'TrialNumber' column naming which is helpful downstream. 
+
+    Args:
+        spike_times: Dataframe with columns: SpikeTime, UnitID
+        trial_intervals: Dataframe with columns: TrialNumber,
+            IntervalStartTime, IntervalEndTime
+
+    Returns:
+        DataFrame with columns: TrialNumber, UnitID, SpikeTime,
+        SpikeTimeFromStart
+    """
+    intervals = trial_intervals.rename(columns={"TrialNumber": "IntervalID"})
+    spikes_by_interval = get_spikes_by_interval(spike_times, intervals)
+    spikes_by_interval.rename(columns={"IntervalID": "TrialNumber"}, inplace=True)
+    return spikes_by_interval
+
 
 
 def get_firing_rates_by_interval(spData, bins, smoothing):
