@@ -67,11 +67,15 @@ def evaluate_classifier(clf, firing_rates, feature_selections, trial_splitter, s
         x_test = transform_to_input_data(firing_rates, trials_filter=test_trials)
         y_test = transform_to_label_data(feature_selections, trials_filter=test_trials)
         clf = clf.fit(x_train, y_train)
-
+        
         train_acc = clf.score(x_train, y_train)
 
         # to account for the fact that certain splitters with certain
         # filters may result in no test data. 
+        print("Y_PREDICTED===")
+        print(clf.predict(x_test))
+        print("Y_TRUE===")
+        print(y_test)
         if len(y_test) > 0 and len(x_test) > 0:
             test_acc = clf.score(x_test, y_test)
         else:
@@ -82,6 +86,9 @@ def evaluate_classifier(clf, firing_rates, feature_selections, trial_splitter, s
 
         y_test_shuffle = y_test
         rng.shuffle(y_test_shuffle)
+        print("Y_SHUFFLED===")
+        print(y_test_shuffle)
+        print("========")
         shuffled_acc = clf.score(x_test, y_test_shuffle)
         shuffled_accs.append(shuffled_acc)
         
@@ -121,6 +128,8 @@ def evaluate_classifiers_by_time_bins(clf, inputs, labels, time_bins, splitter):
         _, test_accs, shuffled_accs, models = evaluate_classifier(
             clf, inputs_for_bin, labels, splits
         )
+        print(test_accs)
+        print(shuffled_accs)
         test_accs_by_bin[i, :] = test_accs
         shuffled_accs_by_bin[i, :] = shuffled_accs
         models_by_bin[i, :] = models
@@ -184,3 +193,14 @@ def evaluate_models_by_time_bins(models_by_bin, inputs, labels, bins):
             y_test = transform_to_label_data(labels)
             accs[model_bin_idx, idx] = model.score(x_test, y_test)
     return accs
+
+
+def evaluate_model_weights_by_time_bins(models_by_bin):
+    """For each time bin, look at the weights of models of that bin
+
+    Args: 
+        models_by_bin: np array of num_time_bins x num_splits of model objects
+    
+    Returns:
+        weights: np array of num_time_bins, num_neurons
+    """
