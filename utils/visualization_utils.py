@@ -18,8 +18,8 @@ def visualize_accuracy_across_time_bins(
         post_interval: int, in miliseconds
         interval_size: int, in miliseconds
     """
-    means = np.mean(accuracies, axis=1)
-    stds = np.std(accuracies, axis=1)
+    means = np.nanmean(accuracies, axis=1)
+    stds = np.nanstd(accuracies, axis=1)
     x = np.arange(-pre_interval, post_interval, interval_size)
     if right_align:
         # every x timepoint indicates the right of the bin

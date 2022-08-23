@@ -26,7 +26,6 @@ def main():
     behavior_file = spike_general.get_behavior_path(subject, session)
     behavior_data = pd.read_csv(fs.open(behavior_file))
     valid_beh = behavior_data[behavior_data.Response.isin(["Correct", "Incorrect"])]
-    trial_numbers = np.unique(valid_beh.TrialNumber)
     spike_times = spike_general.get_spike_times(fs, subject, session)
 
     print("Calculating spikes by trial interval")

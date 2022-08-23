@@ -148,14 +148,30 @@ def remove_selected_fixation(first_fixations_for_cards):
 
 
 def exclude_first_block(behavioral_data):
-    pass
+    return behavioral_data[behavioral_data.BlockNumber != 0]
 
 
 def get_figured_out_trials(behavioral_data):
-    pass
+    """
+    Get trials that fall into the 8/8 or 16/20 conditions
+    for rule switches
+    """
+    def label_trials(block_group):
+        block_len = len(block_group)
+        block_group["TrialUntilRuleChange"] = block_len - block_group["TrialAfterRuleChange"]
+        last_eight = block_group[block_group["TrialUntilRuleChange"] <= 8]
+        if (last_eight.Response == "Correct").all():
+            return last_eight
+        else:
+            return block_group[block_group["TrialUntilRuleChange"] <= 20]
+    block_groups = behavioral_data.groupby(["BlockNumber"], as_index=False)
+    return block_groups.apply(label_trials).reset_index()
+
 
 def get_not_figured_out_trials(behavioral_data):
-    pass
+    figured_out_trial_nums = get_figured_out_trials(behavioral_data).TrialNumber
+    return behavioral_data[~behavioral_data.TrialNumber.isin(figured_out_trial_nums)]
+
 
 def get_first_n_in_blocks(behavioral_data):
     pass

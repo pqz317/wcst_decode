@@ -69,7 +69,13 @@ def evaluate_classifier(clf, firing_rates, feature_selections, trial_splitter, s
         clf = clf.fit(x_train, y_train)
 
         train_acc = clf.score(x_train, y_train)
-        test_acc = clf.score(x_test, y_test)
+
+        # to account for the fact that certain splitters with certain
+        # filters may result in no test data. 
+        if len(y_test) > 0 and len(x_test) > 0:
+            test_acc = clf.score(x_test, y_test)
+        else:
+            test_acc = np.nan
 
         train_accs.append(train_acc)
         test_accs.append(test_acc)
