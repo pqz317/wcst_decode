@@ -122,9 +122,32 @@ def get_firing_rates_by_interval(spData, bins, smoothing):
 
 def get_temporal_drive_unit_ids(fs, subject, session):
     unit_info = spike_general.list_session_units(fs, subject, session)
-    return unit_info[~unit_info["Channel"].str.contains("a")].UnitID.unique().astype(int)
+    temp_units = unit_info[~unit_info["Channel"].str.contains("a")].UnitID.unique().astype(int)
+    # HACK: converting to 0 index
+    return temp_units - 1
 
     
 def get_anterior_drive_unit_ids(fs, subject, session):
     unit_info = spike_general.list_session_units(fs, subject, session)
-    return unit_info[unit_info["Channel"].str.contains("a")].UnitID.unique().astype(int)
+    ant_units = unit_info[unit_info["Channel"].str.contains("a")].UnitID.unique().astype(int)
+    # HACK: converting to 0 index
+    return ant_units - 1
+
+def get_variances_for_units(firing_rates):
+    """Per unit, calculate variances for SpikeCounts, FiringRate
+    Across all trials and time intervals
+
+    Args:
+        firing_rates: df with UnitID, SpikeCounts, FiringRate columns
+    
+    Returns:
+        variances: df with UnitID, SpikeCountVar, FiringRateVar columns
+    """
+    def calc_var_for_unit(unit):
+        firing_rate_var = np.var(unit.FiringRate)
+        spike_count_var = np.var(unit.SpikeCounts)
+        return pd.Series(
+            [firing_rate_var, spike_count_var], 
+            index=["FiringRateVar", "SpikeCountVar"]
+        )
+    return firing_rates.groupby(["UnitID"]).apply(calc_var_for_unit).reset_index()
