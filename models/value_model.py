@@ -16,18 +16,19 @@ class ValueModel(nn.Module):
         super().__init__()  # needed to invoke the properties of the parent class nn.Module
         self.linear = nn.Linear(n_inputs, n_values) # neural activity --> output classes
 
-    def forward(self, neural_activity, cards_by_trials):
+    def forward(self, neural_activity, card_masks):
         """
         Args
             neural_activity: batch_size x 59
-            cards: batch_size x 4 (cards) x 3 features
+            card_masks: batch_size x 4 (cards) x 12 features
         """
 
+        # batch_size x 12
         feature_values = self.linear(neural_activity)     
-        print(feature_values.shape)
-        card_values = torch.empty((cards_by_trials.shape[0], cards_by_trials.shape[1]))
-        for trial_idx in range(cards_by_trials.shape[0]):
-            for card_idx in range(cards_by_trials.shape[1]):
-                feature_idxs = cards_by_trials[trial_idx, card_idx]
-                card_values[trial_idx, card_idx] = torch.sum(feature_values[trial_idx, feature_idxs])
-        return card_values
+
+        # add dimension, repeat along added dim
+        # new dims batch_size x 4 x 12
+        expanded = feature_values.unsqueeze(1).repeat(1, 4, 1)
+        masked = expanded * card_masks
+        summed = torch.sum(masked, dim=2)
+        return summed

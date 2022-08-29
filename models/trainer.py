@@ -11,7 +11,9 @@ class Trainer:
     def train(self, model, x_train, y_train, cards_train=None):
         device = "cuda" if torch.cuda.is_available() else "cpu"
         model = model.to(device)
-        x_train =  torch.Tensor(x_train).to(device)
+        x_train = torch.Tensor(x_train).to(device)
+        if cards_train is not None:
+            cards_train = torch.Tensor(cards_train).to(torch.long).to(device)
         y_train = torch.Tensor(y_train).to(torch.long).to(device)
 
         criterion = nn.CrossEntropyLoss().to(device)
@@ -21,7 +23,7 @@ class Trainer:
         losses = np.empty((self.max_iter))
         for epoch_idx in range(self.max_iter):
             optimizer.zero_grad()
-            if cards_train: 
+            if cards_train is not None: 
                 out = model(x_train, cards_train)
             else:
                 out = model(x_train)

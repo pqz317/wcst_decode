@@ -50,12 +50,14 @@ def transform_cards_or_none(cards_by_trial, trials_filter=None):
 
     if trials_filter is not None: 
         cards_by_trial = cards_by_trial[cards_by_trial["TrialNumber"].isin(trials_filter)]
-    cards = np.empty((len(cards_by_trial), 4, 3), dtype=int)
+    # create an array of falses
+    cards = np.zeros((len(cards_by_trial), 4, 12), dtype=int)
     for card_idx in range(4):
-        for dim_idx, dim in enumerate(["Color", "Shape", "Pattern"]):
+        for dim in ["Color", "Shape", "Pattern"]:
             feature_names = cards_by_trial[f"Item{card_idx}{dim}"]
             features_idx = feature_names.apply(lambda f: FEATURES.index(f))
-            cards[:, card_idx, dim_idx] = features_idx
+            # for each trial, make the corresponding feature from features_idx at trial idx 1. 
+            cards[np.arange(len(cards_by_trial)), card_idx, features_idx] = 1
     return cards
 
 

@@ -54,6 +54,25 @@ def get_selection_features(behavioral_data):
         selections.append([row["TrialNumber"], color, shape, pattern])
     return pd.DataFrame(selections, columns=["TrialNumber", "Color", "Shape", "Pattern"])
 
+def get_shuffled_card_idxs(behavioral_data):
+    """Per Trial, shuffles the indexes of the cards, so that the correct card
+    is no longer at index 0. 
+    """
+    rng = np.random.default_rng()
+    data = []
+
+    for _, row in behavioral_data.iterrows():
+        new_row = {}
+        shuffled_idxs = np.arange(0, 4)
+        rng.shuffle(shuffled_idxs)
+        for feature_dim in ["Color", "Shape", "Pattern"]:
+            for old_idx, new_idx in enumerate(shuffled_idxs):
+                new_row[f"Item{new_idx}{feature_dim}"] = row[f"Item{old_idx}{feature_dim}"]
+        new_row["ItemChosen"] = shuffled_idxs[int(row["ItemChosen"])]
+        new_row["TrialNumber"] = row["TrialNumber"]
+        data.append(new_row)
+    return pd.DataFrame(data)
+
 def get_fixation_features(behavioral_data, raw_fixation_times):
     """Given behavioral data and fixation times, constructs table
     with fixation times and features of card fixating on. 
