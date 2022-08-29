@@ -4,6 +4,13 @@ from trial_splitters.trial_splitter import TrialSplitter
 import pandas as pd
 import copy
 
+FEATURES = [
+    'CIRCLE', 'SQUARE', 'STAR', 'TRIANGLE', 
+    'CYAN', 'GREEN', 'MAGENTA', 'YELLOW', 
+    'ESCHER', 'POLKADOT', 'RIPPLE', 'SWIRL'
+]
+
+
 def transform_to_input_data(firing_rates, trials_filter=None):
     """Transform DataFrame with columns TrialNumber, UnitID, TimeBins, Value
     to a num_trials x num_inputs numpy array for classifier input
@@ -24,6 +31,32 @@ def transform_to_input_data(firing_rates, trials_filter=None):
     num_inputs = num_time_bins * num_units
     sorted_by_trial = firing_rates.sort_values(by=["TrialNumber", "UnitID"])
     return sorted_by_trial["Value"].to_numpy().reshape((num_trials, num_inputs))
+    
+
+def transform_cards_or_none(cards_by_trial, trials_filter=None):
+    """Transform DataFrame with columns TrialNumber, Item<Index of Card><Feature Dimension>s
+    to a num_trials x num_cards x num_features numpy array, with each element representing
+    a feature as the 0 - 11 index of a FEATURES constant array. 
+
+    Args:
+        card_by_trial: described above
+        trials_filter: List of trial numbers, which trials to filter on.
+
+    Returns: 
+        np array of num_trials x num_cards (4) x num_features (3)
+    """
+    if cards_by_trial is None:
+        return None
+
+    if trials_filter is not None: 
+        cards_by_trial = cards_by_trial[cards_by_trial["TrialNumber"].isin(trials_filter)]
+    cards = np.empty((len(cards_by_trial), 4, 3), dtype=int)
+    for card_idx in range(4):
+        for dim_idx, dim in enumerate(["Color", "Shape", "Pattern"]):
+            feature_names = cards_by_trial[f"Item{card_idx}{dim}"]
+            features_idx = feature_names.apply(lambda f: FEATURES.index(f))
+            cards[:, card_idx, dim_idx] = features_idx
+    return cards
 
 
 def transform_to_label_data(feature_selections, trials_filter=None):
@@ -42,7 +75,9 @@ def transform_to_label_data(feature_selections, trials_filter=None):
     return sorted_by_trial["Feature"].to_numpy()
 
 
-def evaluate_classifier(clf, firing_rates, feature_selections, trial_splitter, seed=10):
+
+
+def evaluate_classifier(clf, firing_rates, feature_selections, trial_splitter, cards=None, seed=10):
     """Given classifier, inputs, and labels, evaluate it with the trial splitter.
 
     Args:
@@ -62,18 +97,20 @@ def evaluate_classifier(clf, firing_rates, feature_selections, trial_splitter, s
     rng = np.random.default_rng(seed)
     for train_trials, test_trials in trial_splitter:
         x_train = transform_to_input_data(firing_rates, trials_filter=train_trials)
+        cards_train = transform_cards_or_none(cards, trials_filter=train_trials)
         y_train = transform_to_label_data(feature_selections, trials_filter=train_trials)
 
         x_test = transform_to_input_data(firing_rates, trials_filter=test_trials)
+        cards_test = transform_cards_or_none(cards, trials_filter=test_trials)
         y_test = transform_to_label_data(feature_selections, trials_filter=test_trials)
-        clf = clf.fit(x_train, y_train)
+        clf = clf.fit(x_train, y_train, cards_train)
         
-        train_acc = clf.score(x_train, y_train)
+        train_acc = clf.score(x_train, y_train, cards_train)
 
         # to account for the fact that certain splitters with certain
         # filters may result in no test data. 
         if len(y_test) > 0 and len(x_test) > 0:
-            test_acc = clf.score(x_test, y_test)
+            test_acc = clf.score(x_test, y_test, cards_test)
         else:
             test_acc = np.nan
 
@@ -82,7 +119,7 @@ def evaluate_classifier(clf, firing_rates, feature_selections, trial_splitter, s
 
         y_test_shuffle = y_test
         rng.shuffle(y_test_shuffle)
-        shuffled_acc = clf.score(x_test, y_test_shuffle)
+        shuffled_acc = clf.score(x_test, y_test_shuffle, cards_test)
         shuffled_accs.append(shuffled_acc)
         
         # needed so that every element in models is 
@@ -92,7 +129,7 @@ def evaluate_classifier(clf, firing_rates, feature_selections, trial_splitter, s
     return np.array(train_accs), np.array(test_accs), np.array(shuffled_accs), np.array(models)
 
 
-def evaluate_classifiers_by_time_bins(clf, inputs, labels, time_bins, splitter):
+def evaluate_classifiers_by_time_bins(clf, inputs, labels, time_bins, splitter, cards=None):
     """For every time bin, separately trains/tests classifiers based on the splitter, 
     And returns back a distribution of accuracies for that time bin. 
     Args:
@@ -119,7 +156,7 @@ def evaluate_classifiers_by_time_bins(clf, inputs, labels, time_bins, splitter):
         # need isclose because the floats get stored weird
         inputs_for_bin = inputs[np.isclose(inputs["TimeBins"], bin)]
         _, test_accs, shuffled_accs, models = evaluate_classifier(
-            clf, inputs_for_bin, labels, splits
+            clf, inputs_for_bin, labels, splits, cards=cards
         )
         test_accs_by_bin[i, :] = test_accs
         shuffled_accs_by_bin[i, :] = shuffled_accs

@@ -1,6 +1,9 @@
 import numpy as np
 import pandas as pd
 
+# sorted features by shape, color, pattern
+FEATURES = ['CIRCLE' 'SQUARE' 'STAR' 'TRIANGLE', 'CYAN' 'GREEN' 'MAGENTA' 'YELLOW', 'ESCHER' 'POLKADOT' 'RIPPLE' 'SWIRL']
+
 def get_trial_intervals(behavioral_data, event="FeedbackOnset", pre_interval=0, post_interval=0):
     """Per trial, finds time interval surrounding some event in the behavioral data
 
