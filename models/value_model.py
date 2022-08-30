@@ -12,9 +12,10 @@ class ValueModel(nn.Module):
         in_layer (nn.Linear): weights and biases of input layer
     """
 
-    def __init__(self, n_inputs, n_values):
+    def __init__(self, n_inputs, n_values, agg_func=torch.sum):
         super().__init__()  # needed to invoke the properties of the parent class nn.Module
         self.linear = nn.Linear(n_inputs, n_values) # neural activity --> output classes
+        self.agg_func = agg_func
 
     def forward(self, neural_activity, card_masks):
         """
@@ -30,5 +31,8 @@ class ValueModel(nn.Module):
         # new dims batch_size x 4 x 12
         expanded = feature_values.unsqueeze(1).repeat(1, 4, 1)
         masked = expanded * card_masks
-        summed = torch.sum(masked, dim=2)
-        return summed
+        values_agg = self.agg_func(masked, dim=2)
+        if self.agg_func == torch.max:
+            # annoying check because max func returns both values and indices
+            values_agg = values_agg.values
+        return values_agg

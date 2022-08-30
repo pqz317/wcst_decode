@@ -105,6 +105,9 @@ def evaluate_classifier(clf, firing_rates, feature_selections, trial_splitter, c
         x_test = transform_to_input_data(firing_rates, trials_filter=test_trials)
         cards_test = transform_cards_or_none(cards, trials_filter=test_trials)
         y_test = transform_to_label_data(feature_selections, trials_filter=test_trials)
+        # print(len(x_train))
+        # print(len(y_train))
+        # print(cards_train.shape)
         clf = clf.fit(x_train, y_train, cards_train)
         
         train_acc = clf.score(x_train, y_train, cards_train)
@@ -166,7 +169,7 @@ def evaluate_classifiers_by_time_bins(clf, inputs, labels, time_bins, splitter, 
 
     return test_accs_by_bin, shuffled_accs_by_bin, models_by_bin, splits
 
-def cross_evaluate_by_time_bins(models_by_bin, inputs, labels, splits, input_bins):
+def cross_evaluate_by_time_bins(models_by_bin, inputs, labels, splits, input_bins, cards=None):
     """
     For each time bin, evaluate models trained on that time bin against 
     data in other time bins 
@@ -196,8 +199,9 @@ def cross_evaluate_by_time_bins(models_by_bin, inputs, labels, splits, input_bin
                 else:
                     trials_filter = None
                 x_test = transform_to_input_data(inputs_for_bin, trials_filter=trials_filter)
+                cards_test = transform_cards_or_none(cards, trials_filter=trials_filter)
                 y_test = transform_to_label_data(labels, trials_filter=trials_filter)
-                accs.append(model.score(x_test, y_test))
+                accs.append(model.score(x_test, y_test, cards_test))
             avg_acc = np.mean(accs)
             cross_accs[model_bin_idx, test_bin_idx] = avg_acc
     return cross_accs

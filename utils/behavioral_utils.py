@@ -54,11 +54,11 @@ def get_selection_features(behavioral_data):
         selections.append([row["TrialNumber"], color, shape, pattern])
     return pd.DataFrame(selections, columns=["TrialNumber", "Color", "Shape", "Pattern"])
 
-def get_shuffled_card_idxs(behavioral_data):
+def get_shuffled_card_idxs(behavioral_data, seed=42):
     """Per Trial, shuffles the indexes of the cards, so that the correct card
     is no longer at index 0. 
     """
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(seed)
     data = []
 
     for _, row in behavioral_data.iterrows():

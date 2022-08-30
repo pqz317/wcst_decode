@@ -1,5 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
+import seaborn as sns
+
 
 def visualize_accuracy_across_time_bins(
     accuracies, 
@@ -26,6 +28,13 @@ def visualize_accuracy_across_time_bins(
         x = x + interval_size
     ax.plot(x, means, label=label)
     ax.fill_between(x, means - stds, means + stds, alpha=0.5)
+
+
+def visualize_accuracy_bars(accuracies, labels, ax):
+    sns.barplot(data=accuracies, capsize=.1, ci="sd", ax=ax)
+    sns.swarmplot(data=accuracies, color="0", alpha=.35, ax=ax)
+    ax.set_xticklabels(labels)
+
 
 
 def plot_hist_of_selections(feature_selections, feature_dim, ax):
