@@ -123,15 +123,13 @@ def get_firing_rates_by_interval(spData, bins, smoothing):
 def get_temporal_drive_unit_ids(fs, subject, session):
     unit_info = spike_general.list_session_units(fs, subject, session)
     temp_units = unit_info[~unit_info["Channel"].str.contains("a")].UnitID.unique().astype(int)
-    # HACK: converting to 0 index
-    return temp_units - 1
+    return temp_units
 
     
 def get_anterior_drive_unit_ids(fs, subject, session):
     unit_info = spike_general.list_session_units(fs, subject, session)
     ant_units = unit_info[unit_info["Channel"].str.contains("a")].UnitID.unique().astype(int)
-    # HACK: converting to 0 index
-    return ant_units - 1
+    return ant_units
 
 def get_variances_for_units(firing_rates):
     """Per unit, calculate variances for SpikeCounts, FiringRate

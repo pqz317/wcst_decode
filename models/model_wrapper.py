@@ -32,5 +32,5 @@ class ModelWrapper:
         return score
 
     @property
-    def _coef(self):
-        return self.model.linear.weight
+    def coef_(self):
+        return self.model.linear.weight.detach().cpu().numpy()

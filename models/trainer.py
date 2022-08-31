@@ -22,6 +22,7 @@ class Trainer:
 
         losses = np.empty((self.max_iter))
         for epoch_idx in range(self.max_iter):
+            # x_train: num_training_trials x num_inputs (num_neurons)
             optimizer.zero_grad()
             if cards_train is not None: 
                 out = model(x_train, cards_train)
