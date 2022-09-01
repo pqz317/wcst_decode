@@ -131,21 +131,23 @@ def get_anterior_drive_unit_ids(fs, subject, session):
     ant_units = unit_info[unit_info["Channel"].str.contains("a")].UnitID.unique().astype(int)
     return ant_units
 
-def get_variances_for_units(firing_rates):
-    """Per unit, calculate variances for SpikeCounts, FiringRate
+def get_stats_for_units(firing_rates):
+    """Per unit, calculate mean, variance for SpikeCounts, FiringRate
     Across all trials and time intervals
 
     Args:
         firing_rates: df with UnitID, SpikeCounts, FiringRate columns
     
     Returns:
-        variances: df with UnitID, SpikeCountVar, FiringRateVar columns
+        stats: df with UnitID, SpikeCountMean, FiringRateMean, SpikeCountVar, FiringRateVar columns
     """
     def calc_var_for_unit(unit):
+        firing_rate_mean = np.mean(unit.FiringRate)
+        spike_count_mean = np.mean(unit.SpikeCounts)
         firing_rate_var = np.var(unit.FiringRate)
         spike_count_var = np.var(unit.SpikeCounts)
         return pd.Series(
-            [firing_rate_var, spike_count_var], 
-            index=["FiringRateVar", "SpikeCountVar"]
+            [firing_rate_mean, spike_count_mean, firing_rate_var, spike_count_var], 
+            index=["FiringRateMean", "SpikeCountMean", "FiringRateVar", "SpikeCountVar"]
         )
     return firing_rates.groupby(["UnitID"]).apply(calc_var_for_unit).reset_index()
