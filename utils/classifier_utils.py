@@ -236,7 +236,7 @@ def evaluate_model_weights_by_time_bins(models_by_bin, num_neurons, num_classes)
         models_by_bin: np array of num_time_bins x num_splits of model objects
     
     Returns:
-        weights: np array of num_time_bins, num_neurons
+        weights: np array of num_neurons, num_time_bins
     """
 
     # create weight matrix of num_time_bins, num_splits, num_neurons, num_classes
@@ -256,4 +256,23 @@ def evaluate_model_weights_by_time_bins(models_by_bin, num_neurons, num_classes)
     # num_time_bins, num_splits, num_neurons
     max_across_classes = np.amax(avg_across_splits, axis=2)
 
-    return max_across_classes
+    return max_across_classes.T
+
+
+def convert_model_weights_to_df(weights, pre_interval, interval_size):
+    """
+    Converts weights that's num_neurons x num_time_bins into df
+    which will have rows UnitID, TimeBin, Weight
+    """
+    num_neurons, num_time_bins = weights.shape
+    print(num_neurons)
+    reshaped = np.reshape(weights, num_neurons * num_time_bins)
+    idx = np.arange(num_neurons * num_time_bins)
+    unit_ids = idx // num_time_bins
+    time_bins = (idx % num_time_bins) * 100 + pre_interval
+    return pd.DataFrame({
+        "UnitID": unit_ids,
+        "TimeBin": time_bins,
+        "Weight": reshaped,
+    })
+

@@ -7,7 +7,8 @@ RUN git clone https://github.com/learning-2-learn/lfp_tools /src/lfp_tools &&\
 RUN git clone https://github.com/learning-2-learn/spike_tools.git /src/spike_tools &&\
         pip3 install -e /src/spike_tools
 
-RUN pip install plotly==5.10.0
+RUN pip3 install plotly==5.10.0
+RUN pip3 install --upgrade s3fs
 
 COPY . /src/wcst_decode
 RUN pip3 install -e /src/wcst_decode
