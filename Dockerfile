@@ -9,6 +9,7 @@ RUN git clone https://github.com/learning-2-learn/spike_tools.git /src/spike_too
 
 RUN pip3 install plotly==5.10.0
 RUN pip3 install --upgrade s3fs
+RUN pip3 install numpy-stl
 
 COPY . /src/wcst_decode
 RUN pip3 install -e /src/wcst_decode
