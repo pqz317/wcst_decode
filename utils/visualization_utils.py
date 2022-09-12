@@ -40,3 +40,9 @@ def visualize_accuracy_bars(accuracies, labels, ax):
 def plot_hist_of_selections(feature_selections, feature_dim, ax):
     dist = feature_selections[feature_dim]
     ax.hist(dist)
+
+
+def plot_values_by_trial(trial_numbers, )
+    """
+    Plots values by trial as a color grid, 
+    """

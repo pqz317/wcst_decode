@@ -194,8 +194,6 @@ def get_not_figured_out_trials(behavioral_data):
     return behavioral_data[~behavioral_data.TrialNumber.isin(figured_out_trial_nums)]
 
 
-def get_first_n_in_blocks(behavioral_data):
-    pass
 
-def get_last_n_in_blocks(behavioral_data):
-    pass
+
+
