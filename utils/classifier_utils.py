@@ -10,6 +10,12 @@ FEATURES = [
     'ESCHER', 'POLKADOT', 'RIPPLE', 'SWIRL'
 ]
 
+HUMAN_FEATURES = [
+    'Q', 'C', 'T', 'S',
+    'M', 'Y', 'B', 'G', 
+    'R', 'P', 'Z', 'L',
+]
+
 
 def transform_to_input_data(firing_rates, trials_filter=None):
     """Transform DataFrame with columns TrialNumber, UnitID, TimeBins, Value
@@ -55,7 +61,7 @@ def transform_cards_or_none(cards_by_trial, trials_filter=None):
     for card_idx in range(4):
         for dim in ["Color", "Shape", "Pattern"]:
             feature_names = cards_by_trial[f"Item{card_idx}{dim}"]
-            features_idx = feature_names.apply(lambda f: FEATURES.index(f))
+            features_idx = feature_names.apply(lambda f: HUMAN_FEATURES.index(f))
             # for each trial, make the corresponding feature from features_idx at trial idx 1. 
             cards[np.arange(len(cards_by_trial)), card_idx, features_idx] = 1
     return cards
@@ -150,6 +156,7 @@ def evaluate_classifiers_by_time_bins(clf, inputs, labels, time_bins, splitter, 
         trained_models_by_bin: np array of num_time_bins x num_splits of model objects
         splits: list of tuples, each element containing train and test lists of IDs
     """
+    training_accs_by_bin = np.empty((len(time_bins), len(splitter)))
     test_accs_by_bin = np.empty((len(time_bins), len(splitter)))
     shuffled_accs_by_bin = np.empty((len(time_bins), len(splitter)))
     models_by_bin = np.empty((len(time_bins), len(splitter)), dtype=object)
@@ -160,14 +167,15 @@ def evaluate_classifiers_by_time_bins(clf, inputs, labels, time_bins, splitter, 
         print(f"Evaluating for bin {bin}")
         # need isclose because the floats get stored weird
         inputs_for_bin = inputs[np.isclose(inputs["TimeBins"], bin)]
-        _, test_accs, shuffled_accs, models = evaluate_classifier(
+        training_accs, test_accs, shuffled_accs, models = evaluate_classifier(
             clf, inputs_for_bin, labels, splits, cards=cards
         )
+        training_accs_by_bin[i, :] = training_accs
         test_accs_by_bin[i, :] = test_accs
         shuffled_accs_by_bin[i, :] = shuffled_accs
         models_by_bin[i, :] = models
 
-    return test_accs_by_bin, shuffled_accs_by_bin, models_by_bin, splits
+    return training_accs_by_bin, test_accs_by_bin, shuffled_accs_by_bin, models_by_bin, splits
 
 def cross_evaluate_by_time_bins(models_by_bin, inputs, labels, splits, input_bins, cards=None):
     """
