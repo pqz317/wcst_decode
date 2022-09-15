@@ -61,7 +61,7 @@ def transform_cards_or_none(cards_by_trial, trials_filter=None):
     for card_idx in range(4):
         for dim in ["Color", "Shape", "Pattern"]:
             feature_names = cards_by_trial[f"Item{card_idx}{dim}"]
-            features_idx = feature_names.apply(lambda f: HUMAN_FEATURES.index(f))
+            features_idx = feature_names.apply(lambda f: FEATURES.index(f))
             # for each trial, make the corresponding feature from features_idx at trial idx 1. 
             cards[np.arange(len(cards_by_trial)), card_idx, features_idx] = 1
     return cards
@@ -235,6 +235,28 @@ def evaluate_models_by_time_bins(models_by_bin, inputs, labels, bins):
             y_test = transform_to_label_data(labels)
             accs[model_bin_idx, idx] = model.score(x_test, y_test)
     return accs
+
+def evaluate_model_by_training_epoch(wrapper, splitter, inputs, labels, cards=None):
+    """For a given time bin, evaluate model performance as a function of training epoch
+    NOTE: incompatible with sklearn models
+    """
+    for train_trials, test_trials in splitter:
+        model = wrapper.model_type(**wrapper.init_params)
+
+        x_train = transform_to_input_data(inputs, trials_filter=train_trials)
+        cards_train = transform_cards_or_none(cards, trials_filter=train_trials)
+        y_train = transform_to_label_data(labels, trials_filter=train_trials)
+        y_train_idxs = np.array([wrapper.labels_to_idx[label] for label in y_train.tolist()]).astype(int)
+
+        x_test = transform_to_input_data(inputs, trials_filter=test_trials)
+        cards_test = transform_cards_or_none(cards, trials_filter=test_trials)
+        y_test = transform_to_label_data(labels, trials_filter=test_trials)
+        y_test_idxs = np.array([wrapper.labels_to_idx[label] for label in y_test.tolist()]).astype(int)
+
+        losses, intermediates = wrapper.trainer.train(model, x_train, y_train_idxs, cards_train)
+        for int_model in intermediates:
+            int_model()
+    pass
 
 
 def evaluate_model_weights_by_time_bins(models_by_bin, num_neurons, num_classes):
