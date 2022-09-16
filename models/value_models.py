@@ -153,7 +153,7 @@ class ValueNormedModel(FeatureValueBaseModel):
 
     def __init__(self, n_inputs, n_values, agg_func=torch.sum):
         super().__init__(agg_func)
-        self.norm = nn.BatchNorm1d(n_inputs)
+        self.norm = nn.BatchNorm1d(n_inputs, affine=False)
         self.linear = nn.Linear(n_inputs, n_values) # neural activity --> output classes
 
     def forward(self, neural_activity, card_masks):
@@ -180,7 +180,7 @@ class ValueNormedExpModel(FeatureValueBaseModel):
 
     def __init__(self, n_inputs, n_values, agg_func=torch.sum):
         super().__init__(agg_func)
-        self.norm = nn.BatchNorm1d(n_inputs)
+        self.norm = nn.BatchNorm1d(n_inputs, affine=False)
         self.linear = nn.Linear(n_inputs, n_values) # neural activity --> output classes
         self.exp = ExpModule()
 
