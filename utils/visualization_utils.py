@@ -52,7 +52,7 @@ def plot_hist_of_selections(feature_selections, feature_dim, ax):
 #     Plots values by trial as a color grid, 
 #     """
 
-def plotly_add_glass_brain(fs, fig1, subject, areas=['brain'], show_axis=False):
+def plotly_add_glass_brain(fig1, subject, areas=['brain'], show_axis=False):
     '''
     Adds a glass brain to a plotly figure
     Code for rendering stl file is from here:
@@ -88,7 +88,7 @@ def plotly_add_glass_brain(fs, fig1, subject, areas=['brain'], show_axis=False):
     for area in areas:
         if area=='brain':
             filename = 'glass_brain.stl'
-            colorscale= [[0, 'lightblue'], [1, 'lightblue']]
+            colorscale= [[0, 'whitesmoke'], [1, 'whitesmoke']]
         elif area=='fef':
             filename = 'FEF_interaural.stl'
             colorscale= [[0, 'darkblue'], [1, 'darkblue']]
@@ -117,19 +117,23 @@ def plotly_add_glass_brain(fs, fig1, subject, areas=['brain'], show_axis=False):
         x, y, z = vertices.T
     
         mesh3D = go.Mesh3d(x=x, y=y, z=z, i=I, j=J, k=K, \
-                           opacity=0.3, colorscale=colorscale, intensity=z, showscale=False)
+                           opacity=0.3, colorscale=colorscale, intensity=z, showscale=False, name=area)
     
-        layout = go.Layout(scene_xaxis_visible=False, scene_yaxis_visible=False, scene_zaxis_visible=False)
+        layout = go.Layout(
+            scene_xaxis_visible=False, 
+            scene_yaxis_visible=False,
+            scene_zaxis_visible=False,
+            showlegend=True
+        )
     
         fig2 = go.Figure(
-            data=[mesh3D, {'name':area}], 
+            data=[mesh3D], 
             layout=layout
         )
         fig_data = fig_data + fig2.data
         
-    if show_axis:
-        fig3 = go.Figure(data=fig_data)
-    else:
-        fig3 = go.Figure(data=fig_data, layout=layout)
+    fig3 = go.Figure(data=fig_data, layout=fig1.layout)
+    if not show_axis:
+        fig3.update_layout(layout)
     
     return(fig3)
