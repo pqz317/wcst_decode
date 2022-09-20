@@ -52,7 +52,7 @@ def plot_hist_of_selections(feature_selections, feature_dim, ax):
 #     Plots values by trial as a color grid, 
 #     """
 
-def plotly_add_glass_brain(fig1, subject, areas=['brain'], show_axis=False):
+def plotly_add_glass_brain(fs, fig1, subject, areas=['brain'], show_axis=False):
     '''
     Adds a glass brain to a plotly figure
     Code for rendering stl file is from here:

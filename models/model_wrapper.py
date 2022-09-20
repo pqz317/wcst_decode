@@ -3,7 +3,8 @@ import torch
 
 class ModelWrapper:
     def __init__(self, model_type, init_params, trainer, labels):
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        # self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = "cpu"
         self.model_type = model_type
         self.init_params = init_params
         self.trainer = trainer
