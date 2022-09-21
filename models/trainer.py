@@ -10,8 +10,7 @@ class Trainer:
         self.weight_decay = weight_decay
 
     def train(self, model, x_train, y_train, cards_train=None, return_intermediates=False):
-        # device = "cuda" if torch.cuda.is_available() else "cpu"
-        device = "cpu"
+        device = "cuda" if torch.cuda.is_available() else "cpu"
         model = model.to(device)
         x_train = torch.Tensor(x_train).to(device)
         if cards_train is not None:
