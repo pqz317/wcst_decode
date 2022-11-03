@@ -193,6 +193,56 @@ def get_not_figured_out_trials(behavioral_data):
     figured_out_trial_nums = get_figured_out_trials(behavioral_data).TrialNumber
     return behavioral_data[~behavioral_data.TrialNumber.isin(figured_out_trial_nums)]
 
+def get_first_correct_in_blocks(behavioral_data):
+    def first_correct(block_group):
+        corrects = block_group[block_group.Response == "Correct"]
+        if len(corrects) > 0: 
+            return corrects.iloc[0]
+        else: 
+            return None
+    # filter out last block
+    last_block = behavioral_data.BlockNumber.max()
+    without_last_block = behavioral_data[behavioral_data.BlockNumber != last_block]
+    block_grouped = without_last_block.groupby(["BlockNumber"], as_index=False)
+    first_corrects = block_grouped.apply(first_correct).dropna(how='all').reset_index()
+    return first_corrects
+
+def get_trial_after_first_correct_stats(behavioral_data, first_corrects):
+    trial_nums = behavioral_data.TrialNumber.values
+    first_correct_idxs = np.argwhere(np.isin(trial_nums, first_corrects.TrialNumber.values)).squeeze()
+    next_idxs = first_correct_idxs + 1
+    next_trial_nums = trial_nums[next_idxs]
+    next_trials = behavioral_data[behavioral_data.TrialNumber.isin(next_trial_nums)]
+    next_trials["LastPattern"] = first_corrects.Item0Pattern.values
+    next_trials["LastColor"] = first_corrects.Item0Color.values
+    next_trials["LastShape"] = first_corrects.Item0Shape.values
+
+    def get_num_prev_features(row):
+        has_two_idx = -1
+        has_one_idx = -1
+        for i in range(4):
+            num_prev = 0
+            for dim in ["Pattern", "Color", "Shape"]:
+                if row[f"Item{i}{dim}"] == row[f"Last{dim}"]:
+                    num_prev += 1
+            if num_prev ==2:
+                has_two_idx = i
+            if num_prev == 1:
+                has_one_idx = i
+            row[f"Item{i}PrevFeatures"] = num_prev
+            row["HasTwoIdx"] = has_two_idx
+            row["HasOneIdx"] = has_one_idx
+        return row
+    next_trials_prev = next_trials.apply(get_num_prev_features, axis=1).reset_index()
+    return next_trials_prev
+
+def get_chosen_two_out_of_has_two(behavioral_data):
+    first_corrects = get_first_correct_in_blocks(behavioral_data)
+    next_trials_prev = get_trial_after_first_correct_stats(behavioral_data, first_corrects)
+    has_two = next_trials_prev[next_trials_prev.HasTwoIdx != -1]
+    chosen_two = has_two[has_two.ItemChosen.astype(int) == has_two.HasTwoIdx]
+    chosen_one = has_two[has_two.ItemChosen.astype(int) == has_two.HasOneIdx]
+    return (len(chosen_one), len(chosen_two), len(has_two))
 
 
 
