@@ -9,3 +9,5 @@ notebooks/scrap.ipynb
 
 # any intermediate data locally
 data/
+
+.DS_Store

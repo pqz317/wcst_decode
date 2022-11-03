@@ -21,3 +21,6 @@ class RandomSplitter(TrialSplitter):
             self.n += 1
             return (train, test)
         raise StopIteration
+
+    def __len__(self) -> int:
+        return self.num_runs
