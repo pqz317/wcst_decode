@@ -14,13 +14,13 @@ species = 'nhp'
 subject = 'SA'
 exp = 'WCST'
 session = 20180802  # this is the session for which there are spikes at the moment.    
-# pre_interval = 1300
-# post_interval = 1500
-# interval_size = 100
+pre_interval = 1300
+post_interval = 2000
+interval_size = 50
 
-pre_interval = 2000
-post_interval = 0
-interval_size = 100
+# pre_interval = 2000
+# post_interval = 0
+# interval_size = 100
 
 def main():
     # grab behavioral data, spike data, trial numbers. 
