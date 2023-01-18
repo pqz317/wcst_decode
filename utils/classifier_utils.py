@@ -231,7 +231,8 @@ def evaluate_models_by_time_bins(models_by_bin, inputs, labels, bins):
         models = models_by_bin[model_bin_idx, :]
         for idx, model in enumerate(models):
             # assumes models, splits are ordered the same
-            x_test = transform_to_input_data(inputs)
+            inputs_for_bin = inputs[np.isclose(inputs["TimeBins"], bins[model_bin_idx])]
+            x_test = transform_to_input_data(inputs_for_bin)
             y_test = transform_to_label_data(labels)
             accs[model_bin_idx, idx] = model.score(x_test, y_test)
     return accs

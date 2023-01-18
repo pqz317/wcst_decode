@@ -17,6 +17,7 @@ class ModelWrapper:
         return self
 
     def predict(self, x_test, cards_test=None):
+        self.model.eval()
         x_test = torch.Tensor(x_test).to(self.device)
         if cards_test is not None:
             cards_test = torch.Tensor(cards_test).to(torch.long).to(self.device)
