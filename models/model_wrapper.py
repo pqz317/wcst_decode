@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from models.wcst_dataset import WcstDataset
 
 class ModelWrapper:
     def __init__(self, model_type, init_params, trainer, labels):
@@ -13,7 +14,8 @@ class ModelWrapper:
     def fit(self, x_train, y_train, cards_train=None):
         self.model = self.model_type(**self.init_params)
         y_train_idxs = np.array([self.labels_to_idx[label] for label in y_train.tolist()]).astype(int)
-        self.trainer.train(self.model, x_train, y_train_idxs, cards_train)
+        dataset = WcstDataset(x_train, y_train_idxs, cards_train)
+        self.trainer.train(self.model, dataset)
         return self
 
     def predict(self, x_test, cards_test=None):

@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.model_selection import train_test_split
 from trial_splitters.trial_splitter import TrialSplitter
+from models.wcst_dataset import WcstDataset
 import pandas as pd
 import copy
 
@@ -253,8 +254,8 @@ def evaluate_model_by_training_epoch(wrapper, splitter, inputs, labels, cards=No
         cards_test = transform_cards_or_none(cards, trials_filter=test_trials)
         y_test = transform_to_label_data(labels, trials_filter=test_trials)
         y_test_idxs = np.array([wrapper.labels_to_idx[label] for label in y_test.tolist()]).astype(int)
-
-        losses, intermediates = wrapper.trainer.train(model, x_train, y_train_idxs, cards_train)
+        dataset = WcstDataset(x_train, y_train_idxs, cards_train)
+        losses, intermediates = wrapper.trainer.train(model, dataset)
         for int_model in intermediates:
             int_model()
     pass
