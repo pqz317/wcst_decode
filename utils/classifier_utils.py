@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.model_selection import train_test_split
 from trial_splitters.trial_splitter import TrialSplitter
+from models.wcst_dataset import WcstDataset
 import pandas as pd
 import copy
 
@@ -111,9 +112,7 @@ def evaluate_classifier(clf, firing_rates, feature_selections, trial_splitter, c
         x_test = transform_to_input_data(firing_rates, trials_filter=test_trials)
         cards_test = transform_cards_or_none(cards, trials_filter=test_trials)
         y_test = transform_to_label_data(feature_selections, trials_filter=test_trials)
-        # print(len(x_train))
-        # print(len(y_train))
-        # print(cards_train.shape)
+        
         clf = clf.fit(x_train, y_train, cards_train)
         
         train_acc = clf.score(x_train, y_train, cards_train)
@@ -231,7 +230,8 @@ def evaluate_models_by_time_bins(models_by_bin, inputs, labels, bins):
         models = models_by_bin[model_bin_idx, :]
         for idx, model in enumerate(models):
             # assumes models, splits are ordered the same
-            x_test = transform_to_input_data(inputs)
+            inputs_for_bin = inputs[np.isclose(inputs["TimeBins"], bins[model_bin_idx])]
+            x_test = transform_to_input_data(inputs_for_bin)
             y_test = transform_to_label_data(labels)
             accs[model_bin_idx, idx] = model.score(x_test, y_test)
     return accs
@@ -252,8 +252,8 @@ def evaluate_model_by_training_epoch(wrapper, splitter, inputs, labels, cards=No
         cards_test = transform_cards_or_none(cards, trials_filter=test_trials)
         y_test = transform_to_label_data(labels, trials_filter=test_trials)
         y_test_idxs = np.array([wrapper.labels_to_idx[label] for label in y_test.tolist()]).astype(int)
-
-        losses, intermediates = wrapper.trainer.train(model, x_train, y_train_idxs, cards_train)
+        dataset = WcstDataset(x_train, y_train_idxs, cards_train)
+        losses, intermediates = wrapper.trainer.train(model, dataset)
         for int_model in intermediates:
             int_model()
     pass

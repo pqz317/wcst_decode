@@ -151,3 +151,14 @@ def get_stats_for_units(firing_rates):
             index=["FiringRateMean", "SpikeCountMean", "FiringRateVar", "SpikeCountVar"]
         )
     return firing_rates.groupby(["UnitID"]).apply(calc_var_for_unit).reset_index()
+
+def get_unit_fr_array(frs, column_name):
+    """ Given a dataframe with columns UnitID, column_name specified, 
+    Returns a num_units x num_time_bins numpy array
+    Args:
+        frs: dataframe with columns UnitID, column_name, 
+    Returns:
+        np array of dims: num_units x num_time_bins
+    """
+    grouped = frs[["UnitID", column_name]].groupby(by="UnitID").agg(list).to_numpy()
+    return np.stack(grouped.squeeze(), axis=0)

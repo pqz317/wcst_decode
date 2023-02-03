@@ -164,7 +164,7 @@ class ValueNormedModel(FeatureValueBaseModel):
         """
         # batch_size x 12
         normed = self.norm(neural_activity)
-        feature_values = self.linear(normed)     
+        feature_values = self.linear(normed)    
         return self.choice_from_values(feature_values, card_masks)
 
 class ValueNormedExpModel(FeatureValueBaseModel):
@@ -196,3 +196,81 @@ class ValueNormedExpModel(FeatureValueBaseModel):
         feature_probs = self.exp(feature_logits)
         choice_probs = self.choice_from_values(feature_probs, card_masks)
         return torch.log(choice_probs)
+
+class ValueNormedDropoutModel(FeatureValueBaseModel):
+    """Model where neural activity linearly maps to feature values
+
+    Args:
+        n_inputs (int): number of input units
+        n_values (int): number of feature values
+    """
+
+    def __init__(self, n_inputs, n_values, agg_func=torch.sum, p_dropout=0.1):
+        super().__init__(agg_func)
+        self.sequence = nn.Sequential(
+            nn.BatchNorm1d(n_inputs, affine=False),
+            nn.Dropout(p_dropout),
+            nn.Linear(n_inputs, n_values)
+        )
+
+    def forward(self, neural_activity, card_masks):
+        """
+        Args
+            neural_activity: batch_size x 59
+            card_masks: batch_size x 4 (cards) x 12 features
+        """
+        # batch_size x 12
+        feature_values = self.sequence(neural_activity)   
+        return self.choice_from_values(feature_values, card_masks)
+
+class ValueDropoutNormedModel(FeatureValueBaseModel):
+    """Model where neural activity linearly maps to feature values
+
+    Args:
+        n_inputs (int): number of input units
+        n_values (int): number of feature values
+    """
+
+    def __init__(self, n_inputs, n_values, agg_func=torch.sum, p_dropout=0.1):
+        super().__init__(agg_func)
+        self.sequence = nn.Sequential(
+            nn.Dropout(p_dropout),
+            nn.BatchNorm1d(n_inputs, affine=False),
+            nn.Linear(n_inputs, n_values)
+        )
+
+    def forward(self, neural_activity, card_masks):
+        """
+        Args
+            neural_activity: batch_size x 59
+            card_masks: batch_size x 4 (cards) x 12 features
+        """
+        # batch_size x 12
+        feature_values = self.sequence(neural_activity)   
+        return self.choice_from_values(feature_values, card_masks)
+        
+
+class ValueDropoutModel(FeatureValueBaseModel):
+    """Model where neural activity linearly maps to feature values
+
+    Args:
+        n_inputs (int): number of input units
+        n_values (int): number of feature values
+    """
+
+    def __init__(self, n_inputs, n_values, agg_func=torch.sum, p_dropout=0.1):
+        super().__init__(agg_func)
+        self.sequence = nn.Sequential(
+            nn.Dropout(p=p_dropout),
+            nn.Linear(n_inputs, n_values)
+        )
+
+    def forward(self, neural_activity, card_masks):
+        """
+        Args
+            neural_activity: batch_size x 59
+            card_masks: batch_size x 4 (cards) x 12 features
+        """
+        # batch_size x 12
+        feature_values = self.sequence(neural_activity)   
+        return self.choice_from_values(feature_values, card_masks)

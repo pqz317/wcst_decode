@@ -14,9 +14,9 @@ species = 'nhp'
 subject = 'SA'
 exp = 'WCST'
 session = 20180802  # this is the session for which there are spikes at the moment.    
-pre_interval = 300
-post_interval = 500
-interval_size = 100
+pre_interval = 0
+post_interval = 350
+interval_size = 50
 
 
 def main():
@@ -36,7 +36,7 @@ def main():
     end_bin = (pre_interval + post_interval) / 1000 + interval_size_secs
 
     print("Calculating Firing Rates")
-    firing_rates = spike_analysis.firing_rate(spike_by_trial_interval, bins=np.arange(0, end_bin, interval_size_secs), smoothing=1)
+    firing_rates = spike_analysis.firing_rate(spike_by_trial_interval, spike_by_trial_interval, bins=np.arange(0, end_bin, interval_size_secs), smoothing=1)
 
     print("Saving")
     firing_rates.to_pickle(fs.open(f"l2l.pqz317.scratch/firing_rates_{pre_interval}_crossfixation_{post_interval}_{interval_size}_bins.pickle", "wb"))
