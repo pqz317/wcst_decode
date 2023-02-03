@@ -16,8 +16,8 @@ class Trainer:
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
         model = model.to(device)
+        # loader = DataLoader(dataset, batch_size=self.batch_size, num_workers=3)
         loader = DataLoader(dataset, batch_size=self.batch_size)
-        
         criterion = nn.CrossEntropyLoss().to(device)
         optimizer = torch.optim.SGD(
             model.parameters(), 

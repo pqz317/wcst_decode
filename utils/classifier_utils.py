@@ -112,9 +112,7 @@ def evaluate_classifier(clf, firing_rates, feature_selections, trial_splitter, c
         x_test = transform_to_input_data(firing_rates, trials_filter=test_trials)
         cards_test = transform_cards_or_none(cards, trials_filter=test_trials)
         y_test = transform_to_label_data(feature_selections, trials_filter=test_trials)
-        # print(len(x_train))
-        # print(len(y_train))
-        # print(cards_train.shape)
+        
         clf = clf.fit(x_train, y_train, cards_train)
         
         train_acc = clf.score(x_train, y_train, cards_train)
