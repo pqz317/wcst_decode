@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from lfp_tools import startup
 
 # sorted features by shape, color, pattern
 
@@ -243,6 +244,80 @@ def get_chosen_two_out_of_has_two(behavioral_data):
     chosen_two = has_two[has_two.ItemChosen.astype(int) == has_two.HasTwoIdx]
     chosen_one = has_two[has_two.ItemChosen.astype(int) == has_two.HasOneIdx]
     return (len(chosen_one), len(chosen_two), len(has_two))
+
+def get_num_prev_corrects(beh_df):
+    responses = beh_df.Response.values
+    results = np.empty(len(responses))
+    for pos, el in enumerate(responses):
+        idx = pos - 1
+        num_corrects = 0
+        while idx >= 0:
+            if responses[idx] == "Correct":
+                num_corrects += 1
+                idx -= 1
+            else:
+                break
+        results[pos] = num_corrects
+    return results
+
+def get_stay_switch_trials(fs, species, subject, exp, session, enforce_inc=True, lfp_trials=True):
+    '''
+    Use enforce_inc==True to make sure that there is an incorrect trial before the perseveration trial
+    Use lfp_trials==True to use only trials used in LFP analysis
+    
+    switch1 is the first trial after perseveration ends
+    switch0 is the trial before switch 1
+    switch2 is the trial after switch 1
+    '''
+    of = startup.get_object_features(fs, species, subject, exp, session)
+    
+    switch1 = []
+    for b in np.unique(of.BlockNumber.values):
+        of_sub = of[(of['BlockNumber']==b) & (of['Response'].isin(['Correct', 'Incorrect']))]
+        trials = of_sub[of_sub.Perseveration==0].TrialNumber.values
+
+        if len(trials)>0:
+            t1 = trials[0]
+            if enforce_inc:
+                res = of_sub[of_sub['TrialNumber']<t1].Response.values
+
+                if np.any(res=='Incorrect'):
+                    switch1.append(t1)
+            else:
+                switch1.append(t1)
+    switch1 = np.array(switch1)
+    switch0 = switch1.copy()-1
+    switch2 = switch1.copy()+1
+    
+    if lfp_trials:
+        df = startup.get_behavior(fs, species, subject, exp, session, import_obj_features=False)
+
+        df_sub = df[
+            (df['response'].isin([200,206])) & \
+            (df['act']=='fb') & \
+            (df['ignore']==0) & \
+            (df['badTrials']==0) & \
+            (df['badGroup']==0) & \
+            (df['group']>1)
+        ]
+        
+        switch0_cor = df_sub[(df_sub['trial'].isin(switch0)) & (df_sub['response']==200)].trial.values
+        switch1_cor = df_sub[(df_sub['trial'].isin(switch1)) & (df_sub['response']==200)].trial.values
+        switch2_cor = df_sub[(df_sub['trial'].isin(switch2)) & (df_sub['response']==200)].trial.values
+        
+        switch0_inc = df_sub[(df_sub['trial'].isin(switch0)) & (df_sub['response']==206)].trial.values
+        switch1_inc = df_sub[(df_sub['trial'].isin(switch1)) & (df_sub['response']==206)].trial.values
+        switch2_inc = df_sub[(df_sub['trial'].isin(switch2)) & (df_sub['response']==206)].trial.values
+    else:
+        switch0_cor = of[(of['TrialNumber'].isin(switch0)) & (of['Response']=='Correct')].TrialNumber.values
+        switch1_cor = of[(of['TrialNumber'].isin(switch1)) & (of['Response']=='Correct')].TrialNumber.values
+        switch2_cor = of[(of['TrialNumber'].isin(switch2)) & (of['Response']=='Correct')].TrialNumber.values
+        
+        switch0_inc = of[(of['TrialNumber'].isin(switch0)) & (of['Response']=='Incorrect')].TrialNumber.values
+        switch1_inc = of[(of['TrialNumber'].isin(switch1)) & (of['Response']=='Incorrect')].TrialNumber.values
+        switch2_inc = of[(of['TrialNumber'].isin(switch2)) & (of['Response']=='Incorrect')].TrialNumber.values
+    
+    return(switch0_cor, switch1_cor, switch2_cor, switch0_inc, switch1_inc, switch2_inc)
 
 
 

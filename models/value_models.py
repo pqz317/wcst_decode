@@ -274,3 +274,31 @@ class ValueDropoutModel(FeatureValueBaseModel):
         # batch_size x 12
         feature_values = self.sequence(neural_activity)   
         return self.choice_from_values(feature_values, card_masks)
+
+class ValueNormedHiddenModel(FeatureValueBaseModel):
+    """Model where neural activity linearly maps to a hidden Layer, then to feature values
+
+    Args:
+        n_inputs (int): number of input units
+        n_hidden (int): number of hidden units
+        n_values (int): number of feature values
+    """
+
+    def __init__(self, n_inputs, n_hidden, n_values, agg_func=torch.sum):
+
+        super().__init__(agg_func)
+        self.sequence = nn.Sequential(
+            nn.BatchNorm1d(n_inputs, affine=False),
+            nn.Linear(n_inputs, n_hidden),
+            nn.Linear(n_hidden, n_values)
+        )
+
+    def forward(self, neural_activity, card_masks):
+        """
+        Args
+            neural_activity: batch_size x 59
+            card_masks: batch_size x 4 (cards) x 12 features
+        """
+        # batch_size x 12
+        feature_values = self.sequence(neural_activity)   
+        return self.choice_from_values(feature_values, card_masks)

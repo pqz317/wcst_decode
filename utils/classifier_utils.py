@@ -112,15 +112,16 @@ def evaluate_classifier(clf, firing_rates, feature_selections, trial_splitter, c
         x_test = transform_to_input_data(firing_rates, trials_filter=test_trials)
         cards_test = transform_cards_or_none(cards, trials_filter=test_trials)
         y_test = transform_to_label_data(feature_selections, trials_filter=test_trials)
-        
+        # print("|||||||NEW SPLIT ||||||||||")
         clf = clf.fit(x_train, y_train, cards_train)
-        
         train_acc = clf.score(x_train, y_train, cards_train)
+        # print(f"Train Score: {train_acc}")
 
         # to account for the fact that certain splitters with certain
         # filters may result in no test data. 
         if len(y_test) > 0 and len(x_test) > 0:
             test_acc = clf.score(x_test, y_test, cards_test)
+            # print(f"Test Score: {test_acc}")
         else:
             test_acc = np.nan
 
@@ -131,7 +132,8 @@ def evaluate_classifier(clf, firing_rates, feature_selections, trial_splitter, c
         rng.shuffle(y_test_shuffle)
         shuffled_acc = clf.score(x_test, y_test_shuffle, cards_test)
         shuffled_accs.append(shuffled_acc)
-        
+        # print(f"Shuffled Score: {shuffled_acc}")
+
         # needed so that every element in models is 
         # from a different instance of the model
         models.append(copy.deepcopy(clf))

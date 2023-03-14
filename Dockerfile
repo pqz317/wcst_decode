@@ -7,6 +7,9 @@ RUN git clone https://github.com/learning-2-learn/lfp_tools /src/lfp_tools &&\
 RUN git clone https://github.com/learning-2-learn/spike_tools.git /src/spike_tools &&\
         pip3 install -e /src/spike_tools
 
+RUN git clone https://github.com/ahwillia/tensortools &&\
+        pip3 install -e /src/tensortools
+
 RUN pip3 install plotly==5.10.0
 RUN pip3 install --upgrade s3fs
 RUN pip3 install numpy-stl

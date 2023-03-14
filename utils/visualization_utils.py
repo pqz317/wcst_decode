@@ -16,7 +16,8 @@ def visualize_accuracy_across_time_bins(
     ax,
     label=None,
     right_align=False,
-    color=None
+    color=None,
+    add_std=True
 ):
     """Plots accuracies across time bins as a shaded line plot
 
@@ -33,10 +34,12 @@ def visualize_accuracy_across_time_bins(
         # every x timepoint indicates the right of the bin
         x = x + interval_size
     mean_line, = ax.plot(x, means, label=label, linewidth=2)
-    std_line = ax.fill_between(x, means - stds, means + stds, alpha=0.5)
+    if add_std:
+        std_line = ax.fill_between(x, means - stds, means + stds, alpha=0.5)
     if color:
         mean_line.set_color(color)
-        std_line.set_color(color)
+        if add_std:
+            std_line.set_color(color)
 
 
 def visualize_accuracy_bars(accuracies, labels, ax):

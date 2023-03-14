@@ -10,4 +10,7 @@ notebooks/scrap.ipynb
 # any intermediate data locally
 data/
 
+# notebook checkpoints
+notebooks/.ipynb_checkpoints/
+
 .DS_Store
