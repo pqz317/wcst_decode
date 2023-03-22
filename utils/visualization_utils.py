@@ -94,19 +94,19 @@ def plotly_add_glass_brain(fs, fig1, subject, areas=['brain'], show_axis=False):
     
     for area in areas:
         if area=='brain':
-            filename = 'glass_brain.stl'
+            filename = 'glass brain.stl'
             colorscale= [[0, 'whitesmoke'], [1, 'whitesmoke']]
         elif area=='fef':
-            filename = 'FEF_interaural.stl'
+            filename = 'FEF.stl'
             colorscale= [[0, 'darkblue'], [1, 'darkblue']]
         elif area=='dlpfc':
-            filename = 'dlPFC_interaural.stl'
+            filename = 'dlPFC.stl'
             colorscale= [[0, 'lightgreen'], [1, 'lightgreen']]
         elif area=='mpfc':
-            filename = 'mPFC_interaural.stl'
+            filename = 'mPFC.stl'
             colorscale= [[0, 'darkgreen'], [1, 'darkgreen']]
         elif area=='hippocampus':
-            filename = 'Hippocampal_interaural.stl'
+            filename = 'Hippocampal.stl'
             colorscale= [[0, 'coral'], [1, 'coral']]
             
         stl_file = 'nhp-lfp/wcst-preprocessed/rawdata/sub-'+subject+'/anatomy/'+filename
@@ -124,7 +124,7 @@ def plotly_add_glass_brain(fs, fig1, subject, areas=['brain'], show_axis=False):
         x, y, z = vertices.T
     
         mesh3D = go.Mesh3d(x=x, y=y, z=z, i=I, j=J, k=K, \
-                           opacity=0.3, colorscale=colorscale, intensity=z, showscale=False, name=area)
+                           opacity=0.14, colorscale=colorscale, intensity=z, showscale=False, name=area)
     
         layout = go.Layout(
             scene_xaxis_visible=False, 

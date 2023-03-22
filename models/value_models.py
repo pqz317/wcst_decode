@@ -207,10 +207,12 @@ class ValueNormedDropoutModel(FeatureValueBaseModel):
 
     def __init__(self, n_inputs, n_values, agg_func=torch.sum, p_dropout=0.1):
         super().__init__(agg_func)
+        self.linear = nn.Linear(n_inputs, n_values)
+
         self.sequence = nn.Sequential(
             nn.BatchNorm1d(n_inputs, affine=False),
             nn.Dropout(p_dropout),
-            nn.Linear(n_inputs, n_values)
+            self.linear
         )
 
     def forward(self, neural_activity, card_masks):
@@ -233,10 +235,11 @@ class ValueDropoutNormedModel(FeatureValueBaseModel):
 
     def __init__(self, n_inputs, n_values, agg_func=torch.sum, p_dropout=0.1):
         super().__init__(agg_func)
+        self.linear = nn.Linear(n_inputs, n_values)
         self.sequence = nn.Sequential(
             nn.Dropout(p_dropout),
             nn.BatchNorm1d(n_inputs, affine=False),
-            nn.Linear(n_inputs, n_values)
+            self.linear
         )
 
     def forward(self, neural_activity, card_masks):
