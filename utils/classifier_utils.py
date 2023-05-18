@@ -171,6 +171,8 @@ def evaluate_classifiers_by_time_bins(clf, inputs, labels, time_bins, splitter, 
         training_accs, test_accs, shuffled_accs, models = evaluate_classifier(
             clf, inputs_for_bin, labels, splits, cards=cards
         )
+        # print(training_accs_by_bin.shape)
+        # print(training_accs.shape)
         training_accs_by_bin[i, :] = training_accs
         test_accs_by_bin[i, :] = test_accs
         shuffled_accs_by_bin[i, :] = shuffled_accs

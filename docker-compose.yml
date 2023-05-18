@@ -6,7 +6,13 @@ services:
       - "${JUPYTER_IP:-127.0.0.1}:${JUPYTER_PORT:-8888}:8888"  
     environment:
       - "JUPYTER_PASSWORD=${JUPYTER_PASSWORD:-simple}"
-    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     volumes:
       - .:/src/wcst_decode
       - $HOME/.aws/credentials:/root/.aws/credentials:ro

@@ -3,6 +3,7 @@ import os
 import scipy.io
 import numpy as np
 import pickle
+import torch
 
 HUMAN_LFP_DIR = 'human-lfp'
 NHP_DIR = 'nhp-lfp'
