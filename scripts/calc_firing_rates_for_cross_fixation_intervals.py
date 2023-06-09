@@ -39,8 +39,8 @@ def main():
     firing_rates = spike_analysis.firing_rate(spike_by_trial_interval, spike_by_trial_interval, bins=np.arange(0, end_bin, interval_size_secs), smoothing=1)
 
     print("Saving")
-    firing_rates.to_pickle(fs.open(f"l2l.pqz317.scratch/firing_rates_{pre_interval}_crossfixation_{post_interval}_{interval_size}_bins.pickle", "wb"))
-    spike_by_trial_interval.to_pickle(fs.open(f"l2l.pqz317.scratch/spike_by_trial_interval_{pre_interval}_crossfixation_{post_interval}_{interval_size}_bins.pickle", "wb"))
+    firing_rates.to_pickle(f"/data/patrick_scratch/firing_rates_{pre_interval}_crossfixation_{post_interval}_{interval_size}_bins.pickle")
+    spike_by_trial_interval.to_pickle(f"/data/patrick_scratch/spike_by_trial_interval_{pre_interval}_crossfixation_{post_interval}_{interval_size}_bins.pickle")
 
 if __name__ == "__main__":
     main()

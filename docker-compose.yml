@@ -17,4 +17,4 @@ services:
       - .:/src/wcst_decode
       - $HOME/.aws/credentials:/root/.aws/credentials:ro
       - $HOME/.ssh/id_rsa:/root/.ssh/id_rsa
-
+      - /mnt/U19_NAS:/data

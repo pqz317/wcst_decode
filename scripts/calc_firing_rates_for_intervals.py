@@ -14,13 +14,25 @@ species = 'nhp'
 subject = 'SA'
 exp = 'WCST'
 session = 20180802  # this is the session for which there are spikes at the moment.    
-pre_interval = 1300
-post_interval = 2000
-interval_size = 50
 
-# pre_interval = 2000
-# post_interval = 0
-# interval_size = 100
+# feedback onest
+# pre_interval = 1300
+# post_interval = 1500
+# interval_size = 50
+# event = "FeedbackOnset"
+
+# cross fixation
+pre_interval = 150
+post_interval = 350
+interval_size = 50
+event = "FixationOnCross"
+
+# stimulation onset
+# pre_interval = 200
+# post_interval = 300
+# interval_size = 50
+# event = "StimOnset"
+
 
 def main():
     # grab behavioral data, spike data, trial numbers. 
@@ -34,7 +46,7 @@ def main():
 
     print("Calculating spikes by trial interval")
     interval_size_secs = interval_size / 1000
-    intervals = behavioral_utils.get_trial_intervals(valid_beh, "FeedbackOnset", pre_interval, post_interval)
+    intervals = behavioral_utils.get_trial_intervals(valid_beh, event, pre_interval, post_interval)
     
     spike_by_trial_interval = spike_utils.get_spikes_by_trial_interval(spike_times, intervals)
     end_bin = (pre_interval + post_interval) / 1000 + interval_size_secs
@@ -43,8 +55,8 @@ def main():
     firing_rates = spike_analysis.firing_rate(spike_by_trial_interval, spike_by_trial_interval, bins=np.arange(0, end_bin, interval_size_secs), smoothing=1)
 
     print("Saving")
-    firing_rates.to_pickle(fs.open(f"l2l.pqz317.scratch/firing_rates_{pre_interval}_fb_{post_interval}_{interval_size}_bins.pickle", "wb"))
-    spike_by_trial_interval.to_pickle(fs.open(f"l2l.pqz317.scratch/spike_by_trial_interval_{pre_interval}_fb_{post_interval}_{interval_size}_bins.pickle", "wb"))
+    firing_rates.to_pickle(f"/data/patrick_scratch/firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins.pickle")
+    spike_by_trial_interval.to_pickle(f"/data/patrick_scratch/spike_by_trial_interval_{pre_interval}_{event}_{post_interval}_{interval_size}_bins.pickle")
 
 if __name__ == "__main__":
     main()
