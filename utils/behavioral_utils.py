@@ -260,65 +260,20 @@ def get_num_prev_corrects(beh_df):
         results[pos] = num_corrects
     return results
 
-def get_stay_switch_trials(fs, species, subject, exp, session, enforce_inc=True, lfp_trials=True):
-    '''
-    Use enforce_inc==True to make sure that there is an incorrect trial before the perseveration trial
-    Use lfp_trials==True to use only trials used in LFP analysis
-    
-    switch1 is the first trial after perseveration ends
-    switch0 is the trial before switch 1
-    switch2 is the trial after switch 1
-    '''
-    of = startup.get_object_features(fs, species, subject, exp, session)
-    
-    switch1 = []
-    for b in np.unique(of.BlockNumber.values):
-        of_sub = of[(of['BlockNumber']==b) & (of['Response'].isin(['Correct', 'Incorrect']))]
-        trials = of_sub[of_sub.Perseveration==0].TrialNumber.values
-
-        if len(trials)>0:
-            t1 = trials[0]
-            if enforce_inc:
-                res = of_sub[of_sub['TrialNumber']<t1].Response.values
-
-                if np.any(res=='Incorrect'):
-                    switch1.append(t1)
-            else:
-                switch1.append(t1)
-    switch1 = np.array(switch1)
-    switch0 = switch1.copy()-1
-    switch2 = switch1.copy()+1
-    
-    if lfp_trials:
-        df = startup.get_behavior(fs, species, subject, exp, session, import_obj_features=False)
-
-        df_sub = df[
-            (df['response'].isin([200,206])) & \
-            (df['act']=='fb') & \
-            (df['ignore']==0) & \
-            (df['badTrials']==0) & \
-            (df['badGroup']==0) & \
-            (df['group']>1)
-        ]
-        
-        switch0_cor = df_sub[(df_sub['trial'].isin(switch0)) & (df_sub['response']==200)].trial.values
-        switch1_cor = df_sub[(df_sub['trial'].isin(switch1)) & (df_sub['response']==200)].trial.values
-        switch2_cor = df_sub[(df_sub['trial'].isin(switch2)) & (df_sub['response']==200)].trial.values
-        
-        switch0_inc = df_sub[(df_sub['trial'].isin(switch0)) & (df_sub['response']==206)].trial.values
-        switch1_inc = df_sub[(df_sub['trial'].isin(switch1)) & (df_sub['response']==206)].trial.values
-        switch2_inc = df_sub[(df_sub['trial'].isin(switch2)) & (df_sub['response']==206)].trial.values
-    else:
-        switch0_cor = of[(of['TrialNumber'].isin(switch0)) & (of['Response']=='Correct')].TrialNumber.values
-        switch1_cor = of[(of['TrialNumber'].isin(switch1)) & (of['Response']=='Correct')].TrialNumber.values
-        switch2_cor = of[(of['TrialNumber'].isin(switch2)) & (of['Response']=='Correct')].TrialNumber.values
-        
-        switch0_inc = of[(of['TrialNumber'].isin(switch0)) & (of['Response']=='Incorrect')].TrialNumber.values
-        switch1_inc = of[(of['TrialNumber'].isin(switch1)) & (of['Response']=='Incorrect')].TrialNumber.values
-        switch2_inc = of[(of['TrialNumber'].isin(switch2)) & (of['Response']=='Incorrect')].TrialNumber.values
-    
-    return(switch0_cor, switch1_cor, switch2_cor, switch0_inc, switch1_inc, switch2_inc)
-
-
-
-
+def get_last_five_corrects_per_block(beh):
+    """ 
+    Filter for trials with:
+    - Response is correct
+    - Previous response was also correct
+    - Per block, grab the last 5 satifying this 
+    - Only returns blocks corresponding to rules that occured in at least 3 blocks
+    """
+    cor_cors = beh[(beh.Response == "Correct") & (beh.PrevResponse == "Correct")]
+    num_blocks = cor_cors.groupby(by="CurrentRule").apply(lambda g: len(g.BlockNumber.unique()))
+    valid_rules = num_blocks[num_blocks > 3].index
+    cor_cor_valid_rules = cor_cors[cor_cors.CurrentRule.isin(valid_rules)]
+    def last_five(block):
+        # last 5 items that meet this critera
+        return block.iloc[-5:]
+    last_fives = cor_cor_valid_rules.groupby(by="BlockNumber", as_index=False).apply(last_five).reset_index()
+    return last_fives

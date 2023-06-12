@@ -18,13 +18,13 @@ session = 20180802  # this is the session for which there are spikes at the mome
 # feedback onest
 # pre_interval = 1300
 # post_interval = 1500
-# interval_size = 50
+# interval_size = 100
 # event = "FeedbackOnset"
 
 # cross fixation
 pre_interval = 150
 post_interval = 350
-interval_size = 50
+interval_size = 100
 event = "FixationOnCross"
 
 # stimulation onset
