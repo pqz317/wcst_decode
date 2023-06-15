@@ -13,12 +13,14 @@ class KFoldBlockSplitter:
     trials as the training set.
     """
 
-    def __init__(self, trials_with_blocks: pd.Series, n_splits=5):
-        kf = KFold(n_splits=n_splits, shuffle=True)
-        self.n_splits = n_splits
+    def __init__(self, trials_with_blocks: pd.Series, n_splits=5, block_splits=None):
         self.trials_with_blocks = trials_with_blocks
-        self.blocks = trials_with_blocks.BlockNumber.unique()
-        self.splits = kf.split(self.blocks)
+        if block_splits is None:
+            kf = KFold(n_splits=n_splits, shuffle=True)
+            blocks = trials_with_blocks.BlockNumber.unique()
+            self.splits = kf.split(blocks)
+        else:
+            self.splits = block_splits
         self.iter = iter(self.splits)
 
     def __iter__(self):
