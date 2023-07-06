@@ -35,34 +35,18 @@ def get_raw_fixation_times(fs, subject, session):
         data = scipy.io.loadmat(fixation_file)
         return data["itemFixationTimes"]
 
-# def save_model_outputs(fs, name, interval, split, outputs):
-#     train_accs_by_bin, test_accs_by_bin, shuffled_accs, models, splits = outputs
-#     np.save(fs.open(f"l2l.pqz317.scratch/{name}_train_accs_{interval}_{split}.npy", "wb"), train_accs_by_bin)
-#     np.save(fs.open(f"l2l.pqz317.scratch/{name}_accs_{interval}_{split}.npy", "wb"), test_accs_by_bin)
-#     np.save(fs.open(f"l2l.pqz317.scratch/{name}_shuffled_accs_{interval}_{split}.npy", "wb"), shuffled_accs)
-#     np.save(fs.open(f"l2l.pqz317.scratch/{name}_models_{interval}_{split}.npy", "wb"), models)
-#     pickle.dump(splits, fs.open(f"l2l.pqz317.scratch/{name}_splits_{interval}_{split}.npy", "wb"))
-
-# def load_model_outputs(fs, name, interval, split):
-#     train_accs_by_bin = np.load(fs.open(f"l2l.pqz317.scratch/{name}_train_accs_{interval}_{split}.npy", "rb"))
-#     test_accs_by_bin = np.load(fs.open(f"l2l.pqz317.scratch/{name}_accs_{interval}_{split}.npy", "rb"))
-#     shuffled_accs = np.load(fs.open(f"l2l.pqz317.scratch/{name}_shuffled_accs_{interval}_{split}.npy", "rb"))
-#     models = np.load(fs.open(f"l2l.pqz317.scratch/{name}_models_{interval}_{split}.npy", "rb"), allow_pickle=True)
-#     splits = pickle.load(fs.open(f"l2l.pqz317.scratch/{name}_splits_{interval}_{split}.npy", "rb"))
-#     return train_accs_by_bin, test_accs_by_bin, shuffled_accs, models, splits
-
-def save_model_outputs(name, interval, split, outputs):
+def save_model_outputs(name, interval, split, outputs, base_dir="/data/patrick_scratch/"):
     train_accs_by_bin, test_accs_by_bin, shuffled_accs, models, splits = outputs
-    np.save(f"/data/patrick_scratch/{name}_train_accs_{interval}_{split}.npy", train_accs_by_bin)
-    np.save(f"/data/patrick_scratch/{name}_accs_{interval}_{split}.npy", test_accs_by_bin)
-    np.save(f"/data/patrick_scratch/{name}_shuffled_accs_{interval}_{split}.npy", shuffled_accs)
-    np.save(f"/data/patrick_scratch/{name}_models_{interval}_{split}.npy", models)
-    pickle.dump(splits, open(f"/data/patrick_scratch/{name}_splits_{interval}_{split}.npy", "wb"))
+    np.save(os.path.join(base_dir, f"{name}_train_accs_{interval}_{split}.npy"), train_accs_by_bin)
+    np.save(os.path.join(base_dir, f"{name}_accs_{interval}_{split}.npy"), test_accs_by_bin)
+    np.save(os.path.join(base_dir, f"{name}_shuffled_accs_{interval}_{split}.npy"), shuffled_accs)
+    np.save(os.path.join(base_dir, f"{name}_models_{interval}_{split}.npy"), models)
+    pickle.dump(splits, open(os.path.join(base_dir, f"{name}_splits_{interval}_{split}.npy"), "wb"))
 
-def load_model_outputs(name, interval, split):
-    train_accs_by_bin = np.load(f"/data/patrick_scratch/{name}_train_accs_{interval}_{split}.npy")
-    test_accs_by_bin = np.load(f"/data/patrick_scratch/{name}_accs_{interval}_{split}.npy")
-    shuffled_accs = np.load(f"/data/patrick_scratch/{name}_shuffled_accs_{interval}_{split}.npy")
-    models = np.load(f"/data/patrick_scratch/{name}_models_{interval}_{split}.npy", allow_pickle=True)
-    splits = pickle.load(open(f"/data/patrick_scratch/{name}_splits_{interval}_{split}.npy", "rb"))
+def load_model_outputs(name, interval, split, base_dir="/data/patrick_scratch/"):
+    train_accs_by_bin = np.load(os.path.join(base_dir, f"{name}_train_accs_{interval}_{split}.npy"))
+    test_accs_by_bin = np.load(os.path.join(base_dir, f"{name}_accs_{interval}_{split}.npy"))
+    shuffled_accs = np.load(os.path.join(base_dir, f"{name}_shuffled_accs_{interval}_{split}.npy"))
+    models = np.load(os.path.join(base_dir, f"{name}_models_{interval}_{split}.npy"), allow_pickle=True)
+    splits = pickle.load(open(os.path.join(base_dir, f"{name}_splits_{interval}_{split}.npy"), "rb"))
     return train_accs_by_bin, test_accs_by_bin, shuffled_accs, models, splits
