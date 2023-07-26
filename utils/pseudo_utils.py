@@ -43,10 +43,15 @@ def generate_pseudo_population(frs, split, num_train_samples=1000, num_test_samp
         samples_for_conditions.append(train_samples)
         samples_for_conditions.append(test_samples)
         conditions.append(condition)
+    # concat all the trial numbers that have been sampled
     trial_samples = np.concatenate(samples_for_conditions)
+    # total number of pseudo trials created
     num_pseudo_trials =  (num_train_samples + num_test_samples) * num_conditions
+    # each pseudo trial has n units, so tile the unit_ids num_pseudo_trials times
     tiled_unit_ids = np.tile(unit_ids, num_pseudo_trials)
+    # to label a pseudo trial number for each unit
     pseudo_trial_nums = np.repeat(np.arange(num_pseudo_trials), num_units)
+    # assign whether the trial was train or test
     pseudo_trial_types = np.tile(
         np.concatenate((
             np.repeat(["Train"], num_train_samples * num_units), 
@@ -64,6 +69,10 @@ def generate_pseudo_population(frs, split, num_train_samples=1000, num_test_samp
     })
     num_time_bins = len(frs.TimeBins.unique())
     pseudo_pop = pd.merge(pseudo_df, frs, "inner", on=["UnitID", "TrialNumber"])
+    # print("len of pseudo_df unique unit id, trial number: ")
+    # print(len(pseudo_df.UnitID.unique()))
+    # print(len(pseudo_df.TrialNumber.unique()))
+    # print(num_pseudo_trials * num_units * num_time_bins)
     if not len(pseudo_pop) == num_pseudo_trials * num_units * num_time_bins: 
         raise ValueError("Did not get expected number of rows in pseudo population")
     return pseudo_pop
@@ -104,3 +113,7 @@ def generate_multi_split_pseudo_population(frs, splitter, num_splits, num_train_
         pseudo_pops.append(pseudo_pop)
     return pd.concat(pseudo_pops)
     
+
+def filter_sessions_by_condition(sessions, num_trials_per_cond):
+    # only keep sessions that have at least N trials per condition. 
+    pass

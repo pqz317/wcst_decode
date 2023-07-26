@@ -109,16 +109,16 @@ def plotly_add_glass_brain(fs, fig1, subject, areas=['brain'], show_axis=False):
             filename = 'Hippocampal.stl'
             colorscale= [[0, 'coral'], [1, 'coral']]
             
-        stl_file = 'nhp-lfp/wcst-preprocessed/rawdata/sub-'+subject+'/anatomy/'+filename
-        
-        if not fs.exists(stl_file):
-            print(stl_file + ' does not exist, not including...')
-            continue
+        # stl_file = 'nhp-lfp/wcst-preprocessed/rawdata/sub-'+subject+'/anatomy/'+filename
+        stl_file = '/data/rawdata/sub-'+subject+'/anatomy/'+filename
+        # if not fs.exists(stl_file):
+        #     print(stl_file + ' does not exist, not including...')
+        #     continue
     
-        tmp = tempfile.NamedTemporaryFile()
-        with open(tmp.name, mode='wb') as f:
-            fs.get_file(stl_file, tmp.name)
-            my_mesh = mesh.Mesh.from_file(tmp.name)
+        # tmp = tempfile.NamedTemporaryFile()
+        # with open(tmp.name, mode='wb') as f:
+        #     fs.get_file(stl_file, tmp.name)
+        my_mesh = mesh.Mesh.from_file(stl_file)
     
         vertices, I, J, K = stl2mesh3d(my_mesh)
         x, y, z = vertices.T
