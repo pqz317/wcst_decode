@@ -13,10 +13,15 @@ import os
 SPECIES = 'nhp'
 SUBJECT = 'SA'
 
-PRE_INTERVAL = 1300
-POST_INTERVAL = 1500
+# PRE_INTERVAL = 1300
+# POST_INTERVAL = 1500
+# INTERVAL_SIZE = 100
+# EVENT = "FeedbackOnset"
+
+PRE_INTERVAL = 150
+POST_INTERVAL = 350
 INTERVAL_SIZE = 100
-EVENT = "FeedbackOnset"
+EVENT = "FixationOnCross"
 
 
 def calc_firing_rate_for_interval(row):

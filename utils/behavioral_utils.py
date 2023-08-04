@@ -268,12 +268,48 @@ def get_last_five_corrects_per_block(beh):
     - Per block, grab the last 5 satifying this 
     - Only returns blocks corresponding to rules that occured in at least 3 blocks
     """
+    beh["PrevResponse"] = beh.Response.shift()
     cor_cors = beh[(beh.Response == "Correct") & (beh.PrevResponse == "Correct")]
     num_blocks = cor_cors.groupby(by="CurrentRule").apply(lambda g: len(g.BlockNumber.unique()))
-    valid_rules = num_blocks[num_blocks > 3].index
-    cor_cor_valid_rules = cor_cors[cor_cors.CurrentRule.isin(valid_rules)]
+    # valid_rules = num_blocks[num_blocks > 3].index
+    cor_cor_valid_rules = cor_cors[cor_cors.CurrentRule.isin(num_blocks.index)]
     def last_five(block):
         # last 5 items that meet this critera
         return block.iloc[-5:]
     last_fives = cor_cor_valid_rules.groupby(by="BlockNumber", as_index=False).apply(last_five).reset_index()
     return last_fives
+
+def get_last_n_corrects_per_block(beh, n):
+    """ 
+    Filter for trials with:
+    - Response is correct
+    - Per block, grab the last 5 satifying this 
+    - Only returns blocks corresponding to rules that occured in at least 3 blocks
+    """
+    cors = beh[beh.Response == "Correct"]
+    def last_n_per_block(block, n):
+        # last n items that meet this critera
+        return block.iloc[-n:]
+    last_ns = cors.groupby(by="BlockNumber", as_index=False).apply(
+        lambda x: last_n_per_block(x, n)
+    ).reset_index()
+    return last_ns
+
+def get_valid_trials(beh):
+    """
+    Filters trials where *usually* are not wanted for decoding, specifically filters out: 
+    - any trials that don't result in correct/incorrect response (incomplete or error trials)
+    - any trials from the first 2 blocks (these are usually fixed)
+    - any trials from the last blocks
+    - any blocks with less than 8 trials
+    """
+    last_block = beh.BlockNumber.max()
+    longer_thans = beh.groupby("BlockNumber").apply(lambda x: len(x.TrialNumber.unique()) >= 8)
+    longer_than_block_idxs = longer_thans[longer_thans].index
+    valid_beh = beh[
+        (beh.Response.isin(["Correct", "Incorrect"])) & 
+        (beh.BlockNumber >= 2) &
+        (beh.BlockNumber != last_block) &
+        (beh.BlockNumber.isin(longer_than_block_idxs))
+    ]  
+    return valid_beh

@@ -12,15 +12,24 @@ import numpy as np
 class RuleConditionBlockSplitter: 
     """
     Per rule, splits trials into train/test by leaving one block out for testing, and letting the rest be training
-
+    IMPORTANT: condition here should only be specified as either CurrentRulr or RuleDim. We want to ensure that
+    train/test sets don't bleed in to each other
     """
 
-    def __init__(self, beh_df, seed=None):
+    def __init__(self, beh_df, condition="CurrentRule", seed=None, num_distinct_conditions=12):
         # get condition -> block numbers
         self.rng = np.random.default_rng(seed=seed)
         self.beh_df = beh_df
-        blocks = beh_df.groupby(by="CurrentRule").apply(lambda g: g.BlockNumber.unique())
+        blocks = beh_df.groupby(by=condition).apply(lambda g: g.BlockNumber.unique())
         self.blocks_df = pd.DataFrame({"Condition": blocks.index, "Blocks": blocks.values})
+        if len(self.blocks_df) != num_distinct_conditions:
+            raise ValueError(f"not the right number of conditions, with: {self.blocks_df.Condition.unique()}")
+        # verify that each condition has at least 2 blocks
+        self.blocks_df["NumBlocks"] = self.blocks_df.apply(lambda x: len(x.Blocks), axis=1)
+        less_than_twos = self.blocks_df[self.blocks_df.NumBlocks < 2]
+        if len(less_than_twos) > 0:
+            raise ValueError(f"conditions {less_than_twos.Condition.unique()} have less than two associated blocks")
+
 
     def __iter__(self):
         return self

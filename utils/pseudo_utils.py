@@ -36,8 +36,10 @@ def generate_pseudo_population(frs, split, num_train_samples=1000, num_test_samp
     for _, row in split.iterrows():
         # per condition, sample from train and test trials
         condition = row["Condition"]
+        # print(condition)
         train_trials = row["TrainTrials"]
         test_trials = row["TestTrials"]
+        # print(train_trials)
         train_samples = rng.choice(train_trials, num_train_samples * num_units)
         test_samples = rng.choice(test_trials, num_test_samples * num_units)
         samples_for_conditions.append(train_samples)
