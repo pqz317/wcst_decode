@@ -11,19 +11,28 @@ class ModelWrapper:
         self.trainer = trainer
         self.labels_to_idx = {label: idx for idx, label in enumerate(labels)}
         self.idx_to_labels = {idx: label for idx, label in enumerate(labels)}
+    
+    def _create_dataset(self, x, y, cards=None):
+        y_idxs = np.array([self.labels_to_idx[label] for label in y.tolist()]).astype(int)
+        # dataset = WcstDataset(x_train, y_train_idxs, cards_train)
+        ### TEST CODE
+        x = torch.tensor(x).float().to(self.device)
+        y = torch.tensor(y_idxs).to(self.device)
+        if cards is not None:
+            cards = torch.tensor(cards).to(torch.long).to(self.device)
+        return (x, y, cards)
 
     def fit(self, x_train, y_train, cards_train=None):
         self.model = self.model_type(**self.init_params)
-        y_train_idxs = np.array([self.labels_to_idx[label] for label in y_train.tolist()]).astype(int)
-        # dataset = WcstDataset(x_train, y_train_idxs, cards_train)
-        ### TEST CODE
-        x_train = torch.tensor(x_train).float().to(self.device)
-        y_train = torch.tensor(y_train_idxs).to(self.device)
-        if cards_train is not None:
-            cards_train = torch.tensor(cards_train).to(torch.long).to(self.device)
-        dataset = (x_train, y_train, cards_train)
+        dataset = self._create_dataset(x_train, y_train, cards_train)
         self.trainer.train(self.model, dataset)
         return self
+
+    def fit_with_valid(self, x_train, y_train, x_valid, y_valid, cards_train=None, cards_valid=None):
+        self.model = self.model_type(**self.init_params)
+        train_dataset = self._create_dataset(x_train, y_train, cards_train)
+        valid_dataset = self._create_dataset(x_valid, y_valid, cards_valid)
+        return self.trainer.train(self.model, train_dataset, valid_dataset)
 
     def predict(self, x_test, cards_test=None):
         self.model.eval()

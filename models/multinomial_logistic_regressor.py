@@ -70,11 +70,20 @@ class NormedDropoutNonlinear(nn.Module):
         in_layer (nn.Linear): weights and biases of input layer
     """
 
-    def __init__(self, n_inputs, n_classes, p_dropout, hidden_sizes=[100, 100]):
+    def __init__(self, n_inputs, n_classes, p_dropout, hidden_sizes=[200]):
         super().__init__()  # needed to invoke the properties of the parent class nn.Module
         self.norm = nn.BatchNorm1d(n_inputs, affine=False)
         self.dropout = nn.Dropout(p=p_dropout)
-        self.linear = nn.Linear(n_inputs, n_classes) # neural activity --> output classes
+        sequence = [self.norm, self.dropout]
+        prev_dim = n_inputs
+        for hidden in hidden_sizes:
+            layer = nn.Linear(prev_dim, hidden)
+            sequence.append(layer)
+            sequence.append(nn.ReLU())
+            prev_dim = hidden
+        self.output = nn.Linear(prev_dim, n_classes) # neural activity --> output classes
+        sequence.append(self.output)
+        self.sequence = nn.Sequential(*sequence)
 
     def forward(self, x):
-        return self.linear(self.dropout(self.norm(x)))
+        return self.sequence(x)

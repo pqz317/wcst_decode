@@ -13,6 +13,9 @@ data/
 # notebook checkpoints
 notebooks/.ipynb_checkpoints/
 
+# workspace configs
+wcst_decode.code-workspace
+
 .DS_Store
 
 .env

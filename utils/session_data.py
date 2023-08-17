@@ -5,12 +5,6 @@ from itertools import cycle
 
 from . import pseudo_utils
 from . import behavioral_utils
-from trial_splitters.condition_trial_splitter import ConditionTrialSplitter
-
-PRE_INTERVAL = 1300
-POST_INTERVAL = 1500
-INTERVAL_SIZE = 100
-EVENT = "FeedbackOnset"
 
 class SessionData: 
     """
@@ -23,7 +17,7 @@ class SessionData:
             sess_name: an str name for the session, ex: 20180802
             beh: behavior dataframe 
             frs: dataframe of firing rates, spike counts, by unit, time_bin
-            splitter: a TrialSplitter dictacting how 
+            splitter: dictates how to split trials by condition, in order to generate pseudo trials
         """
         self.sess_name = sess_name
         self.beh = beh
@@ -52,29 +46,32 @@ class SessionData:
 
 
     def generate_pseudo_data(self, num_train, num_test, time_bin):
+        """
+        For a specified timebin, generate num_train and num_test pseudotrials per condition
+        With the existing trialsplitter
+        Args: 
+            num_train: number of train pseudo trials per condition to generate
+            num_test: number of test pseudo trials per condition to generate
+            time_bin: specific time_bin to generate for
+        Returns: 
+            A pseudo population dataframe specific to this session with columns:
+                - Session: session name
+                - PseudoUnitID: identifier for unit across sessions
+                - UnitID: ID of unit (neuron) selected
+                - TrialNumber: ID of original trial selected from
+                - PseudoTrialNumber: ID of the pseudo trial generated
+                - Type: Either Train or Test 
+                - Condition
+                - TimeBins
+                - some data column (eg. SpikeCounts or FiringRates)
+        """
         frs_at_bin = self.frs[np.isclose(self.frs.TimeBins, time_bin)]
         split = next(self.splitter)
         pseudo_pop = pseudo_utils.generate_pseudo_population(frs_at_bin, split, num_train, num_test)
-        # print(self.sess_name)
-        # print(len(pseudo_pop.PseudoTrialNumber.unique()))
-        # print(pseudo_pop.Condition.unique())
         pseudo_pop["Session"] = self.sess_name
         # NOTE: very hacky way of giving unique ID to units across sessions
         pseudo_pop["PseudoUnitID"] = int(self.sess_name) * 100 + pseudo_pop["UnitID"]
-        # print(len(pseudo_pop.PseudoUnitID.unique()))
         return pseudo_pop
 
     def get_num_neurons(self):
         return len(self.frs.UnitID.unique())
-
-    
-    @staticmethod
-    def load_session_data(sess_name, condition): 
-        behavior_path = f"/data/rawdata/sub-SA/sess-{sess_name}/behavior/sub-SA_sess-{sess_name}_object_features.csv"
-        beh = pd.read_csv(behavior_path)
-        valid_beh = beh[beh.Response.isin(["Correct", "Incorrect"])]    
-        feature_selections = behavioral_utils.get_selection_features(valid_beh)
-        valid_beh_merged = pd.merge(valid_beh, feature_selections, on="TrialNumber", how="inner")
-        frs = pd.read_pickle(f"/data/patrick_scratch/multi_sess/{sess_name}/{sess_name}_firing_rates_{PRE_INTERVAL}_{EVENT}_{POST_INTERVAL}_{INTERVAL_SIZE}_bins.pickle")
-        splitter = ConditionTrialSplitter(valid_beh_merged, condition, 0.2)
-        return SessionData(sess_name, valid_beh_merged, frs, splitter)

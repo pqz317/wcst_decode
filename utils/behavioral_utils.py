@@ -295,6 +295,22 @@ def get_last_n_corrects_per_block(beh, n):
     ).reset_index()
     return last_ns
 
+def get_first_n_corrects_per_block(beh, n):
+    """ 
+    Filter for trials with:
+    - Response is correct
+    - Per block, grab the first 5 satifying this 
+    - Only returns blocks corresponding to rules that occured in at least 3 blocks
+    """
+    cors = beh[beh.Response == "Correct"]
+    def first_n_per_block(block, n):
+        # last n items that meet this critera
+        return block.iloc[:n]
+    last_ns = cors.groupby(by="BlockNumber", as_index=False).apply(
+        lambda x: first_n_per_block(x, n)
+    ).reset_index()
+    return last_ns
+
 def get_valid_trials(beh):
     """
     Filters trials where *usually* are not wanted for decoding, specifically filters out: 
@@ -313,3 +329,11 @@ def get_valid_trials(beh):
         (beh.BlockNumber.isin(longer_than_block_idxs))
     ]  
     return valid_beh
+
+# def filter_perseverating_trials(beh):
+#     """
+#     """
+#     def find_prev_rule(row):
+#         if row.BlockNumber == 0
+#         return row.BlockNumber - 1
+#     beh["PrevRule"] = beh.apply(find_prev_rule, axis=1)

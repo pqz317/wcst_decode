@@ -114,8 +114,3 @@ def generate_multi_split_pseudo_population(frs, splitter, num_splits, num_train_
         pseudo_pop["SplitNum"] = split_num
         pseudo_pops.append(pseudo_pop)
     return pd.concat(pseudo_pops)
-    
-
-def filter_sessions_by_condition(sessions, num_trials_per_cond):
-    # only keep sessions that have at least N trials per condition. 
-    pass

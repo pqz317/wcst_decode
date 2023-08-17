@@ -1,5 +1,3 @@
-# creates spike by trials, firing rates data for a specific interval
-
 import numpy as np
 import pandas as pd
 from spike_tools import (
@@ -10,13 +8,16 @@ import utils.behavioral_utils as behavioral_utils
 import utils.spike_utils as spike_utils
 import os
 
+"""
+Creates firing rates dataframes for all sessions, saves them invdividually
+Requires a sessions dataframe, with with column `session_name` that identifies each session
+
+For each session, creates a firing_rates dataframe that should have columns: 
+UnitID, TrialNumber, TimeBins, and some data columns, like SpikeCounts or FiringRates
+"""
+
 SPECIES = 'nhp'
 SUBJECT = 'SA'
-
-# PRE_INTERVAL = 1300
-# POST_INTERVAL = 1500
-# INTERVAL_SIZE = 100
-# EVENT = "FeedbackOnset"
 
 PRE_INTERVAL = 150
 POST_INTERVAL = 350
