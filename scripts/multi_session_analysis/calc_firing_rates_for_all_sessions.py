@@ -19,13 +19,28 @@ UnitID, TrialNumber, TimeBins, and some data columns, like SpikeCounts or Firing
 SPECIES = 'nhp'
 SUBJECT = 'SA'
 
-PRE_INTERVAL = 150
-POST_INTERVAL = 350
+# PRE_INTERVAL = 150
+# POST_INTERVAL = 350
+# INTERVAL_SIZE = 100
+# EVENT = "FixationOnCross"
+PRE_INTERVAL = 1300
+POST_INTERVAL = 1500
 INTERVAL_SIZE = 100
-EVENT = "FixationOnCross"
+EVENT = "FeedbackOnset"
 
 
 def calc_firing_rate_for_interval(row):
+    """
+    For a session, per trial, aligns spike data to a specific behavioral event, 
+    Bins spikes to specified bin sizes 
+    Calculates spike counts, firing rates per bin
+    Stores into a dataframe with columns:
+            - UnitID
+            - TrialNumber
+            - TimeBins
+            - SpikeCounts
+            - FiringRate
+    """
     sess_name = row.session_name
     print(f"Processing session {sess_name}")
     print("Loading files")
