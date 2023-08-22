@@ -1,5 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
+import matplotlib
 import seaborn as sns
 import numpy as np
 from stl import mesh  # pip install numpy-stl
@@ -7,6 +8,8 @@ import tempfile
 import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
+from itertools import accumulate
+import matplotlib.patches as patches
 
 def visualize_accuracy_across_time_bins(
     accuracies, 
@@ -144,3 +147,122 @@ def plotly_add_glass_brain(fs, fig1, subject, areas=['brain'], show_axis=False):
         fig3.update_layout(layout)
     
     return(fig3)
+
+def get_name_to_color(positions, structure_level, color_list=None, unknown_color="#adadad"):
+    positions_by_structure = positions.sort_values(structure_level)
+    structure_names = positions_by_structure[structure_level].unique()
+    name_to_color = {}
+    if not color_list:
+        color_list = [matplotlib.colors.to_hex(x) for x in plt.cm.tab10.colors]
+    for i, pos in enumerate(structure_names):
+        name_to_color[pos] = color_list[i % len(color_list)]
+    # add a grey for unknown
+    name_to_color["unknown"] = unknown_color
+    return name_to_color
+
+
+def generate_glass_brain(positions, structure_level, color_list=None, unknown_color="#adadad"):
+    name_to_color = get_name_to_color(positions, structure_level, color_list, unknown_color)
+
+    fig1 = px.scatter_3d(
+        positions, x="x", y="y", z="z", 
+        color=structure_level, 
+        labels={structure_level: "Structure"},
+        color_discrete_map=name_to_color)
+    fig = plotly_add_glass_brain(None, fig1, "SA", areas='all', show_axis=False)
+    fig.update_layout(
+        autosize=True,
+        width=750,
+        height=700,
+    )
+    camera = dict(
+        eye=dict(x=1.3, y=1, z=0.1)
+    )
+    temp_grid = dict(
+        showgrid=False, 
+        zeroline=False, 
+        showticklabels=False
+    )
+    fig.update_layout(
+        autosize=False,
+        width=1000,
+        height=700,
+        xaxis=temp_grid,
+        yaxis=temp_grid,
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        showlegend=True,
+        scene_camera=camera
+    )
+    return fig
+
+def visualize_weights(positions, weights, structure_level, color_list=None, unknown_color="#adadad", ax=None):
+    # get re-ordered indexes
+    pos_unit_sorted = positions.sort_values(by="PseudoUnitID")
+    pos_unit_sorted["np_idx"] = np.arange(0, len(pos_unit_sorted))
+    pos_structure_sorted = pos_unit_sorted.sort_values(by=structure_level)
+    reordered_idxs = pos_structure_sorted.np_idx.values
+
+    # get lengths of vertical bands on the left
+    lens = pos_structure_sorted.groupby(structure_level).apply(lambda x: len(x)).values
+    lens_accum = list(accumulate(lens))
+    reg_start = lens_accum[:-1].insert(0, 0)
+    reg_end = list(np.array(lens_accum[1:]) - 1)
+    lines = np.array(lens_accum[0:-1]) - 0.5
+
+    name_to_color = get_name_to_color(positions, structure_level, color_list, unknown_color)
+
+    # reorder by temp then ant
+    reordered = weights[reordered_idxs, :]
+
+    # sort structure names
+    positions_by_structure = positions.sort_values(structure_level)
+    structure_names = positions_by_structure[structure_level].unique()
+
+    if not ax: 
+        _, ax = plt.subplots(figsize=(8, 15))
+    colors = ax.matshow(reordered, aspect='auto')
+    # tick_labels = np.array([-1.2, -0.9, -0.6, -0.3, 0, 0.3, 0.6, 0.9, 1.2])
+    tick_labels = np.array([-1, -0.5, 0, 0.5, 1.0, 1.5])
+    tick_pos = (tick_labels + 1.3) * 10 - 0.5
+    # fig.colorbar(colors)
+    # axis = np.arange(0, 28, 3)s
+    # labels = np.around((axis - 13) * 0.1, 1)
+    ax.set_xticks(tick_pos)
+    ax.set_xticklabels(tick_labels)
+    ax.xaxis.tick_bottom()
+    ax.set_xlabel("Time Relative to Feedback (s)")
+    ax.get_yaxis().set_visible(False)
+    ax.set_ylabel([])
+    # y_axis = np.arange(0, 59, 5)
+    # ax.set_yticks(y_axis)
+    # ax.set_yticklabels(y_axis)
+
+    boundaries = np.insert(np.insert(lines, len(lines), reordered.shape[0] - 0.5), 0, -0.5)
+    print(lines)
+    print(len(boundaries))
+    for line in lines:
+        ax.axhline(line, color='white', linestyle="dotted")
+
+    for i in range(len(boundaries)-1):
+        structure_name = structure_names[i]
+        rect = patches.Rectangle(
+            (
+                -1.3 - 1,
+                (boundaries[i])#+boundaries[i+1]) / 2
+            ),
+            1.2,
+            (boundaries[i+1]-boundaries[i]),
+            edgecolor=name_to_color[structure_name],
+            facecolor=name_to_color[structure_name],
+            clip_on=False
+        )
+        ax.add_patch(rect)
+    gray_rect = patches.Rectangle(
+        (4.5, -1.2), 8, 0.5,
+        edgecolor="gray",
+        facecolor="gray",
+        clip_on=False,
+    )
+    ax.add_patch(gray_rect)
+    ax.axvline(13.48, color="gray", linestyle="dotted")

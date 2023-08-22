@@ -4,6 +4,7 @@ from spike_tools import (
     general as spike_general,
 )
 from scipy.ndimage import gaussian_filter1d
+import json
 
 
 def get_spikes_by_trial_interval_DEPRECATED(spike_times, intervals):
@@ -162,3 +163,37 @@ def get_unit_fr_array(frs, column_name):
     """
     grouped = frs[["UnitID", column_name]].groupby(by="UnitID").agg(list).to_numpy()
     return np.stack(grouped.squeeze(), axis=0)
+
+
+PRE_INTERVAL = 1300
+EVENT = "FeedbackOnset"
+POST_INTERVAL = 1500 
+INTERVAL_SIZE = 100
+
+def get_unit_positions_per_sess(session):
+    # For the cases like 201807250001
+    sess_day = session[:8]
+    info_path = f"/data/rawdata/sub-SA/sess-{sess_day}/session_info/sub-SA_sess-{sess_day}_sessioninfo.json"
+    frs = pd.read_pickle(f"/data/patrick_scratch/multi_sess/{session}/{session}_firing_rates_{PRE_INTERVAL}_{EVENT}_{POST_INTERVAL}_{INTERVAL_SIZE}_bins.pickle")
+    with open(info_path, 'r') as f:
+        data = json.load(f)
+    locs = data['electrode_info']
+    locs_df = pd.DataFrame.from_dict(locs)
+    # TODO: filter by units appearing in firing rates file. 
+    electrode_pos_not_nan = locs_df[~locs_df['x'].isna() & ~locs_df['y'].isna() & ~locs_df['z'].isna()]
+    units = spike_general.list_session_units(None, "SA", session, species_dir="/data")
+    unit_pos = pd.merge(units, electrode_pos_not_nan, left_on="Channel", right_on="electrode_id", how="left")
+    unit_pos = unit_pos.astype({"UnitID": int})
+    unit_pos["session"] = session
+    unit_pos = unit_pos[unit_pos.UnitID.isin(frs.UnitID.unique())]
+    unit_pos["PseudoUnitID"] = int(session) * 100 + unit_pos["UnitID"]
+    return unit_pos
+
+
+def get_unit_positions(sessions):
+    positions = pd.concat(sessions.apply(lambda x: get_unit_positions_per_sess(x.session_name), axis=1).values)
+    # known_poses = positions.structure_level1.dropna().unique()
+    # sort that so its always in order
+    # still want to plot the None units
+    positions = positions.fillna("unknown")
+    return positions
