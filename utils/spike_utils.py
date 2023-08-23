@@ -165,22 +165,26 @@ def get_unit_fr_array(frs, column_name):
     return np.stack(grouped.squeeze(), axis=0)
 
 
-PRE_INTERVAL = 1300
-EVENT = "FeedbackOnset"
-POST_INTERVAL = 1500 
-INTERVAL_SIZE = 100
-
-def get_unit_positions_per_sess(session):
-    # For the cases like 201807250001
+def get_unit_positions_per_sess(session, pre_interval, event, post_interval, interval_size):
+    """
+    Finds the unit positions in a session, from electrode positions provided in the sessioninfo json
+    Positions have x, y, z, as well as structures at various hiearchical levels
+    """
+    # session names are usually stored as 20180802 style dates,
+    # but there are names like 201807250001 which denotes an additional
+    # session recorded for that day, but the date's sessioninfo json is the same
+    # so account for that
     sess_day = session[:8]
     info_path = f"/data/rawdata/sub-SA/sess-{sess_day}/session_info/sub-SA_sess-{sess_day}_sessioninfo.json"
-    frs = pd.read_pickle(f"/data/patrick_scratch/multi_sess/{session}/{session}_firing_rates_{PRE_INTERVAL}_{EVENT}_{POST_INTERVAL}_{INTERVAL_SIZE}_bins.pickle")
+    # read the spikes dataframe within the specified interval to ensure that the unit actually fires within the interval
+    frs = pd.read_pickle(f"/data/patrick_scratch/multi_sess/{session}/{session}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins.pickle")
     with open(info_path, 'r') as f:
         data = json.load(f)
     locs = data['electrode_info']
     locs_df = pd.DataFrame.from_dict(locs)
-    # TODO: filter by units appearing in firing rates file. 
+    # ensure a position exists
     electrode_pos_not_nan = locs_df[~locs_df['x'].isna() & ~locs_df['y'].isna() & ~locs_df['z'].isna()]
+    # grab unit to electrode mapping
     units = spike_general.list_session_units(None, "SA", session, species_dir="/data")
     unit_pos = pd.merge(units, electrode_pos_not_nan, left_on="Channel", right_on="electrode_id", how="left")
     unit_pos = unit_pos.astype({"UnitID": int})
@@ -190,10 +194,14 @@ def get_unit_positions_per_sess(session):
     return unit_pos
 
 
-def get_unit_positions(sessions):
-    positions = pd.concat(sessions.apply(lambda x: get_unit_positions_per_sess(x.session_name), axis=1).values)
-    # known_poses = positions.structure_level1.dropna().unique()
-    # sort that so its always in order
+def get_unit_positions(sessions, pre_interval, event, post_interval, interval_size):
+    """
+    For each session, finds unit positions, concatenates
+    """
+    positions = pd.concat(sessions.apply(
+        lambda x: get_unit_positions_per_sess(x.session_name, pre_interval, event, post_interval, interval_size), 
+        axis=1
+    ).values)
     # still want to plot the None units
     positions = positions.fillna("unknown")
     return positions
