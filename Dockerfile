@@ -11,6 +11,10 @@ RUN git clone https://github.com/learning-2-learn/spike_tools.git /src/spike_too
 RUN git clone https://github.com/ahwillia/tensortools &&\
         pip3 install -e /src/tensortools
 
+# dPCA dependency
+RUN pip3 install numexpr  
+RUN pip3 install dpca
+
 RUN pip3 install plotly==5.10.0
 RUN pip3 install --upgrade s3fs
 RUN pip3 install numpy-stl

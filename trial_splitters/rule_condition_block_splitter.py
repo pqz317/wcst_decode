@@ -16,7 +16,7 @@ class RuleConditionBlockSplitter:
     train/test sets don't bleed in to each other
     """
 
-    def __init__(self, beh_df, condition="CurrentRule", seed=None, num_distinct_conditions=12):
+    def __init__(self, beh_df, condition="CurrentRule", seed=None, num_distinct_conditions=12, num_blocks_per_cond=2):
         # get condition -> block numbers
         self.rng = np.random.default_rng(seed=seed)
         self.beh_df = beh_df
@@ -26,9 +26,9 @@ class RuleConditionBlockSplitter:
             raise ValueError(f"not the right number of conditions, with: {self.blocks_df.Condition.unique()}")
         # verify that each condition has at least 2 blocks
         self.blocks_df["NumBlocks"] = self.blocks_df.apply(lambda x: len(x.Blocks), axis=1)
-        less_than_twos = self.blocks_df[self.blocks_df.NumBlocks < 2]
-        if len(less_than_twos) > 0:
-            raise ValueError(f"conditions {less_than_twos.Condition.unique()} have less than two associated blocks")
+        less_than_ns = self.blocks_df[self.blocks_df.NumBlocks < num_blocks_per_cond]
+        if len(less_than_ns) > 0:
+            raise ValueError(f"conditions {less_than_ns.Condition.unique()} have less than {num_blocks_per_cond} associated blocks")
 
 
     def __iter__(self):

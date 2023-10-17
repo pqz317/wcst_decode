@@ -29,12 +29,15 @@ POSSIBLE_FEATURES = {
 # the output directory to store the data
 OUTPUT_DIR = "/data/patrick_scratch/pseudo"
 # path to a dataframe of sessions to analyze
-SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions.pickle"
+# SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions.pickle"
+SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions_rpe.pickle"
+
 # path for each session, specifying behavior
 SESS_BEHAVIOR_PATH = "/data/rawdata/sub-SA/sess-{sess_name}/behavior/sub-SA_sess-{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
 SESS_SPIKES_PATH = "/data/patrick_scratch/multi_sess/{sess_name}/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins.pickle"
 
+DATA_MODE = "SpikeCounts"
 
 def load_session_data(sess_name, condition): 
     """
@@ -65,6 +68,7 @@ def load_session_data(sess_name, condition):
         interval_size=INTERVAL_SIZE
     )
     frs = pd.read_pickle(spikes_path)
+    frs = frs.rename(columns={DATA_MODE: "Value"})
 
     # create a trial splitter 
     splitter = ConditionTrialSplitter(valid_beh_merged, condition, 0.2)
@@ -95,10 +99,10 @@ def decode_feature(feature_dim, valid_sess):
     train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, 5, 2000, 400, 42)
 
     # store the results
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_train_accs.npy"), train_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_test_accs.npy"), test_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_shuffled_accs.npy"), shuffled_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_models.npy"), models)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_rpe_sess_train_accs.npy"), train_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_rpe_sess_test_accs.npy"), test_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_rpe_sess_shuffled_accs.npy"), shuffled_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_rpe_sess_models.npy"), models)
 
 
 def main():

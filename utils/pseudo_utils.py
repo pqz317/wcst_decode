@@ -69,12 +69,8 @@ def generate_pseudo_population(frs, split, num_train_samples=1000, num_test_samp
         "Type": pseudo_trial_types,
         "Condition": repeat_conditions
     })
-    num_time_bins = len(frs.TimeBins.unique())
+    num_time_bins = len(frs.TimeBins.unique())  
     pseudo_pop = pd.merge(pseudo_df, frs, "inner", on=["UnitID", "TrialNumber"])
-    # print("len of pseudo_df unique unit id, trial number: ")
-    # print(len(pseudo_df.UnitID.unique()))
-    # print(len(pseudo_df.TrialNumber.unique()))
-    # print(num_pseudo_trials * num_units * num_time_bins)
     if not len(pseudo_pop) == num_pseudo_trials * num_units * num_time_bins: 
         raise ValueError("Did not get expected number of rows in pseudo population")
     return pseudo_pop

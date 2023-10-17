@@ -28,11 +28,10 @@ def create_session_data(sess_name):
     beh = pd.read_csv(behavior_path)
     valid_beh = behavioral_utils.get_valid_trials(beh)
     # find blocks with at least 10 corrects
-    valid_blocks = valid_beh.groupby("BlockNumber").apply(lambda x: len(x[x.Response == "Correct"]) > 15).index 
+    valid_beh = valid_beh.groupby("BlockNumber").filter(lambda x: len(x[x.Response == "Correct"]) > 15)
     # session must also have at least 10 blocks like this
-    if len(valid_blocks) < 10:
+    if len(valid_beh.BlockNumber.unique()) < 10: 
         return None
-    valid_beh = valid_beh[valid_beh.BlockNumber.isin(valid_blocks)]
     first_fives = behavioral_utils.get_first_n_corrects_per_block(valid_beh, 5)
     first_fives["label"] = "First"
     last_fives = behavioral_utils.get_last_n_corrects_per_block(valid_beh, 5)
@@ -47,6 +46,7 @@ def create_session_data(sess_name):
 def decode_position(valid_sess):
     sess_datas = valid_sess.apply(lambda x: create_session_data(x.session_name), axis=1)
     sess_datas = sess_datas.dropna()
+    print(f"{len(sess_datas)} sessions to decode with")
     num_neurons = sess_datas.apply(lambda x: x.get_num_neurons()).sum()
     print(f"{num_neurons} neurons to decode with")
     init_params = {"n_inputs": num_neurons, "p_dropout": 0.5, "n_classes": 2}

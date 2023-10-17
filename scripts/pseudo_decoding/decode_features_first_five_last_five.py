@@ -39,12 +39,11 @@ def load_session_data(sess_name, condition, mode):
     beh = pd.read_csv(behavior_path)
 
     valid_beh = behavioral_utils.get_valid_trials(beh)
-    # find blocks with at least 10 corrects
-    valid_blocks = valid_beh.groupby("BlockNumber").apply(lambda x: len(x[x.Response == "Correct"]) > 15).index 
+    # find blocks with at least 15 corrects
+    valid_beh = valid_beh.groupby("BlockNumber").filter(lambda x: len(x[x.Response == "Correct"]) > 15)
     # session must also have at least 10 blocks like this
-    if len(valid_blocks) < 10:
+    if len(valid_beh.BlockNumber.unique()) < 10: 
         return None
-    valid_beh = valid_beh[valid_beh.BlockNumber.isin(valid_blocks)]
     if mode == "first_five": 
         valid_beh = behavioral_utils.get_first_n_corrects_per_block(valid_beh, 5)   
     elif mode == "last_five": 
@@ -68,7 +67,8 @@ def decode_feature(feature_dim, valid_sess, mode):
     print(f"Decoding {feature_dim}")
     # load all session datas
     sess_datas = valid_sess.apply(lambda x: load_session_data(x.session_name, feature_dim, mode), axis=1)
-
+    sess_datas = sess_datas.dropna()
+    print(f"{len(sess_datas)} sessions to decode with")
     # setup decoder, specify all possible label classes, number of neurons, parameters
     classes = possible_features[feature_dim]
     num_neurons = sess_datas.apply(lambda x: x.get_num_neurons()).sum()

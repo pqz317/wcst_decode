@@ -6,7 +6,6 @@ from spike_tools import (
 from scipy.ndimage import gaussian_filter1d
 import json
 
-
 def get_spikes_by_trial_interval_DEPRECATED(spike_times, intervals):
     """Finds all the spikes within a series of time intervals
 
@@ -165,23 +164,39 @@ def get_unit_fr_array(frs, column_name):
     return np.stack(grouped.squeeze(), axis=0)
 
 
-def get_unit_positions_per_sess(session, pre_interval, event, post_interval, interval_size):
-    """
-    Finds the unit positions in a session, from electrode positions provided in the sessioninfo json
-    Positions have x, y, z, as well as structures at various hiearchical levels
-    """
+DEFAULT_FR_PATH = "/data/patrick_scratch/multi_sess/{session}/{session}_firing_rates_1300_FeedbackOnset_1500_100_bins.pickle"
+
+def get_unit_positions_per_sess(session, fr_path=None):
+    if fr_path is None: 
+        fr_path = DEFAULT_FR_PATH
+    session_fr_path = fr_path.format(
+        session=session,
+    )
+    frs = pd.read_pickle(session_fr_path)
+
     # session names are usually stored as 20180802 style dates,
     # but there are names like 201807250001 which denotes an additional
     # session recorded for that day, but the date's sessioninfo json is the same
     # so account for that
-    sess_day = session[:8]
-    info_path = f"/data/rawdata/sub-SA/sess-{sess_day}/session_info/sub-SA_sess-{sess_day}_sessioninfo.json"
-    # read the spikes dataframe within the specified interval to ensure that the unit actually fires within the interval
-    frs = pd.read_pickle(f"/data/patrick_scratch/multi_sess/{session}/{session}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins.pickle")
+    # sess_day = session[:8]
+    sess_day = session
+    info_path = f"/data/rawdata/sub-SA/sess-{sess_day}/session_info/sub-SA_sess-{sess_day}_sessioninfomodified.json"
+
     with open(info_path, 'r') as f:
         data = json.load(f)
     locs = data['electrode_info']
     locs_df = pd.DataFrame.from_dict(locs)
+    # switch types because some entries can be a list
+    # NOTE: hack to convert relevant fields to str first
+    locs_df = locs_df.astype({
+        "structure_level1": "str",
+        "structure_level2": "str",
+        "structure_level3": "str",
+        "structure_level4": "str",
+        "structure_level5": "str"
+    })
+    locs_df = locs_df.replace("[]", None)
+
     # ensure a position exists
     electrode_pos_not_nan = locs_df[~locs_df['x'].isna() & ~locs_df['y'].isna() & ~locs_df['z'].isna()]
     # grab unit to electrode mapping
@@ -194,14 +209,54 @@ def get_unit_positions_per_sess(session, pre_interval, event, post_interval, int
     return unit_pos
 
 
-def get_unit_positions(sessions, pre_interval, event, post_interval, interval_size):
+USE_STRUCTURE_2 = ["diencephalon (di)", "metencephalon (met)", "telencephalon (tel)", ""]
+
+LEVEL_2_TO_MANUALS = {
+    "posterior_medial_cortex (PMC)": "Parietal Cortex",
+    "motor_cortex (motor)": "Premotor Cortex",
+    "orbital_frontal_cortex (OFC)": "Prefrontal Cortex",
+    "lateral_prefrontal_cortex (lat_PFC)": "Prefrontal Cortex",
+    "anterior_cingulate_gyrus (ACgG)": "Anterior Cingulate Gyrus",
+    "lateral_and_ventral_pallium (LVPal)": "Claustrum",
+    "amygdala (Amy)": "Amygdala",
+    "inferior_temporal_cortex (ITC)": "Hippocampus/MTL",
+    "preoptic_complex (POC)": "Hippocampus/MTL",
+    "basal_ganglia (BG)": "Basal Ganglia",
+    "primary_visual_cortex (V1)": "Visual Cortex",
+    "inferior_parietal_lobule (IPL)": "Parietal Cortex",
+    "medial_pallium (MPal)": "Hippocampus/MTL",
+    "superior_parietal_lobule (SPL)": "Parietal Cortex",
+    "extrastriate_visual_areas_2-4 (V2-V4)": "Visual Cortex",
+    "thalamus (Thal)": "unknown",
+    # "floor_of_the_lateral_sulcus (floor_of_ls)": "Hippocampus/MTL",
+    "floor_of_the_lateral_sulcus (floor_of_ls)": "unknown",
+    "diagonal_subpallium (DSP)": "unknown",
+    "cerebellum (Cb)": "unknown",
+    "medial_temporal_lobe (MTL)": "Hippocampus/MTL",
+    "somatosensory_cortex (SI/SII)": "Parietal Cortex",
+    "core_and_belt_areas_of_auditory_cortex (core/belt)": "Hippocampus/MTL",
+    "unknown": "unknown",
+}
+
+
+
+def get_manual_structure(positions):
+    """
+    Curates a structure level that combines levels 1 and 2, replacing any *phalon 
+    structures with their level 2 substructures
+    """
+    positions["manual_structure"] = positions.apply(lambda x: LEVEL_2_TO_MANUALS[x.structure_level2], axis=1)
+    return positions
+
+def get_unit_positions(sessions, fr_path=None):
     """
     For each session, finds unit positions, concatenates
     """
     positions = pd.concat(sessions.apply(
-        lambda x: get_unit_positions_per_sess(x.session_name, pre_interval, event, post_interval, interval_size), 
+        lambda x: get_unit_positions_per_sess(x.session_name, fr_path), 
         axis=1
     ).values)
     # still want to plot the None units
     positions = positions.fillna("unknown")
+    positions = get_manual_structure(positions)
     return positions

@@ -330,6 +330,15 @@ def get_valid_trials(beh):
     ]  
     return valid_beh
 
+def get_rpes_per_session(session, beh):
+    probs_path = f"/data/082023_RL_Probs/sess-{session}_hv.csv"
+    probs = pd.read_csv(probs_path)
+    probs["RPE_FE"] = probs.fb - probs.Prob_FE
+    probs["RPE_FD"] = probs.fb - probs.Prob_FD
+    probs["RPE_FRL"] = probs.fb - probs.Prob_FRL
+    merged = pd.merge(beh, probs, left_on="TrialNumber", right_on="trial", how="inner")
+    return merged
+
 # def filter_perseverating_trials(beh):
 #     """
 #     """

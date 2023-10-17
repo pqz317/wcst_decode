@@ -11,6 +11,18 @@ import pandas as pd
 from itertools import accumulate
 import matplotlib.patches as patches
 
+REGION_TO_COLOR = {
+    "Amygdala": "#00ff00",
+    "Anterior Cingulate Gyrus": "#ff4500",
+    "Basal Ganglia": "#0000ff",
+    "Claustrum": "#ffd700",
+    "Hippocampus/MTL": "#00ffff",
+    "Parietal Cortex": "#191970",
+    "Prefrontal Cortex": "#bc8f8f",
+    "Premotor Cortex": "#006400",
+    "Visual Cortex": "#ff1493",
+}
+
 def visualize_accuracy_across_time_bins(
     accuracies, 
     pre_interval, 
@@ -20,7 +32,8 @@ def visualize_accuracy_across_time_bins(
     label=None,
     right_align=False,
     color=None,
-    add_std=True
+    add_err=True, 
+    sem=False,
 ):
     """Plots accuracies across time bins as a shaded line plot
 
@@ -37,11 +50,12 @@ def visualize_accuracy_across_time_bins(
         # every x timepoint indicates the right of the bin
         x = x + interval_size
     mean_line, = ax.plot(x, means, label=label, linewidth=2)
-    if add_std:
-        std_line = ax.fill_between(x, means - stds, means + stds, alpha=0.5)
+    if add_err:
+        err = stds / np.sqrt(accuracies.shape[1]) if sem else stds
+        std_line = ax.fill_between(x, means - err, means + err, alpha=0.5)
     if color:
         mean_line.set_color(color)
-        if add_std:
+        if add_err:
             std_line.set_color(color)
 
 
@@ -161,9 +175,11 @@ def get_name_to_color(positions, structure_level, color_list=None, unknown_color
     return name_to_color
 
 
-def generate_glass_brain(positions, structure_level, color_list=None, unknown_color="#adadad"):
-    name_to_color = get_name_to_color(positions, structure_level, color_list, unknown_color)
-
+def generate_glass_brain(positions, structure_level, color_list=None, name_to_color=None, unknown_color="#adadad"):
+    # hack to get things in the same order
+    positions = positions.sort_values(structure_level)
+    if not name_to_color:
+        name_to_color = get_name_to_color(positions, structure_level, color_list, unknown_color)
     fig1 = px.scatter_3d(
         positions, x="x", y="y", z="z", 
         color=structure_level, 
@@ -192,16 +208,24 @@ def generate_glass_brain(positions, structure_level, color_list=None, unknown_co
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
         showlegend=True,
+        legend={'traceorder':'normal'},
+        legend_title_text=None,
         scene_camera=camera
     )
     return fig
 
-def visualize_weights(positions, weights, structure_level, color_list=None, unknown_color="#adadad", ax=None):
+def visualize_weights(positions, weights, structure_level, interval_size=100, color_list=None, name_to_color=None, cmap=None, unknown_color="#adadad", add_region=True, mean_weights_df=None, ax=None, fig=None):
     # get re-ordered indexes
     pos_unit_sorted = positions.sort_values(by="PseudoUnitID")
     pos_unit_sorted["np_idx"] = np.arange(0, len(pos_unit_sorted))
-    pos_structure_sorted = pos_unit_sorted.sort_values(by=structure_level)
-    reordered_idxs = pos_structure_sorted.np_idx.values
+    if mean_weights_df is None:
+        pos_structure_sorted = pos_unit_sorted.sort_values(by=structure_level)
+        reordered_idxs = pos_structure_sorted.np_idx.values
+    else: 
+        merged = pd.merge(pos_unit_sorted, mean_weights_df, on="np_idx")
+        pos_structure_sorted = merged.sort_values(by=[structure_level, "weight"], ascending=[True, False])
+        # pos_structure_sorted = pos_structure_sorted.groupby(structure_level).apply(lambda x: x.iloc[:int(len(x) * 0.5)]).reset_index(drop=True)
+        reordered_idxs = pos_structure_sorted.np_idx.values
 
     # get lengths of vertical bands on the left
     lens = pos_structure_sorted.groupby(structure_level).apply(lambda x: len(x)).values
@@ -210,7 +234,8 @@ def visualize_weights(positions, weights, structure_level, color_list=None, unkn
     reg_end = list(np.array(lens_accum[1:]) - 1)
     lines = np.array(lens_accum[0:-1]) - 0.5
 
-    name_to_color = get_name_to_color(positions, structure_level, color_list, unknown_color)
+    if not name_to_color:
+        name_to_color = get_name_to_color(positions, structure_level, color_list, unknown_color)
 
     # reorder by temp then ant
     reordered = weights[reordered_idxs, :]
@@ -221,10 +246,14 @@ def visualize_weights(positions, weights, structure_level, color_list=None, unkn
 
     if not ax: 
         _, ax = plt.subplots(figsize=(8, 15))
-    colors = ax.matshow(reordered, aspect='auto')
+    if cmap is None:
+        colors = ax.matshow(reordered, aspect='auto')
+    else: 
+        colors = ax.matshow(reordered, aspect='auto', cmap=cmap)
     # tick_labels = np.array([-1.2, -0.9, -0.6, -0.3, 0, 0.3, 0.6, 0.9, 1.2])
+    ratio = 1000 / interval_size
     tick_labels = np.array([-1, -0.5, 0, 0.5, 1.0, 1.5])
-    tick_pos = (tick_labels + 1.3) * 10 - 0.5
+    tick_pos = (tick_labels + 1.3) * ratio - 0.5
     # fig.colorbar(colors)
     # axis = np.arange(0, 28, 3)s
     # labels = np.around((axis - 13) * 0.1, 1)
@@ -239,10 +268,8 @@ def visualize_weights(positions, weights, structure_level, color_list=None, unkn
     # ax.set_yticklabels(y_axis)
 
     boundaries = np.insert(np.insert(lines, len(lines), reordered.shape[0] - 0.5), 0, -0.5)
-    print(lines)
-    print(len(boundaries))
     for line in lines:
-        ax.axhline(line, color='white', linestyle="dotted")
+        ax.axhline(line, color='white', linestyle="dotted", linewidth=1.5)
 
     for i in range(len(boundaries)-1):
         structure_name = structure_names[i]
@@ -257,12 +284,13 @@ def visualize_weights(positions, weights, structure_level, color_list=None, unkn
             facecolor=name_to_color[structure_name],
             clip_on=False
         )
-        ax.add_patch(rect)
+        if add_region:
+            ax.add_patch(rect)
     gray_rect = patches.Rectangle(
-        (4.5, -1.2), 8, 0.5,
+        (4.5, -1.5), 8, 0.5,
         edgecolor="gray",
         facecolor="gray",
         clip_on=False,
     )
     ax.add_patch(gray_rect)
-    ax.axvline(13.48, color="gray", linestyle="dotted")
+    ax.axvline(13.48, color="gray", linestyle="dotted", linewidth=1.5)

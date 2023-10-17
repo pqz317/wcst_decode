@@ -53,7 +53,9 @@ rule_to_dim = {
     'SWIRL': 'Pattern'
 }
 
-split_seed = 42
+SPLIT_SEED = 42
+MIN_NUM_BLOCKS_PER_RULE = 3
+LAST_N_CORRECTS_PER_BLOCK = 8
 
 def create_session_datas(sess_name, rule_dim):
     """
@@ -65,7 +67,7 @@ def create_session_datas(sess_name, rule_dim):
     beh = pd.read_csv(behavior_path)
 
     valid_beh = behavioral_utils.get_valid_trials(beh)
-    last_eights = behavioral_utils.get_last_n_corrects_per_block(valid_beh, 8)
+    last_eights = behavioral_utils.get_last_n_corrects_per_block(valid_beh, LAST_N_CORRECTS_PER_BLOCK)
     feature_selections = behavioral_utils.get_selection_features(last_eights)
     last_eights_merged = pd.merge(last_eights, feature_selections, on="TrialNumber", how="inner")
     last_eights_merged["RuleDim"] = last_eights_merged.apply(lambda x: rule_to_dim[x.CurrentRule], axis=1)
@@ -79,8 +81,9 @@ def create_session_datas(sess_name, rule_dim):
         rule_dim_splitter = RuleConditionBlockSplitter(
             last_eights_only_rule, 
             condition="CurrentRule", 
-            seed=split_seed,
+            seed=SPLIT_SEED,
             num_distinct_conditions=4,
+            num_blocks_per_cond=MIN_NUM_BLOCKS_PER_RULE,
         )
     except ValueError as e:
         print(f"Error while generating splits for session {sess_name}, skipping:")
@@ -115,8 +118,15 @@ def create_session_datas(sess_name, rule_dim):
 
 def decode_features_of_rule_dim(rule_dim, valid_sess):
     print(f"Decoding features where rule is {rule_dim}")
+    base_dir = "/data/patrick_scratch/pseudo"
+
     sess_datas = valid_sess.apply(lambda x: create_session_datas(x.session_name, rule_dim), axis=1)
     sess_datas = sess_datas.dropna()
+
+    # store sessions that were used
+    sess_names = sess_datas.apply(lambda x: x["Color"].sess_name)  # choice of Color arbitrary
+    sess_names.to_pickle(os.path.join(base_dir, f"rule_dim_{rule_dim}_sessions.pickle"))
+
     print(f"{len(sess_datas)} sessions successfully generated splits, using them")
     for feature_dim in feature_dims:
         print(f"Rule dim is {rule_dim}, decoding {feature_dim}")
@@ -129,7 +139,6 @@ def decode_features_of_rule_dim(rule_dim, valid_sess):
         time_bins = np.arange(0, 2.8, 0.1)
         train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(model, feature_sess_datas, time_bins, 5, 2000, 400, 42)
 
-        base_dir = "/data/patrick_scratch/pseudo"
         np.save(os.path.join(base_dir, f"rule_dim_{rule_dim}_{feature_dim}_decoding_train_accs.npy"), train_accs)
         np.save(os.path.join(base_dir, f"rule_dim_{rule_dim}_{feature_dim}_decoding_test_accs.npy"), test_accs)
         np.save(os.path.join(base_dir, f"rule_dim_{rule_dim}_{feature_dim}_decoding_shuffled_accs.npy"), shuffled_accs)

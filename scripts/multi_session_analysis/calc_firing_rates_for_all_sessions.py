@@ -25,7 +25,8 @@ SUBJECT = 'SA'
 # EVENT = "FixationOnCross"
 PRE_INTERVAL = 1300
 POST_INTERVAL = 1500
-INTERVAL_SIZE = 100
+INTERVAL_SIZE = 50
+NUM_BINS_SMOOTH = 2
 EVENT = "FeedbackOnset"
 
 
@@ -57,13 +58,13 @@ def calc_firing_rate_for_interval(row):
     end_bin = (PRE_INTERVAL + POST_INTERVAL) / 1000 + interval_size_secs
 
     print("Calculating Firing Rates")
-    firing_rates = spike_analysis.firing_rate(spike_by_trial_interval, spike_by_trial_interval, bins=np.arange(0, end_bin, interval_size_secs), smoothing=1)
+    firing_rates = spike_analysis.firing_rate(spike_by_trial_interval, spike_by_trial_interval, bins=np.arange(0, end_bin, interval_size_secs), smoothing=NUM_BINS_SMOOTH)
 
     print("Saving")
     dir_path = f"/data/patrick_scratch/multi_sess/{sess_name}"
     if not os.path.isdir(dir_path):
         os.mkdir(dir_path)
-    firing_rates.to_pickle(os.path.join(dir_path, f"{sess_name}_firing_rates_{PRE_INTERVAL}_{EVENT}_{POST_INTERVAL}_{INTERVAL_SIZE}_bins.pickle"))
+    firing_rates.to_pickle(os.path.join(dir_path, f"{sess_name}_firing_rates_{PRE_INTERVAL}_{EVENT}_{POST_INTERVAL}_{INTERVAL_SIZE}_bins_{NUM_BINS_SMOOTH}_smooth.pickle"))
 
 
 def main():

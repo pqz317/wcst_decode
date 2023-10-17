@@ -10,11 +10,11 @@ import copy
 Need to adapt classifier utils due to the pseudo population workflow being so different
 """
 def transform_input_data(pseudo_data):
-    pseudo_data = pseudo_data[["PseudoTrialNumber", "PseudoUnitID", "SpikeCounts"]]
+    pseudo_data = pseudo_data[["PseudoTrialNumber", "PseudoUnitID", "Value"]]
     num_units = len(pseudo_data["PseudoUnitID"].unique())
     num_trials = len(pseudo_data["PseudoTrialNumber"].unique())
     sorted_by_trial = pseudo_data.sort_values(by=["PseudoTrialNumber", "PseudoUnitID"])
-    return sorted_by_trial["SpikeCounts"].to_numpy().reshape((num_trials, num_units))
+    return sorted_by_trial["Value"].to_numpy().reshape((num_trials, num_units))
 
 def transform_label_data(pseudo_data):
     pseudo_data = pseudo_data[["PseudoTrialNumber", "Condition"]].drop_duplicates()
