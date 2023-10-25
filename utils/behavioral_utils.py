@@ -339,10 +339,5 @@ def get_rpes_per_session(session, beh):
     merged = pd.merge(beh, probs, left_on="TrialNumber", right_on="trial", how="inner")
     return merged
 
-# def filter_perseverating_trials(beh):
-#     """
-#     """
-#     def find_prev_rule(row):
-#         if row.BlockNumber == 0
-#         return row.BlockNumber - 1
-#     beh["PrevRule"] = beh.apply(find_prev_rule, axis=1)
+def get_feature_rpe_beh_for_session(sess_name):
+    pass

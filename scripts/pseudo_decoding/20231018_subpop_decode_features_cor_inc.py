@@ -29,7 +29,9 @@ POSSIBLE_FEATURES = {
 # the output directory to store the data
 OUTPUT_DIR = "/data/patrick_scratch/pseudo"
 # path to a dataframe of sessions to analyze
-SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions.pickle"
+SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions_rpe.pickle"
+# path for subpopulation intereseted in 
+SUBPOP_PATH = "/data/patrick_scratch/information/subpops/feature_and_rpe_units.pickle"
 # path for each session, specifying behavior
 SESS_BEHAVIOR_PATH = "/data/rawdata/sub-SA/sess-{sess_name}/behavior/sub-SA_sess-{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
@@ -40,7 +42,7 @@ DATA_MODE = "SpikeCounts"
 SEED = 42
 
 
-def load_session_data(sess_name, condition): 
+def load_session_data(sess_name, condition, subpop): 
     """
     Loads the data (behavioral and firing rates) for a given session, 
     generates a TrialSplitter based on a condition (feature dimension) 
@@ -76,15 +78,23 @@ def load_session_data(sess_name, condition):
         post_interval=POST_INTERVAL, 
         interval_size=INTERVAL_SIZE
     )
+    subpop_units = subpop[subpop.session == str(sess_name)].UnitID.unique()
+    print(f"{len(subpop_units)} units in subpop for session") 
+    if len(subpop_units) == 0:
+        return None
     frs = pd.read_pickle(spikes_path)
+    frs = frs[frs.UnitID.isin(subpop_units)]
     frs = frs.rename(columns={DATA_MODE: "Value"})
 
     # create a trial splitter 
     cor_splitter = ConditionTrialSplitter(cor_beh, condition, 0.2)
     inc_splitter = ConditionTrialSplitter(inc_beh, condition, 0.2)
+    all_splitter = ConditionTrialSplitter(valid_beh, condition, 0.2)
     return (
         SessionData(sess_name, cor_beh, frs, cor_splitter),
         SessionData(sess_name, inc_beh, frs, inc_splitter),
+        SessionData(sess_name, valid_beh, frs, all_splitter),
+
     )
 
 
@@ -103,12 +113,12 @@ def run_decoder(sess_datas, feature_dim, response):
     train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, 5, 1000, 200, 42)
 
     # store the results
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{response}_train_accs.npy"), train_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{response}_test_accs.npy"), test_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{response}_shuffled_accs.npy"), shuffled_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{response}_models.npy"), models)
+    np.save(os.path.join(OUTPUT_DIR, f"subpop_{feature_dim}_{response}_train_accs.npy"), train_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"subpop_{feature_dim}_{response}_test_accs.npy"), test_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"subpop_{feature_dim}_{response}_shuffled_accs.npy"), shuffled_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"subpop_{feature_dim}_{response}_models.npy"), models)
 
-def decode_feature(feature_dim, valid_sess):
+def decode_feature(feature_dim, valid_sess, subpop):
     """
     For a feature dimension and list of sessions, sets up and runs decoding, stores results
     Args: 
@@ -117,11 +127,14 @@ def decode_feature(feature_dim, valid_sess):
     """
     print(f"Decoding {feature_dim}")
     # load all session datas
-    sess_datas = valid_sess.apply(lambda x: load_session_data(x.session_name, feature_dim), axis=1)
+    sess_datas = valid_sess.apply(lambda x: load_session_data(x.session_name, feature_dim, subpop), axis=1)
+    sess_datas = sess_datas.dropna()
     cor_datas = sess_datas.apply(lambda x: x[0])
     inc_datas = sess_datas.apply(lambda x: x[1])
+    all_datas = sess_datas.apply(lambda x: x[2])
     run_decoder(cor_datas, feature_dim, "Correct")
     run_decoder(inc_datas, feature_dim, "Incorrect")
+    run_decoder(all_datas, feature_dim, "All")
 
 
 def main():
@@ -130,8 +143,9 @@ def main():
     For each feature dimension, runs decoding, stores results. 
     """
     valid_sess = pd.read_pickle(SESSIONS_PATH)
+    subpop = pd.read_pickle(SUBPOP_PATH)
     for feature_dim in FEATURE_DIMS: 
-        decode_feature(feature_dim, valid_sess)
+        decode_feature(feature_dim, valid_sess, subpop)
 
 if __name__ == "__main__":
     main()

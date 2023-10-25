@@ -81,3 +81,51 @@ class ModelWrapperLinearRegression:
     # @property
     # def coef_(self):
     #     return self.model.linear.weight.detach().cpu().numpy()
+
+class ModelWrapperRegression: 
+    """
+    A wrapper where score and predictions are for a Linear instead of Logistic Regression
+    """
+    def __init__(self, model_type, init_params, trainer):
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        print(self.device)
+        self.model_type = model_type
+        self.init_params = init_params
+        self.trainer = trainer
+
+    def _create_dataset(self, x, y):
+        x = torch.tensor(x).float().to(self.device)
+        y = torch.tensor(y).to(self.device)
+        return (x, y)
+
+    def fit(self, x_train, y_train):
+        self.model = self.model_type(**self.init_params)
+        dataset = self._create_dataset(x_train, y_train)
+        self.trainer.train(self.model, dataset)
+        return self
+
+    def predict(self, x_test):
+        self.model.eval()
+        x_test = torch.Tensor(x_test).to(self.device)
+        res = self.model(x_test)
+        return res.detach().cpu().numpy()
+
+    def score(self, x_test, y_test):
+        """
+        Report the pseudo R^2 
+        (L_model - L_null) / (L_saturated - L_null)
+        Where L_null is if only mean is used for prediction,
+        L_saturated is NLL(y_true, y_true)
+        """
+        loss_fn = self.trainer.loss_fn.to(self.device)
+        x, y_true = self._create_dataset(x_test, y_test)
+        y_pred = self.model(x)
+        y_null = torch.mean(y_true).repeat(len(y_true))
+        l_model = loss_fn(y_pred, y_true)
+        l_null = loss_fn(y_null, y_true)
+        l_sat = loss_fn(y_true, y_true)
+        return (l_model - l_null) / (l_sat - l_null)
+
+    @property
+    def coef_(self):
+        return self.model.linear.weight.detach().cpu().numpy()
