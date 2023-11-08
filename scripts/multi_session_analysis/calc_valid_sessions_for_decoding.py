@@ -7,7 +7,7 @@ from spike_tools import (
     analysis as spike_analysis,
 )
 
-NUM_NEURONS = 20
+NUM_NEURONS = 0
 NUM_TRIALS = 500
 VALID_SESS_BEFORE = datetime.strptime("20181015", "%Y%m%d").date()
 
@@ -53,6 +53,8 @@ def check_num_neurons(sess):
 
 def filter_sessions(sess):
     return check_date(sess) and check_num_trials(sess) and check_num_neurons(sess)
+    # return check_date(sess) and check_num_trials(sess)
+
 
 def main():
     """
@@ -64,7 +66,7 @@ def main():
     sess_df["valid"] = sess_df.apply(filter_sessions, axis=1)
     valid_sess_df = sess_df[sess_df.valid]
     print(f"Found {len(valid_sess_df)} valid sessions")
-    valid_sess_df.to_pickle("/data/patrick_scratch/multi_sess/valid_sessions.pickle")
+    valid_sess_df.to_pickle("/data/patrick_res/multi_sess/valid_sessions.pickle")
 
 if __name__ == "__main__":
     main()

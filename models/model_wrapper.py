@@ -88,7 +88,7 @@ class ModelWrapperRegression:
     """
     def __init__(self, model_type, init_params, trainer):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        print(self.device)
+        # print(self.device)
         self.model_type = model_type
         self.init_params = init_params
         self.trainer = trainer
@@ -96,7 +96,7 @@ class ModelWrapperRegression:
     def _create_dataset(self, x, y):
         x = torch.tensor(x).float().to(self.device)
         y = torch.tensor(y).to(self.device)
-        return (x, y)
+        return (x, y, None)
 
     def fit(self, x_train, y_train):
         self.model = self.model_type(**self.init_params)
@@ -118,13 +118,15 @@ class ModelWrapperRegression:
         L_saturated is NLL(y_true, y_true)
         """
         loss_fn = self.trainer.loss_fn.to(self.device)
-        x, y_true = self._create_dataset(x_test, y_test)
+        x, y_true, _ = self._create_dataset(x_test, y_test)
         y_pred = self.model(x)
         y_null = torch.mean(y_true).repeat(len(y_true))
-        l_model = loss_fn(y_pred, y_true)
-        l_null = loss_fn(y_null, y_true)
-        l_sat = loss_fn(y_true, y_true)
-        return (l_model - l_null) / (l_sat - l_null)
+        l_model = -1* loss_fn(y_pred, y_true)
+        y_null[y_null == 0] = 1e8
+        l_null = -1 * loss_fn(torch.log(y_null), y_true)
+        y_true[y_true == 0] = 1e8
+        l_sat = -1 * loss_fn(torch.log(y_true), y_true)
+        return ((l_model - l_null) / (l_sat - l_null)).detach().cpu().numpy()
 
     @property
     def coef_(self):

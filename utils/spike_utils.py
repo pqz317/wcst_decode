@@ -164,7 +164,7 @@ def get_unit_fr_array(frs, column_name):
     return np.stack(grouped.squeeze(), axis=0)
 
 
-DEFAULT_FR_PATH = "/data/patrick_scratch/multi_sess/{session}/{session}_firing_rates_1300_FeedbackOnset_1500_100_bins.pickle"
+DEFAULT_FR_PATH = "/data/patrick_res/multi_sess/{session}/{session}_firing_rates_1300_FeedbackOnset_1500_100_bins_1_smooth.pickle"
 
 def get_unit_positions_per_sess(session, fr_path=None):
     if fr_path is None: 
@@ -260,3 +260,12 @@ def get_unit_positions(sessions, fr_path=None):
     positions = positions.fillna("unknown")
     positions = get_manual_structure(positions)
     return positions
+
+def get_subpop_ratios_by_region(subpop, valid_sess):
+    all_pop = get_unit_positions(valid_sess)
+    subpop_counts = subpop.groupby("manual_structure").count()["UnitID"].rename("SubpopCount")
+    all_pop_counts = all_pop.groupby("manual_structure").count()["UnitID"].rename("PopCount")
+    merged = pd.merge(subpop_counts, all_pop_counts, on="manual_structure")
+    merged["Ratio"] = merged["SubpopCount"] / merged["PopCount"]
+    merged = merged.sort_values("Ratio", ascending=False)
+    return merged

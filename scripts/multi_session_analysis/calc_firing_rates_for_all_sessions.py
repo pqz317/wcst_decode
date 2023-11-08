@@ -24,17 +24,17 @@ SUBJECT = 'SA'
 # INTERVAL_SIZE = 100
 # EVENT = "FixationOnCross"
 
-# PRE_INTERVAL = 500
-# POST_INTERVAL = 500
-# INTERVAL_SIZE = 100
-# NUM_BINS_SMOOTH = 1
-# EVENT = "StimOnset"
-
-PRE_INTERVAL = 1300
-POST_INTERVAL = 1500
+PRE_INTERVAL = 500
+POST_INTERVAL = 500
 INTERVAL_SIZE = 100
 NUM_BINS_SMOOTH = 1
-EVENT = "FeedbackOnset"
+EVENT = "StimOnset"
+
+# PRE_INTERVAL = 1300
+# POST_INTERVAL = 1500
+# INTERVAL_SIZE = 50
+# NUM_BINS_SMOOTH = 1
+# EVENT = "FeedbackOnset"
 
 
 def calc_firing_rate_for_interval(row):
@@ -68,14 +68,14 @@ def calc_firing_rate_for_interval(row):
     firing_rates = spike_analysis.firing_rate(spike_by_trial_interval, spike_by_trial_interval, bins=np.arange(0, end_bin, interval_size_secs), smoothing=NUM_BINS_SMOOTH)
 
     print("Saving")
-    dir_path = f"/data/patrick_scratch/multi_sess/{sess_name}"
+    dir_path = f"/data/patrick_res/multi_sess/{sess_name}"
     if not os.path.isdir(dir_path):
         os.mkdir(dir_path)
     firing_rates.to_pickle(os.path.join(dir_path, f"{sess_name}_firing_rates_{PRE_INTERVAL}_{EVENT}_{POST_INTERVAL}_{INTERVAL_SIZE}_bins_{NUM_BINS_SMOOTH}_smooth.pickle"))
 
 
 def main():
-    valid_sess = pd.read_pickle("/data/patrick_scratch/multi_sess/valid_sessions.pickle")
+    valid_sess = pd.read_pickle("/data/patrick_res/multi_sess/valid_sessions.pickle")
     valid_sess.apply(calc_firing_rate_for_interval, axis=1)
 
 if __name__ == "__main__":

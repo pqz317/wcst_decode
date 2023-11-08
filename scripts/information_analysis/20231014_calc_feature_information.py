@@ -11,15 +11,17 @@ EVENT = "FeedbackOnset"  # event in behavior to align on
 PRE_INTERVAL = 1300   # time in ms before event
 POST_INTERVAL = 1500  # time in ms after event
 INTERVAL_SIZE = 100  # size of interval in ms
+NUM_BINS_SMOOTH = 1
+
 
 # the output directory to store the data
-OUTPUT_DIR = "/data/patrick_scratch/information"
-SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions_rpe.pickle"
+OUTPUT_DIR = "/data/patrick_res/information"
+SESSIONS_PATH = "/data/patrick_res/multi_sess/valid_sessions_rpe.pickle"
 
 # path for each session, specifying behavior
 SESS_BEHAVIOR_PATH = "/data/rawdata/sub-SA/sess-{sess_name}/behavior/sub-SA_sess-{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
-SESS_SPIKES_PATH = "/data/patrick_scratch/multi_sess/{sess_name}/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins.pickle"
+SESS_SPIKES_PATH = "/data/patrick_res/multi_sess/{sess_name}/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_{num_bins_smooth}_smooth.pickle"
 
 DATA_MODE = "SpikeCounts"
 
@@ -50,7 +52,8 @@ def load_data(sess_name):
         pre_interval=PRE_INTERVAL, 
         event=EVENT, 
         post_interval=POST_INTERVAL, 
-        interval_size=INTERVAL_SIZE
+        interval_size=INTERVAL_SIZE,
+        num_bins_smooth=NUM_BINS_SMOOTH,
     )
     frs = pd.read_pickle(spikes_path)
     frs = frs.set_index(["TrialNumber"])
