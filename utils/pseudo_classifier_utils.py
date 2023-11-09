@@ -45,7 +45,7 @@ def evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, num_splits, 
             x_test = transform_input_data(test_data)
             y_test = transform_label_data(test_data)
 
-            if proj_matrix:
+            if proj_matrix is not None:
                 # means = np.mean(x_train, axis=1)
                 # stds = np.std(x_train, axis=1)
                 # norm_x_train = (x_train - means) / stds

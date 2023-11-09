@@ -19,13 +19,13 @@ POST_INTERVAL = 1500  # time in ms after event
 INTERVAL_SIZE = 100  # size of interval in ms
 
 # # the output directory to store the data
-# OUTPUT_DIR = "/data/patrick_scratch/pseudo"
+# OUTPUT_DIR = "/data/patrick_res/pseudo"
 # # path to a dataframe of sessions to analyze
-# SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions_rpe.pickle"
+# SESSIONS_PATH = "/data/patrick_res/multi_sess/valid_sessions_rpe.pickle"
 # # path for each session, specifying behavior
 # SESS_BEHAVIOR_PATH = "/data/rawdata/sub-SA/sess-{sess_name}/behavior/sub-SA_sess-{sess_name}_object_features.csv"
 # # path for each session, for spikes that have been pre-aligned to event time and binned. 
-# SESS_SPIKES_PATH = "/data/patrick_scratch/multi_sess/{sess_name}/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins.pickle"
+# SESS_SPIKES_PATH = "/data/patrick_res/multi_sess/{sess_name}/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 
 # the output directory to store the data
 OUTPUT_DIR = "/data/res/pseudo"
@@ -118,7 +118,8 @@ def run_decoder(sess_datas, proj=None, proj_name="no_proj"):
     # calculate time bins (in seconds)
     time_bins = np.arange(0, (POST_INTERVAL + PRE_INTERVAL) / 1000, INTERVAL_SIZE / 1000)
     # train and evaluate the decoder per timein 
-    train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, 5, 1000, 200, 42, proj)
+    train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(
+        model, sess_datas, time_bins, 10, 1000, 200, 42, proj)
 
     # store the results
     np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{proj_name}_train_accs.npy"), train_accs)
@@ -144,7 +145,7 @@ def main():
     parser.add_argument('--subpop_name', type=str, help="name of subpopulation", default="all")
 
     parser.add_argument('--proj_path', type=str, help="a path to projection file", default="")
-    parser.add_argument('--proj_name', type=str, help="a path to projection file", default="")
+    parser.add_argument('--proj_name', type=str, help="a path to projection file", default="no_proj")
 
     args = parser.parse_args()
 
