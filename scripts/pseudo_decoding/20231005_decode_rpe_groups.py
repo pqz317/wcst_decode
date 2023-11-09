@@ -106,7 +106,10 @@ def run_decoder(sess_datas, proj=None, proj_name="no_proj"):
     classes = RPE_GROUPS
 
     # proj is in num_neurons x dimensions
-    num_neurons = proj.shape[1] if proj else sess_datas.apply(lambda x: x.get_num_neurons()).sum()
+    if proj is None:
+        num_neurons = sess_datas.apply(lambda x: x.get_num_neurons()).sum()
+    else: 
+        num_neurons = proj.shape[1]
     init_params = {"n_inputs": num_neurons, "p_dropout": 0.5, "n_classes": len(classes)}
     # create a trainer object
     trainer = Trainer(learning_rate=0.05, max_iter=500, batch_size=1000)
