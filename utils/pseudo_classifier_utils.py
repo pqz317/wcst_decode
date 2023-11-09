@@ -23,7 +23,7 @@ def transform_label_data(pseudo_data):
 
 
 
-def evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, num_splits, num_train_per_cond=2000, num_test_per_cond=400, seed=42):
+def evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, num_splits, num_train_per_cond=2000, num_test_per_cond=400, seed=42, proj_matrix=None):
     training_accs_by_bin = np.empty((len(time_bins), num_splits))
     test_accs_by_bin = np.empty((len(time_bins), num_splits))
     shuffled_accs_by_bin = np.empty((len(time_bins), num_splits))
@@ -44,6 +44,17 @@ def evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, num_splits, 
 
             x_test = transform_input_data(test_data)
             y_test = transform_label_data(test_data)
+
+            if proj_matrix:
+                # means = np.mean(x_train, axis=1)
+                # stds = np.std(x_train, axis=1)
+                # norm_x_train = (x_train - means) / stds
+                # norm_x_test = (x_test - means) / stds
+                # x_train = norm_x_train @ proj_matrix
+                # x_test = norm_x_test @ proj_matrix
+                # TODO: chat with about whether we need to normalize first
+                x_train = x_train @ proj_matrix
+                x_test = x_test @ proj_matrix                
 
             print("Fitting model")
             model = model.fit(x_train, y_train)

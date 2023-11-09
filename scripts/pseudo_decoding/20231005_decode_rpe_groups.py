@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
+import argparse
 import utils.pseudo_utils as pseudo_utils
 import utils.pseudo_classifier_utils as pseudo_classifier_utils
 import utils.behavioral_utils as behavioral_utils
@@ -89,10 +90,12 @@ def load_session_data(row):
     return SessionData(sess_name, valid_beh_rpes, frs, splitter)
 
 
-def run_decoder(sess_datas):
+def run_decoder(sess_datas, proj=None, proj_name="no_proj"):
     # setup decoder, specify all possible label classes, number of neurons, parameters
     classes = RPE_GROUPS
-    num_neurons = sess_datas.apply(lambda x: x.get_num_neurons()).sum()
+
+    # proj is in num_neurons x dimensions
+    num_neurons = proj.shape[1] if proj else sess_datas.apply(lambda x: x.get_num_neurons()).sum()
     init_params = {"n_inputs": num_neurons, "p_dropout": 0.5, "n_classes": len(classes)}
     # create a trainer object
     trainer = Trainer(learning_rate=0.05, max_iter=500, batch_size=1000)
@@ -101,19 +104,19 @@ def run_decoder(sess_datas):
     # calculate time bins (in seconds)
     time_bins = np.arange(0, (POST_INTERVAL + PRE_INTERVAL) / 1000, INTERVAL_SIZE / 1000)
     # train and evaluate the decoder per timein 
-    train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, 5, 1000, 200, 42)
+    train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, 5, 1000, 200, 42, proj)
 
     # store the results
-    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_train_accs.npy"), train_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_test_accs.npy"), test_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_shuffled_accs.npy"), shuffled_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_models.npy"), models)
+    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{proj_name}_train_accs.npy"), train_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{proj_name}_test_accs.npy"), test_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{proj_name}_shuffled_accs.npy"), shuffled_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{proj_name}_models.npy"), models)
 
-def decode_rpe_group(valid_sess):
+def decode_rpe_group(valid_sess, is_abstract=False, subpops=None, subpop_name=None, proj=None, proj_name="no_proj"):
     print(f"Decoding")
     # load all session datas
     sess_datas = valid_sess.apply(load_session_data, axis=1)
-    run_decoder(sess_datas)
+    run_decoder(sess_datas, proj, proj_name)
 
 
 def main():
@@ -121,8 +124,29 @@ def main():
     Loads a dataframe specifying sessions to use
     For each feature dimension, runs decoding, stores results. 
     """
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--abstract', action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument('--subpop_path', type=str, help="a path to subpopulation file", default="")
+    parser.add_argument('--subpop_name', type=str, help="name of subpopulation", default="all")
+
+    parser.add_argument('--proj_path', type=str, help="a path to projection file", default="")
+    parser.add_argument('--proj_name', type=str, help="a path to projection file", default="")
+
+    args = parser.parse_args()
+
     valid_sess = pd.read_pickle(SESSIONS_PATH)
-    decode_rpe_group(valid_sess)
+    is_abstract = args.abstract
+    subpop_name = args.subpop_name
+    proj_name = args.proj_name
+    if args.subpop_path:
+        subpops = pd.read_pickle(args.subpop_path)
+    else: 
+        subpops = None
+    if args.proj_path:
+        proj = np.load(args.proj_path)
+    else: 
+        proj = None
+    decode_rpe_group(valid_sess, is_abstract, subpops, subpop_name, proj, proj_name)
 
 if __name__ == "__main__":
     main()

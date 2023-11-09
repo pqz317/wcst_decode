@@ -269,3 +269,10 @@ def get_subpop_ratios_by_region(subpop, valid_sess):
     merged["Ratio"] = merged["SubpopCount"] / merged["PopCount"]
     merged = merged.sort_values("Ratio", ascending=False)
     return merged
+
+def zscore_frs(frs, mode="SpikeCounts"):
+    def zscore_unit(group):
+        mean = group[mode].mean()
+        std = group[mode].std()
+        group[f"Z{mode}"] = (group[mode] - mean) / std
+    frs = frs.groupby("UnitID").apply(zscore_unit).reset_index()
