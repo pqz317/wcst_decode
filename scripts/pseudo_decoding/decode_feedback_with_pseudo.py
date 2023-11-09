@@ -39,6 +39,10 @@ SESS_BEHAVIOR_PATH = "/data/sub-SA_sess-{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
 SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 
+DATA_MODE = "SpikeCounts"
+
+SEED = 42
+
 def load_session_data(sess_name): 
     """
     Loads the data (behavioral and firing rates) for a given session, 
@@ -68,6 +72,7 @@ def load_session_data(sess_name):
         interval_size=INTERVAL_SIZE
     )
     frs = pd.read_pickle(spikes_path)
+    frs = frs.rename(columns={DATA_MODE: "Value"})
 
     # create a trial splitter 
     splitter = ConditionTrialSplitter(valid_beh_merged, "Response", 0.2)
