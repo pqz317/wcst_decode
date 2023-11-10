@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=base_sub_cor
+#SBATCH --job-name=base_sub_inc
 
 #SBATCH -p gpu-a100
 #SBATCH -A walkerlab
