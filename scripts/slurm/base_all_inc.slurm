@@ -4,9 +4,9 @@
 #SBATCH -p gpu-a100
 #SBATCH -A walkerlab
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
+#SBATCH --cpus-per-task=2
 #SBATCH --gpus=1
-#SBATCH --mem=64G
+#SBATCH --mem=32G
 #SBATCH --time=180
 
 module load singularity
