@@ -43,7 +43,7 @@ SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_
 
 DATA_MODE = "SpikeCounts"
 
-TEST_RATIO = 0.75
+TEST_RATIO = 0.2
 
 def load_session_data(sess_name, condition, is_abstract, subpop, subtrials): 
     """

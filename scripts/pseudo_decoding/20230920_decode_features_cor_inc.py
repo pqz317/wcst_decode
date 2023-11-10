@@ -27,13 +27,13 @@ POSSIBLE_FEATURES = {
     "Pattern": ['ESCHER', 'POLKADOT', 'RIPPLE', 'SWIRL']
 }
 # the output directory to store the data
-OUTPUT_DIR = "/data/patrick_scratch/pseudo"
+OUTPUT_DIR = "/data/patrick_res/pseudo"
 # path to a dataframe of sessions to analyze
-SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions.pickle"
+SESSIONS_PATH = "/data/patrick_res/multi_sess/valid_sessions.pickle"
 # path for each session, specifying behavior
 SESS_BEHAVIOR_PATH = "/data/rawdata/sub-SA/sess-{sess_name}/behavior/sub-SA_sess-{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
-SESS_SPIKES_PATH = "/data/patrick_scratch/multi_sess/{sess_name}/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins.pickle"
+SESS_SPIKES_PATH = "/data/patrick_res/multi_sess/{sess_name}/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 
 DATA_MODE = "SpikeCounts"
 
@@ -80,8 +80,12 @@ def load_session_data(sess_name, condition):
     frs = frs.rename(columns={DATA_MODE: "Value"})
 
     # create a trial splitter 
-    cor_splitter = ConditionTrialSplitter(cor_beh, condition, 0.2)
-    inc_splitter = ConditionTrialSplitter(inc_beh, condition, 0.2)
+    cor_splitter = ConditionTrialSplitter(cor_beh, condition, 0.2, seed=SEED)
+    inc_splitter = ConditionTrialSplitter(inc_beh, condition, 0.2, seed=SEED)
+    cor_data = SessionData(sess_name, cor_beh, frs, cor_splitter)
+    cor_data.pre_generate_splits(5)
+    inc_data = SessionData(sess_name, inc_beh, frs, inc_splitter)
+    inc_data.pre_generate_splits(5)
     return (
         SessionData(sess_name, cor_beh, frs, cor_splitter),
         SessionData(sess_name, inc_beh, frs, inc_splitter),

@@ -98,3 +98,26 @@ def cross_evaluate_by_time_bins(models_by_bin, sess_datas, input_bins, num_train
             avg_acc = np.mean(accs)
             cross_accs[model_bin_idx, test_bin_idx] = avg_acc
     return cross_accs
+
+def evaluate_model_with_data(models_by_bin, sess_datas, time_bins, num_train_per_cond=0, num_test_per_cond=400):
+    """
+    Evaluates model with session datas passed in, ideally from a different condition as what the model was trained on
+    """
+    accs_across_time = np.empty((len(time_bins), models_by_bin.shape[1]))
+    for time_bin_idx, time_bin in enumerate(time_bins):
+        print(f"evaluating models for bin idx {time_bin_idx}")
+        models = models_by_bin[time_bin_idx, :]
+        split_accs = []
+        for split_idx, model in enumerate(models):
+            # assumes models, splits are ordered the same
+            pseudo_sess = pd.concat(sess_datas.apply(
+                lambda x: x.generate_pseudo_data(num_train_per_cond, num_test_per_cond, time_bin)
+            ).values, ignore_index=True)
+
+            test_data = pseudo_sess[pseudo_sess.Type == "Test"]
+
+            x_test = transform_input_data(test_data)
+            y_test = transform_label_data(test_data)
+            acc = model.score(x_test, y_test)
+            accs_across_time[time_bin_idx, split_idx] = acc
+    return accs_across_time
