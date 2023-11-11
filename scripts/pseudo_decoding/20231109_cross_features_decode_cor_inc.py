@@ -13,6 +13,7 @@ from models.multinomial_logistic_regressor import NormedDropoutMultinomialLogist
 from trial_splitters.condition_trial_splitter import ConditionTrialSplitter 
 
 import torch
+import argparse
 
 EVENT = "FeedbackOnset"  # event in behavior to align on
 PRE_INTERVAL = 1300   # time in ms before event
@@ -45,7 +46,7 @@ DATA_MODE = "SpikeCounts"
 SEED = 42
 
 
-def load_session_data(sess_name, condition): 
+def load_session_data(sess_name, condition, subpop): 
     """
     Loads the data (behavioral and firing rates) for a given session, 
     generates a TrialSplitter based on a condition (feature dimension) 
@@ -78,7 +79,11 @@ def load_session_data(sess_name, condition):
     )
     frs = pd.read_pickle(spikes_path)
     frs = frs.rename(columns={DATA_MODE: "Value"})
-
+    if subpop is not None: 
+        sess_subpop = subpop[subpop.session == sess_name]
+        frs = frs[frs.UnitID.isin(sess_subpop.UnitID)]
+        if len(frs) == 0:
+            return None
     # create a trial splitter 
     cor_splitter = ConditionTrialSplitter(cor_beh, condition, 0.2, seed=SEED)
     inc_splitter = ConditionTrialSplitter(inc_beh, condition, 0.2, seed=SEED)
@@ -86,7 +91,7 @@ def load_session_data(sess_name, condition):
     inc_data = SessionData(sess_name, inc_beh, frs, inc_splitter)
     return (cor_data, inc_data)
 
-def cross_decode_feature(feature_dim, sessions):
+def cross_decode_feature(feature_dim, sessions, subpop, subpop_name):
     """
     For a feature dimension and list of sessions, sets up and runs decoding, stores results
     Args: 
@@ -96,16 +101,22 @@ def cross_decode_feature(feature_dim, sessions):
     print(f"Decoding {feature_dim}")
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(device)
-    sess_datas = sessions.apply(lambda x: load_session_data(x.session_name, feature_dim), axis=1)
+    sess_datas = sessions.apply(lambda x: load_session_data(x.session_name, feature_dim, subpop), axis=1)
+    sess_datas = sess_datas.dropna()
+
     cor_datas = sess_datas.apply(lambda x: x[0])
     inc_datas = sess_datas.apply(lambda x: x[1])
-    cor_models = np.load(os.path.join(HYAK_OUTPUT_DIR, f"{feature_dim}_baseline_all_cor_models.npy"), allow_pickle=True)
-    inc_models = np.load(os.path.join(HYAK_OUTPUT_DIR, f"{feature_dim}_baseline_all_inc_models.npy"), allow_pickle=True)
+    if subpop is None: 
+        cor_models = np.load(os.path.join(HYAK_OUTPUT_DIR, f"{feature_dim}_baseline_all_cor_models.npy"), allow_pickle=True)
+        inc_models = np.load(os.path.join(HYAK_OUTPUT_DIR, f"{feature_dim}_baseline_all_inc_models.npy"), allow_pickle=True)
+    else: 
+        cor_models = np.load(os.path.join(HYAK_OUTPUT_DIR, f"{feature_dim}_baseline_state_update_cor_models.npy"), allow_pickle=True)
+        inc_models = np.load(os.path.join(HYAK_OUTPUT_DIR, f"{feature_dim}_baseline_state_update_inc_models.npy"), allow_pickle=True)      
     time_bins = np.arange(0, 2.8, 0.1)
     cor_inc_accs = pseudo_classifier_utils.evaluate_model_with_data(cor_models, inc_datas, time_bins)
     inc_cor_accs = pseudo_classifier_utils.evaluate_model_with_data(inc_models, cor_datas, time_bins)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_cross_cor_models_inc_data_accs.npy"), cor_inc_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_cross_inc_models_cor_data_accs.npy"), inc_cor_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{subpop_name}_cross_cor_models_inc_data_accs.npy"), cor_inc_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{subpop_name}_cross_inc_models_cor_data_accs.npy"), inc_cor_accs)
 
 
 def main():
@@ -113,9 +124,18 @@ def main():
     Loads a dataframe specifying sessions to use
     For each feature dimension, runs decoding, stores results. 
     """
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--subpop_path', type=str, help="a path to subpopulation file", default="")
+    parser.add_argument('--subpop_name', type=str, help="name of subpopulation", default="all")
+    args = parser.parse_args()
+    subpop_name = args.subpop_name
+    if args.subpop_path:
+        subpop = pd.read_pickle(args.subpop_path)
+    else: 
+        subpop = None    
     valid_sess = pd.read_pickle(SESSIONS_PATH)
     for feature_dim in FEATURE_DIMS: 
-        cross_decode_feature(feature_dim, valid_sess)
+        cross_decode_feature(feature_dim, valid_sess, subpop, subpop_name)
 
 if __name__ == "__main__":
     main()
