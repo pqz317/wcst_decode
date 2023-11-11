@@ -9,7 +9,7 @@
 #SBATCH --mem=32G
 #SBATCH --time=180
 
-array=("cor", "inc")
+array=("cor" "inc")
 
 cat ${array[$SLURM_ARRAY_TASK_ID]}
 
