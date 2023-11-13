@@ -22,7 +22,7 @@ def main():
     parser.add_argument('--shuffle_type', type=str, help="type of shuffle, card or feature_rpe", default="feature_rpe")
     args = parser.parse_args()
     shuffle_type = args.shuffle_type
-
+    print(f"Processing with shuffle type {shuffle_type}")
     valid_sess = pd.read_pickle(SESSIONS_PATH)
     valid_sess.apply(lambda x: aggregate_shuffles(x.session_name, shuffle_type), axis=1)
 
