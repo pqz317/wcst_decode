@@ -12,9 +12,8 @@ from models.model_wrapper import ModelWrapper, ModelWrapperLinearRegression
 from models.multinomial_logistic_regressor import NormedDropoutMultinomialLogisticRegressor
 from trial_splitters.condition_trial_splitter import ConditionTrialSplitter 
 
-EVENT = "FeedbackOnset"  # event in behavior to align on
-PRE_INTERVAL = 1300   # time in ms before event
-POST_INTERVAL = 1500  # time in ms after event
+PRE_INTERVAL = 300   # time in ms before event
+POST_INTERVAL = 500  # time in ms after event
 INTERVAL_SIZE = 100  # size of interval in ms
 
 # all the possible feature dimensions 
@@ -30,12 +29,11 @@ POSSIBLE_FEATURES = {
 OUTPUT_DIR = "/data/patrick_res/pseudo"
 # path to a dataframe of sessions to analyze
 # SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions.pickle"
-SESSIONS_PATH = "/data/patrick_res/sessions/valid_sessions_rpe.pickle"
+SESSIONS_PATH = "/data/patrick_res/multi_sess/valid_sessions_rpe.pickle"
 
-# path for each session, specifying behavior
-SESS_BEHAVIOR_PATH = "/data/rawdata/sub-SA/sess-{sess_name}/behavior/sub-SA_sess-{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
-SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
+SESS_SPIKES_PATH = "/data/patrick_res/multi_sess/{sess_name}/{sess_name}_firing_rates_{pre_interval}_fixation_{post_interval}_{interval_size}_bins_1_smooth.pickle"
+SESS_FIXATIONS_PATH = "/data/patrick_res/multi_sess/{sess_name}/{sess_name}_fixations.pickle"
 
 DATA_MODE = "SpikeCounts"
 
@@ -53,21 +51,13 @@ def load_session_data(sess_name, condition):
         condition: condition used to group trials in pseudo population (in this case a feature dimension)
     Returns: a SessionData object
     """
-    behavior_path = SESS_BEHAVIOR_PATH.format(sess_name=sess_name)
-    beh = pd.read_csv(behavior_path)
-
-    # filter trials 
-    valid_beh = behavioral_utils.get_valid_trials(beh)
-
-    # grab the features of the selected card
-    feature_selections = behavioral_utils.get_selection_features(valid_beh)
-    valid_beh_merged = pd.merge(valid_beh, feature_selections, on="TrialNumber", how="inner")
+    fixation_path = SESS_FIXATIONS_PATH.format(sess_name=sess_name)
+    fixations = pd.read_pickle(fixation_path)
 
     # load firing rates
     spikes_path = SESS_SPIKES_PATH.format(
         sess_name=sess_name, 
         pre_interval=PRE_INTERVAL, 
-        event=EVENT, 
         post_interval=POST_INTERVAL, 
         interval_size=INTERVAL_SIZE
     )
@@ -75,8 +65,8 @@ def load_session_data(sess_name, condition):
     frs = frs.rename(columns={DATA_MODE: "Value"})
 
     # create a trial splitter 
-    splitter = ConditionTrialSplitter(valid_beh_merged, condition, TEST_RATIO, seed=SEED)
-    session_data = SessionData(sess_name, valid_beh_merged, frs, splitter)
+    splitter = ConditionTrialSplitter(fixations, condition, TEST_RATIO, seed=SEED)
+    session_data = SessionData(sess_name, fixations, frs, splitter)
     session_data.pre_generate_splits(8)
     return session_data
 
@@ -104,16 +94,10 @@ def decode_feature(feature_dim, valid_sess):
     # train and evaluate the decoder per timein 
     train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, 8, 2000, 500, 42)
 
-    # store the results
-    # np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_rpe_sess_abstract_base_{TEST_RATIO}_train_accs.npy"), train_accs)
-    # np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_rpe_sess_abstract_base_{TEST_RATIO}_test_accs.npy"), test_accs)
-    # np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_rpe_sess_abstract_base_{TEST_RATIO}_shuffled_accs.npy"), shuffled_accs)
-    # np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_rpe_sess_abstract_base_{TEST_RATIO}_models.npy"), models)
-
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_rpe_sess_train_accs.npy"), train_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_rpe_sess_test_accs.npy"), test_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_rpe_sess_shuffled_accs.npy"), shuffled_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_rpe_sess_models.npy"), models)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixations_train_accs.npy"), train_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixations_test_accs.npy"), test_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixations_shuffled_accs.npy"), shuffled_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixations_models.npy"), models)
 
 def main():
     """

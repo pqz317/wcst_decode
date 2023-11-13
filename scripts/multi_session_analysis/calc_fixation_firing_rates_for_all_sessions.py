@@ -11,12 +11,21 @@ import utils.behavioral_utils as behavioral_utils
 import utils.spike_utils as spike_utils
 import utils.io_utils as io_utils
 
-species = 'nhp'
-subject = 'SA'
-exp = 'WCST'
-session = 20180802  # this is the session for which there are spikes at the moment.    
-pre_interval = 300
-post_interval = 500
+from lfp_tools import startup_local
+
+import os
+
+FEATURE_DIMS = ["Color", "Shape", "Pattern"]
+
+
+PRE_INTERVAL = 300
+POST_INTERVAL = 500
+INTERVAL_SIZE = 100
+NUM_BINS_SMOOTH = 1
+
+SPECIES = 'nhp'
+SUBJECT = 'SA'
+TASK = "WCST"
 
 def calc_for_session(row):
     # grab behavioral data, spike data, trial numbers. 
@@ -25,42 +34,52 @@ def calc_for_session(row):
     print("Loading files")
     behavior_path = f"/data/rawdata/sub-SA/sess-{sess_name}/behavior/sub-SA_sess-{sess_name}_object_features.csv"
     beh = pd.read_csv(behavior_path)
-
     valid_beh = behavioral_utils.get_valid_trials(beh)
-    trial_numbers = np.unique(valid_beh.TrialNumber)
-    spike_times = spike_general.get_spike_times(None, subject, session)
 
-    raw_fixation_times = io_utils.get_raw_fixation_times(fs, subject, session)
-    
+    res = startup_local.get_sac_dataframe(SPECIES, SUBJECT, TASK, sess_name, False)
+    res = res[res.trial.isin(valid_beh.TrialNumber)]
+    # saccade was onto something different
+    other_cards = ["h1", "h2", "h3", "s1", "s2", "s3"]
+    res = res[res.obj_end.isin(other_cards)]
+    # saccade was onto something different
+    res = res[res.obj_start != res.obj_end]
+    merged = pd.merge(res, valid_beh, left_on="trial", right_on="TrialNumber")
+    def get_features_from_card(row): 
+        card_idx = int(row["obj_end"][1])
+        for feature_dim in FEATURE_DIMS:
+            row[feature_dim] = row[f"Item{card_idx}{feature_dim}"]
+        return row
+    merged = merged.apply(get_features_from_card, axis=1)
+    # NOTE: Hack, this is not a trial number in reality, but everywhere else uses TrialNumber convention
+    merged["TrialNumber"] = np.arange(len(merged))
 
-    print("Calculating spikes by trial interval")
-
-    fixation_features = behavioral_utils.get_fixation_features(behavior_data, raw_fixation_times)
-
-    # fixation_features = fixation_features[fixation_features["TrialNumber"].isin(trial_numbers)]
-    # valids = fixation_features.loc[~(fixation_features["ItemChosen"] == fixation_features["ItemNumber"])]
-
-    first_fixations = behavioral_utils.get_first_fixations_for_cards(fixation_features)
-    no_selected_fixations = behavioral_utils.remove_selected_fixation(first_fixations)
-    valids = no_selected_fixations[no_selected_fixations["TrialNumber"].isin(trial_numbers)]
-    print(f"Number of valid fixations: {len(valids.FixationNum.unique())}")
 
     # finds intervals aligned on fixation start
     intervals = pd.DataFrame(columns=["IntervalID", "IntervalStartTime", "IntervalEndTime"])
-    intervals["IntervalID"] = valids["FixationNum"]
-    intervals["IntervalStartTime"] = valids["FixationStart"] - pre_interval
-    intervals["IntervalEndTime"] = valids["FixationStart"] + post_interval
+    intervals["IntervalID"] = merged["TrialNumber"]
+    intervals["IntervalStartTime"] = merged["time_end"] - PRE_INTERVAL
+    intervals["IntervalEndTime"] = merged["time_end"] + POST_INTERVAL
 
-    spike_by_trial_interval = spike_utils.get_spikes_by_interval(spike_times, intervals)
-    print(f"Number of valid spike intervals: {len(spike_by_trial_interval.IntervalID.unique())}")
-    end_bin = (pre_interval + post_interval) / 1000 + 0.1
+    print("Calculating spikes by trial interval")
+    interval_size_secs = INTERVAL_SIZE / 1000
+    spike_times = spike_general.get_spike_times(None, SUBJECT, sess_name, species_dir="/data")
+    spike_by_trial_interval = spike_utils.get_spikes_by_trial_interval(spike_times, intervals)
+    end_bin = (PRE_INTERVAL + POST_INTERVAL) / 1000 + interval_size_secs
+
     print("Calculating Firing Rates")
-    firing_rates = spike_utils.get_firing_rates_by_interval(spike_by_trial_interval, bins=np.arange(0, end_bin, 0.1), smoothing=1)
-    print(f"Number of valid firing rate intervals: {len(firing_rates.IntervalID.unique())}")
-
+    all_units = spike_general.list_session_units(None, SUBJECT, sess_name, species_dir="/data")
+    firing_rates = spike_analysis.firing_rate(
+        spike_by_trial_interval, 
+        all_units, 
+        bins=np.arange(0, end_bin, interval_size_secs), 
+        smoothing=NUM_BINS_SMOOTH, 
+        trials=merged.TrialNumber.unique()
+    )
     print("Saving")
-    firing_rates.to_pickle(fs.open(f"l2l.pqz317.scratch/firing_rates_{pre_interval}_filtered_fixationstart_{post_interval}.pickle", "wb"))
-    spike_by_trial_interval.to_pickle(fs.open(f"l2l.pqz317.scratch/spike_by_trial_interval_{pre_interval}_filtered_fixationstart_{post_interval}.pickle", "wb"))
+    dir_path = f"/data/patrick_res/firing_rates"
+    firing_rates.to_pickle(os.path.join(dir_path, f"{sess_name}_firing_rates_{PRE_INTERVAL}_fixation_{POST_INTERVAL}_{INTERVAL_SIZE}_bins_{NUM_BINS_SMOOTH}_smooth.pickle"))
+    merged.to_pickle(os.path.join(dir_path, f"{sess_name}_fixations.pickle"))
 
 if __name__ == "__main__":
-    main()
+    valid_sess = pd.read_pickle("/data/sessions/valid_sessions_rpe.pickle")
+    valid_sess.apply(calc_for_session, axis=1)

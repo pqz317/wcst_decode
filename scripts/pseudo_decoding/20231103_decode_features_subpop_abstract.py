@@ -95,7 +95,7 @@ def load_session_data(sess_name, condition, is_abstract, subpop, subtrials):
     sess_data.pre_generate_splits(8)
     return sess_data
 
-def decode_feature(feature_dim, valid_sess, is_abstract, subpop, subpop_name, subtrials, subtrials_name):
+def decode_feature(feature_dim, valid_sess, is_abstract, subpop, subpop_name, subtrials, subtrials_name, proj, proj_name):
     """
     For a feature dimension and list of sessions, sets up and runs decoding, stores results
     Args: 
@@ -120,14 +120,14 @@ def decode_feature(feature_dim, valid_sess, is_abstract, subpop, subpop_name, su
     # calculate time bins (in seconds)
     time_bins = np.arange(0, (POST_INTERVAL + PRE_INTERVAL) / 1000, INTERVAL_SIZE / 1000)
     # train and evaluate the decoder per timein 
-    train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, 8, 2000, 500, 42)
+    train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, 8, 2000, 500, 42, proj)
 
     abstract_str = "abstract" if is_abstract else "baseline"
     # store the results
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_train_accs.npy"), train_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_test_accs.npy"), test_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_shuffled_accs.npy"), shuffled_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_models.npy"), models)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_train_accs.npy"), train_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_test_accs.npy"), test_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_shuffled_accs.npy"), shuffled_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_models.npy"), models)
 
 
 def main():
@@ -141,6 +141,9 @@ def main():
     parser.add_argument('--subpop_name', type=str, help="name of subpopulation", default="all")
     parser.add_argument('--subtrials_path', type=str, help="a path to subtrials file", default="")
     parser.add_argument('--subtrials_name', type=str, help="name of subtrials", default="all")
+    parser.add_argument('--proj_path', type=str, help="a path to projection file", default="")
+    parser.add_argument('--proj_name', type=str, help="a path to projection file", default="no_proj")
+
     args = parser.parse_args()
     is_abstract = args.abstract
     subpop_name = args.subpop_name
@@ -153,9 +156,14 @@ def main():
         subtrials = pd.read_pickle(args.subtrials_path)
     else: 
         subtrials = None
+    proj_name = args.proj_name
+    if args.proj_path:
+        proj = np.load(args.proj_path)
+    else: 
+        proj = None
     valid_sess = pd.read_pickle(SESSIONS_PATH)
     for feature_dim in FEATURE_DIMS: 
-        decode_feature(feature_dim, valid_sess, is_abstract, subpops, subpop_name, subtrials, subtrials_name)
+        decode_feature(feature_dim, valid_sess, is_abstract, subpops, subpop_name, subtrials, subtrials_name, proj, proj_name)
 
 if __name__ == "__main__":
     main()

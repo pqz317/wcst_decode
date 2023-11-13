@@ -131,3 +131,59 @@ class ModelWrapperRegression:
     @property
     def coef_(self):
         return self.model.linear.weight.detach().cpu().numpy()
+    
+class ModelWrapperLinearRegression: 
+    """
+    A wrapper where score and predictions are for a Linear instead of Logistic Regression
+    """
+
+    def fit(self, x_train, y_train, cards_train=None):   
+        ones = np.ones((x_train.shape[0], 1))
+        x_train_ones = np.hstack((ones, x_train))
+        self.weights = np.linalg.pinv(x_train_ones) @ y_train
+        return self
+
+    def predict(self, x_test, cards_test=None):
+        ones = np.ones((x_test.shape[0], 1))
+        x_test_ones = np.hstack((ones, x_test))
+        return x_test_ones @ self.weights
+
+    def score(self, x_test, y_test, cards_test=None):
+        outs = self.predict(x_test, cards_test)
+        # print(f"outs: {outs[:10]}")
+        # print(f"ys: {y_test[:10]}")
+        score = np.sum((outs - y_test)**2) / len(y_test)
+        # print(f"score: {score}")
+        return score
+
+    # @property
+    # def coef_(self):
+    #     return self.model.linear.weight.detach().cpu().numpy()
+
+class DummyCombinedWrapper: 
+    """
+    A wrapper where score and predictions are for a Linear instead of Logistic Regression
+    """
+    def __init__(self, models):
+        self.models = models
+
+    @property
+    def coef_(self):
+        weights = []
+        for model in self.models:
+            weights.append(model.coef_)
+        return np.vstack(weights)
+
+    @staticmethod
+    def combine_models(model_list):
+        """
+        Expect a list of models, each an np array num_time_bins x num_splits
+        """
+        num_time_bins, num_splits = model_list[0].shape
+        combined = np.empty((num_time_bins, num_splits), dtype=object)
+        for time_idx in range(num_time_bins):
+            for split_idx in range(num_splits):
+                models = [m[time_idx, split_idx] for m in model_list]
+                combined[time_idx, split_idx] = DummyCombinedWrapper(models)
+        return combined
+        
