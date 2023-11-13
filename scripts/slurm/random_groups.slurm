@@ -7,7 +7,7 @@
 #SBATCH --cpus-per-task=2
 #SBATCH --gpus=1
 #SBATCH --mem=32G
-#SBATCH --time=180
+#SBATCH --time=360
 
 module load singularity
 singularity exec --writable-tmpfs --nv \

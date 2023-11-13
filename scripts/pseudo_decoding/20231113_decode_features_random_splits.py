@@ -115,11 +115,11 @@ def decode_for_group(feature_dim, sess_datas, group, shuffle_idx):
     # calculate time bins (in seconds)
     time_bins = np.arange(0, (POST_INTERVAL + PRE_INTERVAL) / 1000, INTERVAL_SIZE / 1000)
     # train and evaluate the decoder per timein 
-    train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, 8, 2000, 500, 42)
+    train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, 8, 1000, 250, 42)
 
     # store the results
     np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_group_{group}_shuffle_{shuffle_idx}_train_accs.npy"), train_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_group_{group}_shuffle_{shuffle_idx}__test_accs.npy"), test_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_group_{group}_shuffle_{shuffle_idx}_test_accs.npy"), test_accs)
     np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_group_{group}_shuffle_{shuffle_idx}_shuffled_accs.npy"), shuffled_accs)
     np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_group_{group}_shuffle_{shuffle_idx}_models.npy"), models)
 
