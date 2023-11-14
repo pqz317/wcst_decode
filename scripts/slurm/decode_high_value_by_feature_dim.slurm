@@ -17,5 +17,5 @@ module load singularity
 singularity exec --writable-tmpfs --nv \
     --bind /gscratch/walkerlab/patrick:/data,/mmfs1/home/pqz317/wcst_decode:/src/wcst_decode \
     /gscratch/walkerlab/patrick/singularity/wcst_decode_image.sif \
-    /usr/bin/python3 /src/wcst_decode/scripts/pseudo_decoding/20231113_decode_feature_dim_by_high_value_feature.py \
+    /usr/bin/python3 /src/wcst_decode/scripts/pseudo_decoding/20231113_decode_feature_dim_by_high_value.py \
     --condition ${array[$SLURM_ARRAY_TASK_ID]}
