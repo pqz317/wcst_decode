@@ -94,7 +94,7 @@ def load_session_data(sess_name, condition):
         pattern = row["Pattern"]
         vals = {color: row[color], shape: row[shape], pattern: row[pattern]}
         max_feat = max(zip(vals.values(), vals.keys()))[1]
-        random_feat = rng.choice(max_feat)
+        random_feat = rng.choice(list(vals.keys()))
         row["MaxFeat"] = max_feat
         row["RandomMaxFeat"] = random_feat
         return row
@@ -128,7 +128,7 @@ def decode_high_value(valid_sess, condition):
     sess_datas = valid_sess.apply(lambda x: load_session_data(x.session_name, condition), axis=1)
 
     # setup decoder, specify all possible label classes, number of neurons, parameters
-    classes = FEATURE_TO_DIM.keys()
+    classes = list(FEATURE_TO_DIM.keys())
     num_neurons = sess_datas.apply(lambda x: x.get_num_neurons()).sum()
     init_params = {"n_inputs": num_neurons, "p_dropout": 0.5, "n_classes": len(classes)}
     # create a trainer object
