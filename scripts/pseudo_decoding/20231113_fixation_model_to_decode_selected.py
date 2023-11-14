@@ -28,20 +28,22 @@ POSSIBLE_FEATURES = {
 }
 # the output directory to store the data
 OUTPUT_DIR = "/data/patrick_res/pseudo"
+
 # path to a dataframe of sessions to analyze
 # SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions.pickle"
 SESSIONS_PATH = "/data/patrick_res/sessions/valid_sessions_rpe.pickle"
 
-# path for each session, specifying behavior
-SESS_BEHAVIOR_PATH = "/data/rawdata/sub-SA/sess-{sess_name}/behavior/sub-SA_sess-{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
 SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
+SESS_BEHAVIOR_PATH = "/data/rawdata/sub-SA/sess-{sess_name}/behavior/sub-SA_sess-{sess_name}_object_features.csv"
 
 DATA_MODE = "SpikeCounts"
 
-TEST_RATIO = 0.2
-
+TEST_RATIO = 0.5
 SEED = 42
+
+BEST_FIXATION_IDX = 4
+
 
 def load_session_data(sess_name, condition): 
     """
@@ -91,24 +93,14 @@ def decode_feature(feature_dim, valid_sess):
     # load all session datas
     sess_datas = valid_sess.apply(lambda x: load_session_data(x.session_name, feature_dim), axis=1)
 
-    # setup decoder, specify all possible label classes, number of neurons, parameters
-    classes = POSSIBLE_FEATURES[feature_dim]
-    num_neurons = sess_datas.apply(lambda x: x.get_num_neurons()).sum()
-    init_params = {"n_inputs": num_neurons, "p_dropout": 0.5, "n_classes": len(classes)}
-    # create a trainer object
-    trainer = Trainer(learning_rate=0.05, max_iter=500, batch_size=1000)
-    # create a wrapper for the decoder
-    model = ModelWrapper(NormedDropoutMultinomialLogisticRegressor, init_params, trainer, classes)
-    # calculate time bins (in seconds)
-    time_bins = np.arange(0, (POST_INTERVAL + PRE_INTERVAL) / 1000, INTERVAL_SIZE / 1000)
-    # train and evaluate the decoder per timein 
-    train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, 8, 2000, 500, 42)
+    input_bins = np.arange(0, 2.8, 0.1)
+    fix_models = np.load(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixations_models.npy"), allow_pickle=True)
+    best_fix = fix_models[BEST_FIXATION_IDX, :]
+    best_fix = np.expand_dims(best_fix, axis=0)
+    cross_decode_accs = pseudo_classifier_utils.cross_evaluate_by_time_bins(best_fix, sess_datas, input_bins)
 
-    # store the results
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_rpe_sess_train_accs.npy"), train_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_rpe_sess_test_accs.npy"), test_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_rpe_sess_shuffled_accs.npy"), shuffled_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_rpe_sess_models.npy"), models)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixation_on_selections_cross_accs.npy"), cross_decode_accs)
+
 
 def main():
     """
