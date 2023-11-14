@@ -45,7 +45,7 @@ DATA_MODE = "SpikeCounts"
 
 TEST_RATIO = 0.2
 
-def load_session_data(sess_name, condition, shuffle_idx): 
+def load_session_data(sess_name, condition, shuffle_idx, subpop): 
     """
     Loads the data (behavioral and firing rates) for a given session, 
     generates a TrialSplitter based on a condition (feature dimension) 
@@ -91,6 +91,11 @@ def load_session_data(sess_name, condition, shuffle_idx):
     )
     frs = pd.read_pickle(spikes_path)
     frs = frs.rename(columns={DATA_MODE: "Value"})
+    if subpop is not None: 
+        sess_subpop = subpop[subpop.session == sess_name]
+        frs = frs[frs.UnitID.isin(sess_subpop.UnitID)]
+        if len(frs) == 0:
+            return None
  
     sess_data_A = SessionData(sess_name, beh_A, frs, splitter_A)
     sess_data_A.pre_generate_splits(8)
@@ -100,7 +105,7 @@ def load_session_data(sess_name, condition, shuffle_idx):
 
     return (sess_data_A, sess_data_B)
 
-def decode_for_group(feature_dim, sess_datas, group, shuffle_idx):
+def decode_for_group(feature_dim, sess_datas, group, shuffle_idx, subpop_name):
     print(f"Decoding {feature_dim}")
     
     # setup decoder, specify all possible label classes, number of neurons, parameters
@@ -118,13 +123,13 @@ def decode_for_group(feature_dim, sess_datas, group, shuffle_idx):
     train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, 8, 1000, 250, 42)
 
     # store the results
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_group_{group}_shuffle_{shuffle_idx}_train_accs.npy"), train_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_group_{group}_shuffle_{shuffle_idx}_test_accs.npy"), test_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_group_{group}_shuffle_{shuffle_idx}_shuffled_accs.npy"), shuffled_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_group_{group}_shuffle_{shuffle_idx}_models.npy"), models)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{subpop_name}_group_{group}_shuffle_{shuffle_idx}_train_accs.npy"), train_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{subpop_name}_group_{group}_shuffle_{shuffle_idx}_test_accs.npy"), test_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{subpop_name}_group_{group}_shuffle_{shuffle_idx}_shuffled_accs.npy"), shuffled_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{subpop_name}_group_{group}_shuffle_{shuffle_idx}_models.npy"), models)
 
 
-def decode_feature(feature_dim, valid_sess, shuffle_idx):
+def decode_feature(feature_dim, valid_sess, shuffle_idx, subpop, subpop_name):
     """
     For a feature dimension and list of sessions, sets up and runs decoding, stores results
     Args: 
@@ -132,13 +137,13 @@ def decode_feature(feature_dim, valid_sess, shuffle_idx):
         valid_sess: a dataframe of valid sessions to be used
     """
     sess_datas = valid_sess.apply(lambda x: load_session_data(
-        x.session_name, feature_dim, shuffle_idx
+        x.session_name, feature_dim, shuffle_idx, subpop
     ), axis=1)
     sess_datas = sess_datas.dropna()
     group_A_datas = sess_datas.apply(lambda x: x[0])
     group_B_datas = sess_datas.apply(lambda x: x[1])
-    decode_for_group(feature_dim, group_A_datas, "A", shuffle_idx)
-    decode_for_group(feature_dim, group_B_datas, "B", shuffle_idx)
+    decode_for_group(feature_dim, group_A_datas, "A", shuffle_idx, subpop_name)
+    decode_for_group(feature_dim, group_B_datas, "B", shuffle_idx, subpop_name)
 
 
 def main():
@@ -147,13 +152,20 @@ def main():
     For each feature dimension, runs decoding, stores results. 
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('shuffle_idx', type=int, help="int from 0 - 10 denoting which session to run for")
-
+    parser.add_argument('--shuffle_idx', type=int, help="int from 0 - 10 denoting which session to run for")
+    parser.add_argument('--subpop_path', type=str, help="a path to subpopulation file", default="")
+    parser.add_argument('--subpop_name', type=str, help="name of subpopulation", default="all")
+    args = parser.parse_args()
+    subpop_name = args.subpop_name
+    if args.subpop_path:
+        subpops = pd.read_pickle(args.subpop_path)
+    else: 
+        subpops = None
     args = parser.parse_args()
     shuffle_idx = int(args.shuffle_idx)
     valid_sess = pd.read_pickle(SESSIONS_PATH)
     for feature_dim in FEATURE_DIMS: 
-        decode_feature(feature_dim, valid_sess, shuffle_idx)
+        decode_feature(feature_dim, valid_sess, shuffle_idx, subpops, subpop_name)
 
 if __name__ == "__main__":
     main()
