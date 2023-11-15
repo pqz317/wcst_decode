@@ -69,10 +69,12 @@ def calculate_sig_stats(shuffled, p_val, num_hyp):
     stats = shuffled.groupby(["UnitID", "TimeBins"]).apply(lambda group: get_sig_bound(group, p_val, num_hyp)).reset_index()
     return stats
 
-def identify_significant_units(res, shuffled_res, time_bins, alpha=0.05):
-    stats = calculate_sig_stats(shuffled_res, alpha, len(time_bins))
-    merged = pd.merge(res, stats)
-    merged = merged[merged.TimeBins.isin(time_bins)]
+def identify_significant_units(res, shuffled_res, time_idxs, alpha=0.05):
+    stats = calculate_sig_stats(shuffled_res, alpha, len(time_idxs))
+    merged = pd.merge(res, stats, on=["UnitID", "TimeBins"])
+    # TODO: HACK!! make general solution here, get rid of TimeBins disaster
+    merged["TimeIdxs"] = (merged["TimeBins"] * 10).astype(int)
+    merged = merged[merged.TimeIdxs.isin(time_idxs)]
     def assess_unit(unit_group):
         sig = unit_group.score > unit_group.sig_bound
         return pd.Series({"IsSig": np.any(sig)})

@@ -11,6 +11,7 @@ from models.trainer import Trainer
 from models.model_wrapper import ModelWrapper, ModelWrapperLinearRegression
 from models.multinomial_logistic_regressor import NormedDropoutMultinomialLogisticRegressor
 from trial_splitters.condition_trial_splitter import ConditionTrialSplitter 
+from trial_splitters.condition_kfold_block_splitter import ConditionKFoldBlockSplitter
 
 import argparse
 
@@ -42,16 +43,27 @@ POSSIBLE_FEATURES = {
     "Shape": ['CIRCLE', 'SQUARE', 'STAR', 'TRIANGLE'],
     "Pattern": ['ESCHER', 'POLKADOT', 'RIPPLE', 'SWIRL']
 }
+# # the output directory to store the data
+# OUTPUT_DIR = "/data/res/pseudo"
+# # path to a dataframe of sessions to analyze
+# # SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions.pickle"
+# SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
+
+# # path for each session, specifying behavior
+# SESS_BEHAVIOR_PATH = "/data/sub-SA_sess-{sess_name}_object_features.csv"
+# # path for each session, for spikes that have been pre-aligned to event time and binned. 
+# SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
+
 # the output directory to store the data
-OUTPUT_DIR = "/data/res/pseudo"
+OUTPUT_DIR = "/data/patrick_res/pseudo"
 # path to a dataframe of sessions to analyze
 # SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions.pickle"
-SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
+SESSIONS_PATH = "/data/patrick_res/sessions/valid_sessions_rpe.pickle"
 
 # path for each session, specifying behavior
-SESS_BEHAVIOR_PATH = "/data/sub-SA_sess-{sess_name}_object_features.csv"
+SESS_BEHAVIOR_PATH = "/data/rawdata/sub-SA/sess-{sess_name}/behavior/sub-SA_sess-{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
-SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
+SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 
 DATA_MODE = "SpikeCounts"
 
@@ -117,7 +129,8 @@ def load_session_data(sess_name, feature_dim, rand_cond):
     frs = frs.rename(columns={DATA_MODE: "Value"})
 
     # create a trial splitter 
-    splitter = ConditionTrialSplitter(valid_beh_sub, rand_cond, TEST_RATIO, seed=SEED)
+    # splitter = ConditionTrialSplitter(valid_beh_sub, rand_cond, TEST_RATIO, seed=SEED)
+    splitter = ConditionKFoldBlockSplitter(valid_beh_sub, rand_cond, n_splits=8, seed=SEED)
     session_data = SessionData(sess_name, valid_beh_sub, frs, splitter)
     session_data.pre_generate_splits(8)
     return session_data
@@ -146,10 +159,14 @@ def decode_high_value(valid_sess, feature_dim, random_cond):
     train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, 8, 1000, 250, 42)
 
     # store the results
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_rpe_sess_train_accs.npy"), train_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_rpe_sess_test_accs.npy"), test_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_rpe_sess_shuffled_accs.npy"), shuffled_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_rpe_sess_models.npy"), models)
+    # np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_rpe_sess_train_accs.npy"), train_accs)
+    # np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_rpe_sess_test_accs.npy"), test_accs)
+    # np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_rpe_sess_shuffled_accs.npy"), shuffled_accs)
+    # np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_rpe_sess_models.npy"), models)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_block_rpe_sess_train_accs.npy"), train_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_block_rpe_sess_test_accs.npy"), test_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_block_rpe_sess_shuffled_accs.npy"), shuffled_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_block_rpe_sess_models.npy"), models)
 
 def main():
     """

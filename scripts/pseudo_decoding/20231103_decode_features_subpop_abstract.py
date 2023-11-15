@@ -95,7 +95,7 @@ def load_session_data(sess_name, condition, is_abstract, subpop, subtrials):
     sess_data.pre_generate_splits(8)
     return sess_data
 
-def decode_feature(feature_dim, valid_sess, is_abstract, subpop, subpop_name, subtrials, subtrials_name, proj, proj_name):
+def decode_feature(feature_dim, valid_sess, is_abstract, subpop, subpop_name, subtrials, subtrials_name, proj, proj_name, l2_reg):
     """
     For a feature dimension and list of sessions, sets up and runs decoding, stores results
     Args: 
@@ -117,7 +117,7 @@ def decode_feature(feature_dim, valid_sess, is_abstract, subpop, subpop_name, su
         num_neurons = proj.shape[1]
     init_params = {"n_inputs": num_neurons, "p_dropout": 0.5, "n_classes": len(classes)}
     # create a trainer object
-    trainer = Trainer(learning_rate=0.05, max_iter=500, batch_size=1000)
+    trainer = Trainer(learning_rate=0.05, max_iter=500, batch_size=1000, weight_decay=l2_reg)
     # create a wrapper for the decoder
     model = ModelWrapper(NormedDropoutMultinomialLogisticRegressor, init_params, trainer, classes)
     # calculate time bins (in seconds)
@@ -127,10 +127,10 @@ def decode_feature(feature_dim, valid_sess, is_abstract, subpop, subpop_name, su
 
     abstract_str = "abstract" if is_abstract else "baseline"
     # store the results
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_train_accs.npy"), train_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_test_accs.npy"), test_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_shuffled_accs.npy"), shuffled_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_models.npy"), models)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_{l2_reg}_train_accs.npy"), train_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_{l2_reg}_test_accs.npy"), test_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_{l2_reg}_shuffled_accs.npy"), shuffled_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_{l2_reg}_models.npy"), models)
 
 
 def main():
@@ -146,11 +146,14 @@ def main():
     parser.add_argument('--subtrials_name', type=str, help="name of subtrials", default="all")
     parser.add_argument('--proj_path', type=str, help="a path to projection file", default="")
     parser.add_argument('--proj_name', type=str, help="a path to projection file", default="no_proj")
+    parser.add_argument('--l2_reg', type=float, help="amount of l2 regularization", default=0.0)
+
 
     args = parser.parse_args()
     is_abstract = args.abstract
     subpop_name = args.subpop_name
     subtrials_name = args.subtrials_name
+    l2_reg = args.l2_reg
     if args.subpop_path:
         subpops = pd.read_pickle(args.subpop_path)
     else: 
@@ -166,7 +169,7 @@ def main():
         proj = None
     valid_sess = pd.read_pickle(SESSIONS_PATH)
     for feature_dim in FEATURE_DIMS: 
-        decode_feature(feature_dim, valid_sess, is_abstract, subpops, subpop_name, subtrials, subtrials_name, proj, proj_name)
+        decode_feature(feature_dim, valid_sess, is_abstract, subpops, subpop_name, subtrials, subtrials_name, proj, proj_name, l2_reg)
 
 if __name__ == "__main__":
     main()

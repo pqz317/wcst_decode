@@ -17,7 +17,7 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              count: 1
+              count: 2
               capabilities: [gpu]
     volumes:
       - .:/src/wcst_decode
