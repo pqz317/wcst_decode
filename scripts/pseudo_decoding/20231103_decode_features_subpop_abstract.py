@@ -43,9 +43,9 @@ SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_
 
 DATA_MODE = "SpikeCounts"
 
-TEST_RATIO = 0.2
+TEST_RATIO = 0.75
 
-def load_session_data(sess_name, condition, is_abstract, subpop, subtrials): 
+def load_session_data(sess_name, condition, is_abstract, abs_cond, subpop, subtrials): 
     """
     Loads the data (behavioral and firing rates) for a given session, 
     generates a TrialSplitter based on a condition (feature dimension) 
@@ -86,7 +86,10 @@ def load_session_data(sess_name, condition, is_abstract, subpop, subtrials):
         if len(valid_beh_merged) == 0: 
             return None
     if is_abstract:
-        split_conditions = [dim for dim in FEATURE_DIMS if not dim == condition]
+        if not abs_cond: 
+            split_conditions = [dim for dim in FEATURE_DIMS if not dim == condition]
+        else: 
+            split_conditions = [abs_cond]
         # create a trial splitter 
         splitter = ConditionAbstractTrialSplitter(valid_beh_merged, condition, split_conditions)
     else: 
@@ -95,7 +98,7 @@ def load_session_data(sess_name, condition, is_abstract, subpop, subtrials):
     sess_data.pre_generate_splits(8)
     return sess_data
 
-def decode_feature(feature_dim, valid_sess, is_abstract, subpop, subpop_name, subtrials, subtrials_name, proj, proj_name, l2_reg):
+def decode_feature(feature_dim, valid_sess, is_abstract, abs_cond, subpop, subpop_name, subtrials, subtrials_name, proj, proj_name, l2_reg):
     """
     For a feature dimension and list of sessions, sets up and runs decoding, stores results
     Args: 
@@ -105,7 +108,7 @@ def decode_feature(feature_dim, valid_sess, is_abstract, subpop, subpop_name, su
     print(f"Decoding {feature_dim} with subpop {subpop_name} and is_abstract {is_abstract}")
     # load all session datas
     sess_datas = valid_sess.apply(lambda x: load_session_data(
-        x.session_name, feature_dim, is_abstract, subpop, subtrials
+        x.session_name, feature_dim, is_abstract, abs_cond, subpop, subtrials
     ), axis=1)
     sess_datas = sess_datas.dropna()
     
@@ -125,7 +128,13 @@ def decode_feature(feature_dim, valid_sess, is_abstract, subpop, subpop_name, su
     # train and evaluate the decoder per timein 
     train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, 8, 2000, 500, 42, proj)
 
-    abstract_str = "abstract" if is_abstract else "baseline"
+    if abs_cond:
+        abstract_str = "abs_" + abs_cond
+    elif is_abstract:
+        abstract_str = "abs"
+    else: 
+        abstract_str = "baseline"
+
     # store the results
     np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_{l2_reg}_train_accs.npy"), train_accs)
     np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_{l2_reg}_test_accs.npy"), test_accs)
@@ -140,6 +149,7 @@ def main():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--abstract', action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument('--abs_cond', type=str, help="condition to be abstract respect to", default=None)
     parser.add_argument('--subpop_path', type=str, help="a path to subpopulation file", default="")
     parser.add_argument('--subpop_name', type=str, help="name of subpopulation", default="all")
     parser.add_argument('--subtrials_path', type=str, help="a path to subtrials file", default="")
@@ -150,6 +160,7 @@ def main():
 
     args = parser.parse_args()
     is_abstract = args.abstract
+    abs_cond = args.abs_cond
     subpop_name = args.subpop_name
     subtrials_name = args.subtrials_name
     l2_reg = args.l2_reg
@@ -168,7 +179,7 @@ def main():
         proj = None
     valid_sess = pd.read_pickle(SESSIONS_PATH)
     for feature_dim in FEATURE_DIMS: 
-        decode_feature(feature_dim, valid_sess, is_abstract, subpops, subpop_name, subtrials, subtrials_name, proj, proj_name, l2_reg)
+        decode_feature(feature_dim, valid_sess, is_abstract, abs_cond, subpops, subpop_name, subtrials, subtrials_name, proj, proj_name, l2_reg)
 
 if __name__ == "__main__":
     main()

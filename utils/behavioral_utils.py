@@ -339,5 +339,24 @@ def get_rpes_per_session(session, beh):
     merged = pd.merge(beh, probs, left_on="TrialNumber", right_on="trial", how="inner")
     return merged
 
-def get_feature_rpe_beh_for_session(sess_name):
-    pass
+def get_rpe_groups_per_session(session, beh):
+    valid_beh_rpes = get_rpes_per_session(session, beh)
+    assert len(beh) == len(valid_beh_rpes)
+    pos_med = beh[beh.RPE_FE > 0].median()
+    neg_med = beh[beh.RPE_FE <= 0].median()
+    # add median labels to 
+    def add_group(row):
+        rpe = row.RPE_FE
+        group = None
+        if rpe < neg_med:
+            group = "more neg"
+        elif rpe >= neg_med and rpe < 0:
+            group = "less neg"
+        elif rpe >= 0 and rpe < pos_med:
+            group = "less pos"
+        elif rpe > pos_med:
+            group = "more pos"
+        row["group"] = group
+        return row
+    valid_beh_rpes = valid_beh_rpes.apply(add_group, axis=1)
+    return valid_beh_rpes
