@@ -44,6 +44,7 @@ SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_
 DATA_MODE = "SpikeCounts"
 
 TEST_RATIO = 0.75
+NUM_ITERS = 4
 
 def load_session_data(sess_name, condition, is_abstract, abs_cond, subpop, subtrials): 
     """
@@ -96,7 +97,7 @@ def load_session_data(sess_name, condition, is_abstract, abs_cond, subpop, subtr
     else: 
         splitter = ConditionTrialSplitter(valid_beh_merged, condition, TEST_RATIO)
     sess_data = SessionData(sess_name, valid_beh_merged, frs, splitter)
-    sess_data.pre_generate_splits(8)
+    sess_data.pre_generate_splits(NUM_ITERS)
     return sess_data
 
 def decode_feature(feature_dim, valid_sess, is_abstract, abs_cond, subpop, subpop_name, subtrials, subtrials_name, proj, proj_name, l2_reg):
