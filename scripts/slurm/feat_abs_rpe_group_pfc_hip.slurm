@@ -13,7 +13,7 @@ array=("hip" "pfc")
 
 module load singularity
 singularity exec --writable-tmpfs --nv \
-    --bind /gscratch/walkerlab/patrick:/data,/mmfs1/home/pqz317/wcst_decode:/code/wcst_decode \
+    --bind /gscratch/walkerlab/patrick:/data,/mmfs1/home/pqz317/wcst_decode:/src/wcst_decode \
     /gscratch/walkerlab/patrick/singularity/wcst_decode_image.sif \
     /usr/bin/python3 /src/wcst_decode/scripts/pseudo_decoding/20231103_decode_features_subpop_abstract.py \
     --abstract --abs_cond RPEGroup \
