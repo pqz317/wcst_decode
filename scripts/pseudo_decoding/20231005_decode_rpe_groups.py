@@ -65,25 +65,7 @@ def load_session_data(row):
     feature_selections = behavioral_utils.get_selection_features(valid_beh)
     valid_beh = pd.merge(valid_beh, feature_selections, on="TrialNumber", how="inner")
 
-    valid_beh_rpes = behavioral_utils.get_rpes_per_session(sess_name, valid_beh)
-    assert len(valid_beh) == len(valid_beh_rpes)
-    pos_med = row.FE_pos_median
-    neg_med = row.FE_neg_median
-    # add median labels to 
-    def add_group(row):
-        rpe = row.RPE_FE
-        group = None
-        if rpe < neg_med:
-            group = "more neg"
-        elif rpe >= neg_med and rpe < 0:
-            group = "less neg"
-        elif rpe >= 0 and rpe < pos_med:
-            group = "less pos"
-        elif rpe > pos_med:
-            group = "more pos"
-        row["group"] = group
-        return row
-    valid_beh_rpes = valid_beh_rpes.apply(add_group, axis=1)
+    valid_beh_rpes = behavioral_utils.get_rpe_groups_per_session(sess_name, valid_beh)
 
     # load firing rates
     spikes_path = SESS_SPIKES_PATH.format(
@@ -97,7 +79,7 @@ def load_session_data(row):
     frs = frs.rename(columns={DATA_MODE: "Value"})
 
     # create a trial splitter 
-    splitter = ConditionTrialSplitter(valid_beh_rpes, "group", 0.2)
+    splitter = ConditionTrialSplitter(valid_beh_rpes, "RPEGroup", 0.2)
     return SessionData(sess_name, valid_beh_rpes, frs, splitter)
 
 
