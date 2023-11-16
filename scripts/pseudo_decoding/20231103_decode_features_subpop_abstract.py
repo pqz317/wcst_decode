@@ -64,6 +64,7 @@ def load_session_data(sess_name, condition, is_abstract, abs_cond, subpop, subtr
     # grab the features of the selected card
     feature_selections = behavioral_utils.get_selection_features(valid_beh)
     valid_beh_merged = pd.merge(valid_beh, feature_selections, on="TrialNumber", how="inner")
+    valid_beh_merged = behavioral_utils.get_rpe_groups_per_session(sess_name, valid_beh_merged)
 
     # load firing rates
     spikes_path = SESS_SPIKES_PATH.format(
