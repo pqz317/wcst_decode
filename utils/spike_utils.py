@@ -265,7 +265,8 @@ def get_subpop_ratios_by_region(subpop, valid_sess):
     all_pop = get_unit_positions(valid_sess)
     subpop_counts = subpop.groupby("manual_structure").count()["UnitID"].rename("SubpopCount")
     all_pop_counts = all_pop.groupby("manual_structure").count()["UnitID"].rename("PopCount")
-    merged = pd.merge(subpop_counts, all_pop_counts, on="manual_structure")
+    merged = pd.merge(subpop_counts, all_pop_counts, on="manual_structure", how="outer")
+    merged = merged.fillna(0.0)
     merged["Ratio"] = merged["SubpopCount"] / merged["PopCount"]
     merged = merged.sort_values("Ratio", ascending=False)
     return merged

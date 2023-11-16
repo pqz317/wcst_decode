@@ -148,7 +148,6 @@ def main():
     parser.add_argument('--proj_name', type=str, help="a path to projection file", default="no_proj")
     parser.add_argument('--l2_reg', type=float, help="amount of l2 regularization", default=0.0)
 
-
     args = parser.parse_args()
     is_abstract = args.abstract
     subpop_name = args.subpop_name

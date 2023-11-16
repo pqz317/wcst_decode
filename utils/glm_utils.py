@@ -69,7 +69,7 @@ def calculate_sig_stats(shuffled, p_val, num_hyp):
     stats = shuffled.groupby(["UnitID", "TimeBins"]).apply(lambda group: get_sig_bound(group, p_val, num_hyp)).reset_index()
     return stats
 
-def identify_significant_units(res, shuffled_res, time_idxs, alpha=0.05):
+def identify_significant_units(res, shuffled_res, time_idxs, alpha=0.01):
     stats = calculate_sig_stats(shuffled_res, alpha, len(time_idxs))
     merged = pd.merge(res, stats, on=["UnitID", "TimeBins"])
     # TODO: HACK!! make general solution here, get rid of TimeBins disaster
