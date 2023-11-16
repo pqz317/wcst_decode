@@ -342,8 +342,8 @@ def get_rpes_per_session(session, beh):
 def get_rpe_groups_per_session(session, beh):
     valid_beh_rpes = get_rpes_per_session(session, beh)
     assert len(valid_beh_rpes) == len(beh)
-    pos_med = valid_beh_rpes[valid_beh_rpes.RPE_FE > 0].median()
-    neg_med = valid_beh_rpes[valid_beh_rpes.RPE_FE <= 0].median()
+    pos_med = valid_beh_rpes[valid_beh_rpes.RPE_FE > 0].RPE_FE.median()
+    neg_med = valid_beh_rpes[valid_beh_rpes.RPE_FE <= 0].RPE_FE.median()
     # add median labels to 
     def add_group(row):
         rpe = row.RPE_FE
