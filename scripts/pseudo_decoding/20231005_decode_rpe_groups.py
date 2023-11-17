@@ -18,25 +18,25 @@ PRE_INTERVAL = 1300   # time in ms before event
 POST_INTERVAL = 1500  # time in ms after event
 INTERVAL_SIZE = 100  # size of interval in ms
 
-# # the output directory to store the data
-# OUTPUT_DIR = "/data/patrick_res/pseudo"
-# # path to a dataframe of sessions to analyze
-# SESSIONS_PATH = "/data/patrick_res/multi_sess/valid_sessions_rpe.pickle"
-# # path for each session, specifying behavior
-# SESS_BEHAVIOR_PATH = "/data/rawdata/sub-SA/sess-{sess_name}/behavior/sub-SA_sess-{sess_name}_object_features.csv"
-# # path for each session, for spikes that have been pre-aligned to event time and binned. 
-# SESS_SPIKES_PATH = "/data/patrick_res/multi_sess/{sess_name}/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
-
 # the output directory to store the data
-OUTPUT_DIR = "/data/res/pseudo"
+OUTPUT_DIR = "/data/patrick_res/pseudo"
 # path to a dataframe of sessions to analyze
-# SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions.pickle"
-SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
-
+SESSIONS_PATH = "/data/patrick_res/sessions/valid_sessions_rpe.pickle"
 # path for each session, specifying behavior
-SESS_BEHAVIOR_PATH = "/data/sub-SA_sess-{sess_name}_object_features.csv"
+SESS_BEHAVIOR_PATH = "/data/rawdata/sub-SA/sess-{sess_name}/behavior/sub-SA_sess-{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
-SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
+SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
+
+# # the output directory to store the data
+# OUTPUT_DIR = "/data/res/pseudo"
+# # path to a dataframe of sessions to analyze
+# # SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions.pickle"
+# SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
+
+# # path for each session, specifying behavior
+# SESS_BEHAVIOR_PATH = "/data/sub-SA_sess-{sess_name}_object_features.csv"
+# # path for each session, for spikes that have been pre-aligned to event time and binned. 
+# SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 
 DATA_MODE = "SpikeCounts"
 
@@ -45,7 +45,7 @@ SEED = 42
 RPE_GROUPS = ["more neg", "less neg", "less pos", "more pos"]
 
 
-def load_session_data(row): 
+def load_session_data(row, subtrials): 
     """
     Loads the data (behavioral and firing rates) for a given session, 
     generates a TrialSplitter based on a condition (feature dimension) 
@@ -77,15 +77,25 @@ def load_session_data(row):
     )
     frs = pd.read_pickle(spikes_path)
     frs = frs.rename(columns={DATA_MODE: "Value"})
-
+    if subtrials is not None: 
+        sess_subtrial = subtrials[subtrials.session == sess_name]
+        valid_beh_rpes = valid_beh_rpes[valid_beh_rpes.TrialNumber.isin(sess_subtrial.TrialNumber)]
+        if len(valid_beh_rpes) == 0: 
+            return None
     # create a trial splitter 
     splitter = ConditionTrialSplitter(valid_beh_rpes, "RPEGroup", 0.2)
     return SessionData(sess_name, valid_beh_rpes, frs, splitter)
 
 
-def run_decoder(sess_datas, proj=None, proj_name="no_proj"):
+def run_decoder(sess_datas, subtrials_name="all", proj=None, proj_name="no_proj"):
     # setup decoder, specify all possible label classes, number of neurons, parameters
-    classes = RPE_GROUPS
+    classes = None
+    if subtrials_name == "all":
+        classes = RPE_GROUPS
+    elif subtrials_name == "cor_bal":
+        classes = ["less pos", "more pos"]
+    elif subtrials_name == "inc_bal":
+        classes = ["less neg", "more neg"]
 
     # proj is in num_neurons x dimensions
     if proj is None:
@@ -104,16 +114,16 @@ def run_decoder(sess_datas, proj=None, proj_name="no_proj"):
         model, sess_datas, time_bins, 10, 1000, 200, 42, proj)
 
     # store the results
-    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{proj_name}_train_accs.npy"), train_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{proj_name}_test_accs.npy"), test_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{proj_name}_shuffled_accs.npy"), shuffled_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{proj_name}_models.npy"), models)
+    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{proj_name}_{subtrials_name}_train_accs.npy"), train_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{proj_name}_{subtrials_name}_test_accs.npy"), test_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{proj_name}_{subtrials_name}_shuffled_accs.npy"), shuffled_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{proj_name}_{subtrials_name}_models.npy"), models)
 
-def decode_rpe_group(valid_sess, is_abstract=False, subpops=None, subpop_name=None, proj=None, proj_name="no_proj"):
+def decode_rpe_group(valid_sess, subtrials=None, subtrials_name="all", proj=None, proj_name="no_proj"):
     print(f"Decoding")
     # load all session datas
-    sess_datas = valid_sess.apply(load_session_data, axis=1)
-    run_decoder(sess_datas, proj, proj_name)
+    sess_datas = valid_sess.apply(lambda x: load_session_data(x, subtrials), axis=1)
+    run_decoder(sess_datas, subtrials_name, proj, proj_name)
 
 
 def main():
@@ -122,28 +132,25 @@ def main():
     For each feature dimension, runs decoding, stores results. 
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('--abstract', action=argparse.BooleanOptionalAction, default=False)
-    parser.add_argument('--subpop_path', type=str, help="a path to subpopulation file", default="")
-    parser.add_argument('--subpop_name', type=str, help="name of subpopulation", default="all")
-
+    parser.add_argument('--subtrials_path', type=str, help="a path to subtrials file", default="")
+    parser.add_argument('--subtrials_name', type=str, help="name of subtrials", default="all")
     parser.add_argument('--proj_path', type=str, help="a path to projection file", default="")
     parser.add_argument('--proj_name', type=str, help="a path to projection file", default="no_proj")
 
     args = parser.parse_args()
 
     valid_sess = pd.read_pickle(SESSIONS_PATH)
-    is_abstract = args.abstract
-    subpop_name = args.subpop_name
+    subtrials_name = args.subtrials_name
     proj_name = args.proj_name
-    if args.subpop_path:
-        subpops = pd.read_pickle(args.subpop_path)
+    if args.subtrials_path:
+        subtrials = pd.read_pickle(args.subtrials_path)
     else: 
-        subpops = None
+        subtrials = None
     if args.proj_path:
         proj = np.load(args.proj_path)
     else: 
         proj = None
-    decode_rpe_group(valid_sess, is_abstract, subpops, subpop_name, proj, proj_name)
+    decode_rpe_group(valid_sess, subtrials, subtrials_name, proj, proj_name)
 
 if __name__ == "__main__":
     main()
