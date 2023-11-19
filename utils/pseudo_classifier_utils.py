@@ -71,13 +71,16 @@ def evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, num_splits, 
             models_by_bin[time_bin_idx, split_idx] = copy.deepcopy(model)
     return training_accs_by_bin, test_accs_by_bin, shuffled_accs_by_bin, models_by_bin
 
-def cross_evaluate_by_time_bins(models_by_bin, sess_datas, input_bins, num_train_per_cond=0, num_test_per_cond=400):
+def cross_evaluate_by_time_bins(models_by_bin, sess_datas, input_bins, num_train_per_cond=0, num_test_per_cond=400, avg=True):
     """
     Cross evaluates different pseudo models on different time bins
     Assumes sess_datas was generated with the same seed, has splits pre_generated
     """
     num_model_time_bins = models_by_bin.shape[0]
-    cross_accs = np.empty((num_model_time_bins, len(input_bins)))
+    if avg: 
+        cross_accs = np.empty((num_model_time_bins, len(input_bins)))
+    else: 
+        cross_accs = np.empty((num_model_time_bins, len(input_bins), models_by_bin.shape[1]))
     for model_bin_idx in range(num_model_time_bins):
         print(f"evaluating models for bin idx {model_bin_idx}")
         models = models_by_bin[model_bin_idx, :]
@@ -95,8 +98,11 @@ def cross_evaluate_by_time_bins(models_by_bin, sess_datas, input_bins, num_train
                 x_test = transform_input_data(test_data)
                 y_test = transform_label_data(test_data)
                 accs.append(model.score(x_test, y_test))
-            avg_acc = np.mean(accs)
-            cross_accs[model_bin_idx, test_bin_idx] = avg_acc
+            if avg: 
+                avg_acc = np.mean(accs)
+                cross_accs[model_bin_idx, test_bin_idx] = avg_acc
+            else:
+                cross_accs[model_bin_idx, test_bin_idx, :] = accs
     return cross_accs
 
 def evaluate_model_with_data(models_by_bin, sess_datas, time_bins, num_train_per_cond=0, num_test_per_cond=400):

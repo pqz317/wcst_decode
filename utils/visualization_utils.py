@@ -301,18 +301,19 @@ def get_fr_np_array(fr_df, mode):
         len(fr_df.TimeBins.unique())
     )
 
-def plot_mean_frs_by_group(sess_name, unit, frs, beh, group_name, pos, ax, mode="FiringRate", group_colors=None):
+def plot_mean_frs_by_group(sess_name, unit, frs, beh, group_name, pos, ax, mode="FiringRate", group_colors=None, group_label=None):
     groups = beh[group_name].unique()
     for group in groups:
         trials = beh[beh[group_name] == group].TrialNumber
         group_frs = frs[(frs.TrialNumber.isin(trials)) & (frs.UnitID == unit)]
         vals = get_fr_np_array(group_frs, mode)
         color = group_colors[group] if group_colors else None
+        label = group_label[group] if group_label else group
         visualize_accuracy_across_time_bins(
             vals.T,
             1.3, 1.5, 0.1,
             ax,
-            label=group,
+            label=label,
             right_align=True, 
             sem=True,
             color=color
@@ -323,7 +324,7 @@ def plot_mean_frs_by_group(sess_name, unit, frs, beh, group_name, pos, ax, mode=
     ax.axvspan(-0.8, 0, alpha=0.3, color='gray')
     ax.axvline(0.098, alpha=0.3, color='gray', linestyle='dashed')
     ax.set_xlabel("Time Relative to Feedback (s)")
-    ax.set_ylabel("Firing Rate (Hz)")
+    # ax.set_ylabel("Firing Rate (Hz)")
 
 
 def plot_mean_frs_by_group_stim_on(sess_name, unit, frs, beh, group_name, pos, ax, mode="FiringRate", group_colors=None):

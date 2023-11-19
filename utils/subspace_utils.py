@@ -44,18 +44,19 @@ def get_cross_distance_for_models(models):
             cross_distances[time_i, time_j] = np.mean(split_distances)
     return cross_distances
 
-def get_orth_decoding_axes_for_time_bin(model_arrs, time_bin_idx):
+def get_orth_decoding_axes_for_time_bin(model_arrs, time_bin_idxs):
     """
     Pass in list of model_arrs, where each model is a time_bin x split np array of models
     And a time_bin_idx
     """
     weights_across_dims = []
     for model_arr in model_arrs:
-        weights = []
-        for i, model_split in enumerate(model_arr[time_bin_idx, :]):
-            weights.append(model_split.coef_.T)
-        mean_across_splits = np.mean(weights, axis=0)
-        weights_across_dims.append(mean_across_splits)
+        for time_bin_idx in time_bin_idxs:
+            weights = []
+            for i, model_split in enumerate(model_arr[time_bin_idx, :]):
+                weights.append(model_split.coef_.T)
+            mean_across_splits = np.mean(weights, axis=0)
+            weights_across_dims.append(mean_across_splits)
     axes = np.hstack(weights_across_dims)
     orth_axes = scipy.linalg.orth(axes)
     return orth_axes

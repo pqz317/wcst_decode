@@ -97,9 +97,9 @@ def decode_feature(feature_dim, valid_sess):
     fix_models = np.load(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixations_models.npy"), allow_pickle=True)
     best_fix = fix_models[BEST_FIXATION_IDX, :]
     best_fix = np.expand_dims(best_fix, axis=0)
-    cross_decode_accs = pseudo_classifier_utils.cross_evaluate_by_time_bins(best_fix, sess_datas, input_bins)
+    cross_decode_accs = pseudo_classifier_utils.cross_evaluate_by_time_bins(best_fix, sess_datas, input_bins, avg=False)
 
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixation_on_selections_cross_accs.npy"), cross_decode_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixation_on_selections_cross_accs_all.npy"), cross_decode_accs)
 
 
 def main():
