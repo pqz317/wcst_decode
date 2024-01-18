@@ -12,6 +12,9 @@ from models.model_wrapper import ModelWrapper, ModelWrapperLinearRegression
 from models.multinomial_logistic_regressor import NormedDropoutMultinomialLogisticRegressor
 from trial_splitters.condition_trial_splitter import ConditionTrialSplitter 
 
+import argparse
+
+
 PRE_INTERVAL = 300   # time in ms before event
 POST_INTERVAL = 500  # time in ms after event
 INTERVAL_SIZE = 100  # size of interval in ms
@@ -29,11 +32,11 @@ POSSIBLE_FEATURES = {
 OUTPUT_DIR = "/data/patrick_res/pseudo"
 # path to a dataframe of sessions to analyze
 # SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions.pickle"
-SESSIONS_PATH = "/data/patrick_res/multi_sess/valid_sessions_rpe.pickle"
+SESSIONS_PATH = "/data/patrick_res/sessions/valid_sessions_rpe.pickle"
 
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
-SESS_SPIKES_PATH = "/data/patrick_res/multi_sess/{sess_name}/{sess_name}_firing_rates_{pre_interval}_fixation_{post_interval}_{interval_size}_bins_1_smooth.pickle"
-SESS_FIXATIONS_PATH = "/data/patrick_res/multi_sess/{sess_name}/{sess_name}_fixations.pickle"
+SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sess_name}_firing_rates_{pre_interval}_fixation_{post_interval}_{interval_size}_bins_1_smooth.pickle"
+SESS_FIXATIONS_PATH = "/data/patrick_res/behavior/{sess_name}_fixations.pickle"
 
 DATA_MODE = "SpikeCounts"
 
@@ -41,7 +44,7 @@ TEST_RATIO = 0.2
 
 SEED = 42
 
-def load_session_data(sess_name, condition): 
+def load_session_data(sess_name, condition, subpops): 
     """
     Loads the data (behavioral and firing rates) for a given session, 
     generates a TrialSplitter based on a condition (feature dimension) 
@@ -63,14 +66,18 @@ def load_session_data(sess_name, condition):
     )
     frs = pd.read_pickle(spikes_path)
     frs = frs.rename(columns={DATA_MODE: "Value"})
-
+    if subpops is not None: 
+        sess_subpop = subpops[subpops.session == sess_name]
+        frs = frs[frs.UnitID.isin(sess_subpop.UnitID)]
+        if len(frs) == 0:
+            return None
     # create a trial splitter 
     splitter = ConditionTrialSplitter(fixations, condition, TEST_RATIO, seed=SEED)
     session_data = SessionData(sess_name, fixations, frs, splitter)
     session_data.pre_generate_splits(8)
     return session_data
 
-def decode_feature(feature_dim, valid_sess):
+def decode_feature(feature_dim, valid_sess, subpops, subpop_name):
     """
     For a feature dimension and list of sessions, sets up and runs decoding, stores results
     Args: 
@@ -79,7 +86,8 @@ def decode_feature(feature_dim, valid_sess):
     """
     print(f"Decoding {feature_dim}")
     # load all session datas
-    sess_datas = valid_sess.apply(lambda x: load_session_data(x.session_name, feature_dim), axis=1)
+    sess_datas = valid_sess.apply(lambda x: load_session_data(x.session_name, feature_dim, subpops), axis=1)
+    sess_datas = sess_datas.dropna()
 
     # setup decoder, specify all possible label classes, number of neurons, parameters
     classes = POSSIBLE_FEATURES[feature_dim]
@@ -94,19 +102,27 @@ def decode_feature(feature_dim, valid_sess):
     # train and evaluate the decoder per timein 
     train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, 8, 2000, 500, 42)
 
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixations_train_accs.npy"), train_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixations_test_accs.npy"), test_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixations_shuffled_accs.npy"), shuffled_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixations_models.npy"), models)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixations_{subpop_name}_train_accs.npy"), train_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixations_{subpop_name}_test_accs.npy"), test_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixations_{subpop_name}_shuffled_accs.npy"), shuffled_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixations_{subpop_name}_models.npy"), models)
 
 def main():
     """
     Loads a dataframe specifying sessions to use
     For each feature dimension, runs decoding, stores results. 
     """
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--subpop_path', type=str, help="a path to subpopulation file", default="")
+    parser.add_argument('--subpop_name', type=str, help="name of subpopulation", default="all")
+    args = parser.parse_args()
+
+    subpop_name = args.subpop_name
+    subpops =  pd.read_pickle(args.subpop_path) if args.subpop_path else None
+
     valid_sess = pd.read_pickle(SESSIONS_PATH)
     for feature_dim in FEATURE_DIMS: 
-        decode_feature(feature_dim, valid_sess)
+        decode_feature(feature_dim, valid_sess, subpops, subpop_name)
 
 if __name__ == "__main__":
     main()

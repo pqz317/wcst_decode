@@ -354,7 +354,7 @@ def get_rpe_groups_per_session(session, beh):
             group = "less neg"
         elif rpe >= 0 and rpe < pos_med:
             group = "less pos"
-        elif rpe > pos_med:
+        elif rpe >= pos_med:
             group = "more pos"
         row["RPEGroup"] = group
         return row

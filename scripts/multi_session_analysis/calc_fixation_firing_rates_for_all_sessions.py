@@ -77,9 +77,10 @@ def calc_for_session(row):
     )
     print("Saving")
     dir_path = f"/data/patrick_res/firing_rates"
+    beh_dir_path = "/data/patrick_res/behavior"
     firing_rates.to_pickle(os.path.join(dir_path, f"{sess_name}_firing_rates_{PRE_INTERVAL}_fixation_{POST_INTERVAL}_{INTERVAL_SIZE}_bins_{NUM_BINS_SMOOTH}_smooth.pickle"))
-    merged.to_pickle(os.path.join(dir_path, f"{sess_name}_fixations.pickle"))
+    merged.to_pickle(os.path.join(beh_dir_path, f"{sess_name}_fixations.pickle"))
 
 if __name__ == "__main__":
-    valid_sess = pd.read_pickle("/data/sessions/valid_sessions_rpe.pickle")
+    valid_sess = pd.read_pickle("/data/patrick_res/sessions/valid_sessions_rpe.pickle")
     valid_sess.apply(calc_for_session, axis=1)

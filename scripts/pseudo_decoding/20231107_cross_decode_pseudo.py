@@ -34,7 +34,7 @@ TEST_RATIO = 0.2
 
 FEATURE_DIMS = ["Color", "Shape", "Pattern"]
 
-def load_session_data(sess_name, condition): 
+def load_session_data(sess_name, condition, subpops): 
     """
     Loads the data (behavioral and firing rates) for a given session, 
     generates a TrialSplitter based on a condition (feature dimension) 
@@ -64,7 +64,11 @@ def load_session_data(sess_name, condition):
     )
     frs = pd.read_pickle(spikes_path)
     frs = frs.rename(columns={DATA_MODE: "Value"})
-
+    if subpops is not None: 
+        sess_subpop = subpops[subpops.session == sess_name]
+        frs = frs[frs.UnitID.isin(sess_subpop.UnitID)]
+        if len(frs) == 0:
+            return None
     # create a trial splitter 
     splitter = ConditionTrialSplitter(valid_beh_merged, condition, TEST_RATIO, seed=42)
     session_data = SessionData(sess_name, valid_beh_merged, frs, splitter)
@@ -77,15 +81,22 @@ def main():
     For each feature dimension, runs decoding, stores results. 
     """
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    # TODO: remove: 
+    subpops = pd.read_pickle("/data/patrick_res/pfc_subpop.pickle")
     print(device)
     valid_sess = pd.read_pickle(SESSIONS_PATH)
     for feature_dim in FEATURE_DIMS:
         print(f"Cross decoding {feature_dim}") 
-        sess_datas = valid_sess.apply(lambda x: load_session_data(x.session_name, feature_dim), axis=1)
+        sess_datas = valid_sess.apply(lambda x: load_session_data(x.session_name, feature_dim, subpops), axis=1)
+        sess_datas = sess_datas.dropna()
+
         input_bins = np.arange(0, 2.8, 0.1)
-        models = np.load(os.path.join(OUTPUT_DIR, f"{feature_dim}_rpe_sess_models.npy"), allow_pickle=True)
+        # models = np.load(os.path.join(OUTPUT_DIR, f"{feature_dim}_rpe_sess_models.npy"), allow_pickle=True)
+        models = np.load(os.path.join(OUTPUT_DIR, f"{feature_dim}_baseline_pfc_all_no_proj_0.0_models.npy"), allow_pickle=True)
+
         cross_decode_accs = pseudo_classifier_utils.cross_evaluate_by_time_bins(models, sess_datas, input_bins, avg=False)
-        np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_rpe_sess_cross_acc_alls.npy"), cross_decode_accs)
+        # np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_rpe_sess_cross_acc_alls.npy"), cross_decode_accs)
+        np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_cross_acc_pfc.npy"), cross_decode_accs)
 
 if __name__ == "__main__":
     main()
