@@ -30,15 +30,15 @@ POSSIBLE_FEATURES = {
 }
 
 # the output directory to store the data
-# OUTPUT_DIR = "/data/res/pseudo"
-# # path to a dataframe of sessions to analyze
-# # SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions.pickle"
-# SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
+OUTPUT_DIR = "/data/res/pseudo"
+# path to a dataframe of sessions to analyze
+# SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions.pickle"
+SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
 
-# # path for each session, specifying behavior
-# SESS_BEHAVIOR_PATH = "/data/sub-SA_sess-{sess_name}_object_features.csv"
-# # path for each session, for spikes that have been pre-aligned to event time and binned. 
-# SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
+# path for each session, specifying behavior
+SESS_BEHAVIOR_PATH = "/data/sub-SA_sess-{sess_name}_object_features.csv"
+# path for each session, for spikes that have been pre-aligned to event time and binned. 
+SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 
 # OUTPUT_DIR = "/data/patrick_res/pseudo"
 # # path to a dataframe of sessions to analyze
@@ -51,7 +51,7 @@ POSSIBLE_FEATURES = {
 
 DATA_MODE = "SpikeCounts"
 
-TEST_RATIO = 0.75
+TEST_RATIO = 0.2
 NUM_ITERS = 8
 
 def load_session_data(sess_name, condition, is_abstract, abs_cond, subpop, subtrials): 

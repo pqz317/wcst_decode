@@ -28,15 +28,26 @@ POSSIBLE_FEATURES = {
     "Shape": ['CIRCLE', 'SQUARE', 'STAR', 'TRIANGLE'],
     "Pattern": ['ESCHER', 'POLKADOT', 'RIPPLE', 'SWIRL']
 }
+# # the output directory to store the data
+# OUTPUT_DIR = "/data/patrick_res/pseudo"
+# # path to a dataframe of sessions to analyze
+# # SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions.pickle"
+# SESSIONS_PATH = "/data/patrick_res/sessions/valid_sessions_rpe.pickle"
+
+# # path for each session, for spikes that have been pre-aligned to event time and binned. 
+# SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sess_name}_firing_rates_{pre_interval}_fixation_{post_interval}_{interval_size}_bins_1_smooth.pickle"
+# SESS_FIXATIONS_PATH = "/data/patrick_res/behavior/{sess_name}_fixations.pickle"
+
 # the output directory to store the data
-OUTPUT_DIR = "/data/patrick_res/pseudo"
+OUTPUT_DIR = "/data/res/pseudo"
 # path to a dataframe of sessions to analyze
 # SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions.pickle"
-SESSIONS_PATH = "/data/patrick_res/sessions/valid_sessions_rpe.pickle"
+SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
 
+# path for each session, specifying behavior
+SESS_FIXATIONS_PATH = "/data/{sess_name}_fixations.pickle"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
-SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sess_name}_firing_rates_{pre_interval}_fixation_{post_interval}_{interval_size}_bins_1_smooth.pickle"
-SESS_FIXATIONS_PATH = "/data/patrick_res/behavior/{sess_name}_fixations.pickle"
+SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_fixation_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 
 DATA_MODE = "SpikeCounts"
 
