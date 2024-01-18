@@ -13,21 +13,35 @@ from trial_splitters.condition_trial_splitter import ConditionTrialSplitter
 from utils.session_data import SessionData
 
 import torch
+import argparse
 
 EVENT = "FeedbackOnset"  # event in behavior to align on
 PRE_INTERVAL = 1300   # time in ms before event
 POST_INTERVAL = 1500  # time in ms after event
 INTERVAL_SIZE = 100  # size of interval in ms
 
+# # the output directory to store the data
+# OUTPUT_DIR = "/data/patrick_res/pseudo"
+# # path to a dataframe of sessions to analyze
+# # SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions.pickle"
+# SESSIONS_PATH = "/data/patrick_res/sessions/valid_sessions_rpe.pickle"
+# # path for each session, specifying behavior
+# SESS_BEHAVIOR_PATH = "/data/rawdata/sub-SA/sess-{sess_name}/behavior/sub-SA_sess-{sess_name}_object_features.csv"
+# # path for each session, for spikes that have been pre-aligned to event time and binned. 
+# SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
+
+
 # the output directory to store the data
-OUTPUT_DIR = "/data/patrick_res/pseudo"
+OUTPUT_DIR = "/data/res/pseudo"
 # path to a dataframe of sessions to analyze
 # SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions.pickle"
-SESSIONS_PATH = "/data/patrick_res/sessions/valid_sessions_rpe.pickle"
+SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
+
 # path for each session, specifying behavior
-SESS_BEHAVIOR_PATH = "/data/rawdata/sub-SA/sess-{sess_name}/behavior/sub-SA_sess-{sess_name}_object_features.csv"
+SESS_BEHAVIOR_PATH = "/data/sub-SA_sess-{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
-SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
+SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
+
 
 DATA_MODE = "SpikeCounts"
 TEST_RATIO = 0.2
@@ -75,14 +89,13 @@ def load_session_data(sess_name, condition, subpops):
     session_data.pre_generate_splits(8)
     return session_data
 
-def main():
+def main(subpops, subpop_name):
     """
     Loads a dataframe specifying sessions to use
     For each feature dimension, runs decoding, stores results. 
     """
     device = "cuda" if torch.cuda.is_available() else "cpu"
     # TODO: remove: 
-    subpops = pd.read_pickle("/data/patrick_res/pfc_subpop.pickle")
     print(device)
     valid_sess = pd.read_pickle(SESSIONS_PATH)
     for feature_dim in FEATURE_DIMS:
@@ -91,12 +104,22 @@ def main():
         sess_datas = sess_datas.dropna()
 
         input_bins = np.arange(0, 2.8, 0.1)
-        # models = np.load(os.path.join(OUTPUT_DIR, f"{feature_dim}_rpe_sess_models.npy"), allow_pickle=True)
-        models = np.load(os.path.join(OUTPUT_DIR, f"{feature_dim}_baseline_pfc_all_no_proj_0.0_models.npy"), allow_pickle=True)
+        models = np.load(os.path.join(OUTPUT_DIR, f"{feature_dim}_baseline_{subpop_name}_all_no_proj_0.0_models.npy"), allow_pickle=True)
 
         cross_decode_accs = pseudo_classifier_utils.cross_evaluate_by_time_bins(models, sess_datas, input_bins, avg=False)
-        # np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_rpe_sess_cross_acc_alls.npy"), cross_decode_accs)
-        np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_cross_acc_pfc.npy"), cross_decode_accs)
+        np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_cross_acc_{subpop_name}.npy"), cross_decode_accs)
 
 if __name__ == "__main__":
-    main()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--subpop_path', type=str, help="a path to subpopulation file", default="")
+    parser.add_argument('--subpop_name', type=str, help="name of subpopulation", default="all")
+
+    args = parser.parse_args()
+    subpop_name = args.subpop_name
+    if args.subpop_path:
+        subpops = pd.read_pickle(args.subpop_path)
+    else: 
+        subpops = None
+
+    main(subpops, subpop_name)
