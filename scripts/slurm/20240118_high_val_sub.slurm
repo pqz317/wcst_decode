@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=high_val
+#SBATCH --job-name=high_val_sub
 
 #SBATCH -p gpu-a100
 #SBATCH -A walkerlab
