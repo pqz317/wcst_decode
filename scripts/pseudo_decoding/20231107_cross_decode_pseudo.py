@@ -48,6 +48,10 @@ TEST_RATIO = 0.2
 
 FEATURE_DIMS = ["Color", "Shape", "Pattern"]
 
+# NOTE: should match whichever seed was used to generate splits for the models
+SEED=42
+
+
 def load_session_data(sess_name, condition, subpops): 
     """
     Loads the data (behavioral and firing rates) for a given session, 
@@ -84,7 +88,7 @@ def load_session_data(sess_name, condition, subpops):
         if len(frs) == 0:
             return None
     # create a trial splitter 
-    splitter = ConditionTrialSplitter(valid_beh_merged, condition, TEST_RATIO, seed=42)
+    splitter = ConditionTrialSplitter(valid_beh_merged, condition, TEST_RATIO, seed=SEED)
     session_data = SessionData(sess_name, valid_beh_merged, frs, splitter)
     session_data.pre_generate_splits(8)
     return session_data

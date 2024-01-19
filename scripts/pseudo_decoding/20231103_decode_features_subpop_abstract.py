@@ -54,6 +54,9 @@ DATA_MODE = "SpikeCounts"
 TEST_RATIO = 0.2
 NUM_ITERS = 8
 
+# NOTE: this is important to use, especially for cross decoding. Should really have a better way to do this
+SEED=42
+
 def load_session_data(sess_name, condition, is_abstract, abs_cond, subpop, subtrials): 
     """
     Loads the data (behavioral and firing rates) for a given session, 
@@ -103,7 +106,7 @@ def load_session_data(sess_name, condition, is_abstract, abs_cond, subpop, subtr
         # create a trial splitter 
         splitter = ConditionAbstractTrialSplitter(valid_beh_merged, condition, split_conditions)
     else: 
-        splitter = ConditionTrialSplitter(valid_beh_merged, condition, TEST_RATIO)
+        splitter = ConditionTrialSplitter(valid_beh_merged, condition, TEST_RATIO, seed=SEED)
     sess_data = SessionData(sess_name, valid_beh_merged, frs, splitter)
     sess_data.pre_generate_splits(NUM_ITERS)
     return sess_data
