@@ -10,7 +10,7 @@
 #SBATCH --time=180
 
 cond_arr=("MaxFeat" "RandomMaxFeat" "MaxFeat" "RandomMaxFeat")
-pop_arr=("pfc" "pfc", "hip" "hip")
+pop_arr=("pfc" "pfc" "hip" "hip")
 
 
 module load singularity
