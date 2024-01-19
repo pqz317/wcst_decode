@@ -45,7 +45,7 @@ SEED = 42
 RPE_GROUPS = ["more neg", "less neg", "less pos", "more pos"]
 
 
-def load_session_data(row, subtrials): 
+def load_session_data(row, subtrials, subpops): 
     """
     Loads the data (behavioral and firing rates) for a given session, 
     generates a TrialSplitter based on a condition (feature dimension) 
@@ -77,6 +77,11 @@ def load_session_data(row, subtrials):
     )
     frs = pd.read_pickle(spikes_path)
     frs = frs.rename(columns={DATA_MODE: "Value"})
+    if subpops is not None: 
+        sess_subpop = subpops[subpops.session == sess_name]
+        frs = frs[frs.UnitID.isin(sess_subpop.UnitID)]
+        if len(frs) == 0:
+            return None
     if subtrials is not None: 
         sess_subtrial = subtrials[subtrials.session == sess_name]
         valid_beh_rpes = valid_beh_rpes[valid_beh_rpes.TrialNumber.isin(sess_subtrial.TrialNumber)]
@@ -87,7 +92,7 @@ def load_session_data(row, subtrials):
     return SessionData(sess_name, valid_beh_rpes, frs, splitter)
 
 
-def run_decoder(sess_datas, subtrials_name="all", proj=None, proj_name="no_proj"):
+def run_decoder(sess_datas, subtrials_name="all", proj=None, proj_name="no_proj", subpop_name="all"):
     # setup decoder, specify all possible label classes, number of neurons, parameters
     classes = None
     if subtrials_name == "all":
@@ -114,16 +119,17 @@ def run_decoder(sess_datas, subtrials_name="all", proj=None, proj_name="no_proj"
         model, sess_datas, time_bins, 10, 1000, 200, 42, proj)
 
     # store the results
-    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{proj_name}_{subtrials_name}_train_accs.npy"), train_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{proj_name}_{subtrials_name}_test_accs.npy"), test_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{proj_name}_{subtrials_name}_shuffled_accs.npy"), shuffled_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{proj_name}_{subtrials_name}_models.npy"), models)
+    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{subpop_name}_{proj_name}_{subtrials_name}_train_accs.npy"), train_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{subpop_name}_{proj_name}_{subtrials_name}_test_accs.npy"), test_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{subpop_name}_{proj_name}_{subtrials_name}_shuffled_accs.npy"), shuffled_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{subpop_name}_{proj_name}_{subtrials_name}_models.npy"), models)
 
-def decode_rpe_group(valid_sess, subtrials=None, subtrials_name="all", proj=None, proj_name="no_proj"):
+def decode_rpe_group(valid_sess, subtrials=None, subtrials_name="all", proj=None, proj_name="no_proj", subpops=None, subpop_name="all"):
     print(f"Decoding")
     # load all session datas
-    sess_datas = valid_sess.apply(lambda x: load_session_data(x, subtrials), axis=1)
-    run_decoder(sess_datas, subtrials_name, proj, proj_name)
+    sess_datas = valid_sess.apply(lambda x: load_session_data(x, subtrials, subpops), axis=1)
+    sess_datas = sess_datas.dropna()
+    run_decoder(sess_datas, subtrials_name, proj, proj_name, subpop_name)
 
 
 def main():
@@ -136,6 +142,8 @@ def main():
     parser.add_argument('--subtrials_name', type=str, help="name of subtrials", default="all")
     parser.add_argument('--proj_path', type=str, help="a path to projection file", default="")
     parser.add_argument('--proj_name', type=str, help="a path to projection file", default="no_proj")
+    parser.add_argument('--subpop_path', type=str, help="a path to subpopulation file", default="")
+    parser.add_argument('--subpop_name', type=str, help="name of subpopulation", default="all")
 
     args = parser.parse_args()
 
@@ -150,7 +158,12 @@ def main():
         proj = np.load(args.proj_path)
     else: 
         proj = None
-    decode_rpe_group(valid_sess, subtrials, subtrials_name, proj, proj_name)
+    subpop_name = args.subpop_name
+    if args.subpop_path:
+        subpops = pd.read_pickle(args.subpop_path)
+    else: 
+        subpops = None
+    decode_rpe_group(valid_sess, subtrials, subtrials_name, proj, proj_name, subpops, subpop_name)
 
 if __name__ == "__main__":
     main()

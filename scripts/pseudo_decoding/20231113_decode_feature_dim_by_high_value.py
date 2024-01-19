@@ -43,27 +43,26 @@ POSSIBLE_FEATURES = {
     "Shape": ['CIRCLE', 'SQUARE', 'STAR', 'TRIANGLE'],
     "Pattern": ['ESCHER', 'POLKADOT', 'RIPPLE', 'SWIRL']
 }
-# # the output directory to store the data
-# OUTPUT_DIR = "/data/res/pseudo"
-# # path to a dataframe of sessions to analyze
-# # SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions.pickle"
-# SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
-
-# # path for each session, specifying behavior
-# SESS_BEHAVIOR_PATH = "/data/sub-SA_sess-{sess_name}_object_features.csv"
-# # path for each session, for spikes that have been pre-aligned to event time and binned. 
-# SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
-
 # the output directory to store the data
-OUTPUT_DIR = "/data/patrick_res/pseudo"
+OUTPUT_DIR = "/data/res/pseudo"
 # path to a dataframe of sessions to analyze
-# SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions.pickle"
-SESSIONS_PATH = "/data/patrick_res/sessions/valid_sessions_rpe.pickle"
+SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
 
 # path for each session, specifying behavior
-SESS_BEHAVIOR_PATH = "/data/rawdata/sub-SA/sess-{sess_name}/behavior/sub-SA_sess-{sess_name}_object_features.csv"
+SESS_BEHAVIOR_PATH = "/data/sub-SA_sess-{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
-SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
+SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
+
+# # the output directory to store the data
+# OUTPUT_DIR = "/data/patrick_res/pseudo"
+# # path to a dataframe of sessions to analyze
+# # SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions.pickle"
+# SESSIONS_PATH = "/data/patrick_res/sessions/valid_sessions_rpe.pickle"
+
+# # path for each session, specifying behavior
+# SESS_BEHAVIOR_PATH = "/data/rawdata/sub-SA/sess-{sess_name}/behavior/sub-SA_sess-{sess_name}_object_features.csv"
+# # path for each session, for spikes that have been pre-aligned to event time and binned. 
+# SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 
 DATA_MODE = "SpikeCounts"
 
@@ -71,7 +70,7 @@ TEST_RATIO = 0.2
 
 SEED = 42
 
-def load_session_data(sess_name, feature_dim, rand_cond): 
+def load_session_data(sess_name, feature_dim, rand_cond, subpops): 
     """
     Loads the data (behavioral and firing rates) for a given session, 
     generates a TrialSplitter based on a condition (feature dimension) 
@@ -104,7 +103,7 @@ def load_session_data(sess_name, feature_dim, rand_cond):
 
     valid_beh_vals = pd.merge(valid_beh_merged, model_vals, left_on="TrialNumber", right_on="trial", how="inner")
     assert(len(valid_beh_vals) == len(valid_beh))
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(seed=SEED)
     def get_highest_val_feat(row):
         color = row["Color"]
         shape = row["Shape"]
@@ -127,15 +126,20 @@ def load_session_data(sess_name, feature_dim, rand_cond):
     )
     frs = pd.read_pickle(spikes_path)
     frs = frs.rename(columns={DATA_MODE: "Value"})
+    if subpops is not None: 
+        sess_subpop = subpops[subpops.session == sess_name]
+        frs = frs[frs.UnitID.isin(sess_subpop.UnitID)]
+        if len(frs) == 0:
+            return None
 
     # create a trial splitter 
-    # splitter = ConditionTrialSplitter(valid_beh_sub, rand_cond, TEST_RATIO, seed=SEED)
-    splitter = ConditionKFoldBlockSplitter(valid_beh_sub, rand_cond, n_splits=8, seed=SEED)
+    splitter = ConditionTrialSplitter(valid_beh_sub, rand_cond, TEST_RATIO, seed=SEED)
+    # splitter = ConditionKFoldBlockSplitter(valid_beh_sub, rand_cond, n_splits=8, seed=SEED)
     session_data = SessionData(sess_name, valid_beh_sub, frs, splitter)
     session_data.pre_generate_splits(8)
     return session_data
 
-def decode_high_value(valid_sess, feature_dim, random_cond):
+def decode_high_value(valid_sess, feature_dim, random_cond, subpops, subpop_name):
     """
     For a feature dimension and list of sessions, sets up and runs decoding, stores results
     Args: 
@@ -143,8 +147,8 @@ def decode_high_value(valid_sess, feature_dim, random_cond):
         valid_sess: a dataframe of valid sessions to be used
     """
     # load all session datas
-    sess_datas = valid_sess.apply(lambda x: load_session_data(x.session_name, feature_dim, random_cond), axis=1)
-
+    sess_datas = valid_sess.apply(lambda x: load_session_data(x.session_name, feature_dim, random_cond, subpops), axis=1)
+    sess_datas = sess_datas.dropna()
     # setup decoder, specify all possible label classes, number of neurons, parameters
     classes = POSSIBLE_FEATURES[feature_dim]
     num_neurons = sess_datas.apply(lambda x: x.get_num_neurons()).sum()
@@ -159,14 +163,14 @@ def decode_high_value(valid_sess, feature_dim, random_cond):
     train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, 8, 1000, 250, 42)
 
     # store the results
-    # np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_rpe_sess_train_accs.npy"), train_accs)
-    # np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_rpe_sess_test_accs.npy"), test_accs)
-    # np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_rpe_sess_shuffled_accs.npy"), shuffled_accs)
-    # np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_rpe_sess_models.npy"), models)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_block_rpe_sess_train_accs.npy"), train_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_block_rpe_sess_test_accs.npy"), test_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_block_rpe_sess_shuffled_accs.npy"), shuffled_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_block_rpe_sess_models.npy"), models)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_{subpop_name}_rpe_sess_train_accs.npy"), train_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_{subpop_name}_rpe_sess_test_accs.npy"), test_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_{subpop_name}_rpe_sess_shuffled_accs.npy"), shuffled_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_{subpop_name}_rpe_sess_models.npy"), models)
+    # np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_block_rpe_sess_train_accs.npy"), train_accs)
+    # np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_block_rpe_sess_test_accs.npy"), test_accs)
+    # np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_block_rpe_sess_shuffled_accs.npy"), shuffled_accs)
+    # np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_high_val_{random_cond}_block_rpe_sess_models.npy"), models)
 
 def main():
     """
@@ -175,13 +179,21 @@ def main():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--condition', default="MaxFeat")
+    parser.add_argument('--subpop_path', type=str, help="a path to subpopulation file", default="")
+    parser.add_argument('--subpop_name', type=str, help="name of subpopulation", default="all")
 
     args = parser.parse_args()
+    subpop_name = args.subpop_name
+    if args.subpop_path:
+        subpops = pd.read_pickle(args.subpop_path)
+    else: 
+        subpops = None
+
     condition = args.condition
 
     valid_sess = pd.read_pickle(SESSIONS_PATH)
     for feature_dim in FEATURE_DIMS:
-        decode_high_value(valid_sess, feature_dim, condition)
+        decode_high_value(valid_sess, feature_dim, condition, subpops, subpop_name)
 
 if __name__ == "__main__":
     main()
