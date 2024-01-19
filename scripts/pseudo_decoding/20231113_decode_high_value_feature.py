@@ -130,6 +130,7 @@ def decode_high_value(valid_sess, condition, subpops, subpop_name):
     """
     # load all session datas
     sess_datas = valid_sess.apply(lambda x: load_session_data(x.session_name, condition, subpops), axis=1)
+    sess_datas = sess_datas.dropna()
 
     # setup decoder, specify all possible label classes, number of neurons, parameters
     classes = list(FEATURE_TO_DIM.keys())
