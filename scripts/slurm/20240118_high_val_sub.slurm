@@ -9,7 +9,7 @@
 #SBATCH --mem=32G
 #SBATCH --time=180
 
-feat_arr=("MaxFeat" "RandomMaxFeat" "MaxFeat" "RandomMaxFeat")
+cond_arr=("MaxFeat" "RandomMaxFeat" "MaxFeat" "RandomMaxFeat")
 pop_arr=("pfc" "pfc", "hip" "hip")
 
 
@@ -18,6 +18,6 @@ singularity exec --writable-tmpfs --nv \
     --bind /gscratch/walkerlab/patrick:/data,/mmfs1/home/pqz317/wcst_decode:/src/wcst_decode \
     /gscratch/walkerlab/patrick/singularity/wcst_decode_image.sif \
     /usr/bin/python3 /src/wcst_decode/scripts/pseudo_decoding/20231113_decode_high_value_feature.py \
-    --condition ${array[$SLURM_ARRAY_TASK_ID]} \
-    --subpop_path /data/${array[$SLURM_ARRAY_TASK_ID]}_subpop.pickle \
-    --subpop_name ${array[$SLURM_ARRAY_TASK_ID]}
+    --condition ${cond_arr[$SLURM_ARRAY_TASK_ID]} \
+    --subpop_path /data/${pop_arr[$SLURM_ARRAY_TASK_ID]}_subpop.pickle \
+    --subpop_name ${pop_arr[$SLURM_ARRAY_TASK_ID]}
