@@ -52,7 +52,7 @@ class ConditionTrialSplitter:
             self.rng.shuffle(trials)
             # round up number of test trials
             # ex. if test ratio at 0.2, even with 2 trials, train/test split will still be 1/1. 
-            split_at = np.ceil(len(trials) * self.test_ratio)
+            split_at = np.ceil(len(trials) * self.test_ratio).astype(int)
             row["TestTrials"] = trials[:split_at]
             row["TrainTrials"] = trials[split_at:]
             return row
