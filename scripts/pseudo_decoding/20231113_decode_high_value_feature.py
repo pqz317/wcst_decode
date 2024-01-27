@@ -54,7 +54,7 @@ TEST_RATIO = 0.2
 
 SEED = 42
 
-def load_session_data(sess_name, condition, subpops): 
+def load_session_data(sess_name, condition, subpops, subtrials): 
     """
     Loads the data (behavioral and firing rates) for a given session, 
     generates a TrialSplitter based on a condition (feature dimension) 
@@ -84,9 +84,14 @@ def load_session_data(sess_name, condition, subpops):
     # grab the features of the selected card
     feature_selections = behavioral_utils.get_selection_features(valid_beh)
     valid_beh_merged = pd.merge(valid_beh, feature_selections, on="TrialNumber", how="inner")
-
+    if subtrials is not None: 
+        sess_subtrial = subtrials[subtrials.session == sess_name]
+        valid_beh_merged = valid_beh_merged[valid_beh_merged.TrialNumber.isin(sess_subtrial.TrialNumber)]
+        if len(valid_beh_merged) == 0: 
+            return None
     valid_beh_vals = pd.merge(valid_beh_merged, model_vals, left_on="TrialNumber", right_on="trial", how="inner")
-    assert(len(valid_beh_vals) == len(valid_beh))
+    assert(len(valid_beh_vals) == len(valid_beh_merged))
+
     rng = np.random.default_rng(seed=SEED)
     def get_highest_val_feat(row):
         color = row["Color"]
@@ -121,7 +126,7 @@ def load_session_data(sess_name, condition, subpops):
     session_data.pre_generate_splits(8)
     return session_data
 
-def decode_high_value(valid_sess, condition, subpops, subpop_name):
+def decode_high_value(valid_sess, condition, subpops, subpop_name, subtrials, subrials_name):
     """
     For a feature dimension and list of sessions, sets up and runs decoding, stores results
     Args: 
@@ -129,7 +134,7 @@ def decode_high_value(valid_sess, condition, subpops, subpop_name):
         valid_sess: a dataframe of valid sessions to be used
     """
     # load all session datas
-    sess_datas = valid_sess.apply(lambda x: load_session_data(x.session_name, condition, subpops), axis=1)
+    sess_datas = valid_sess.apply(lambda x: load_session_data(x.session_name, condition, subpops, subtrials), axis=1)
     sess_datas = sess_datas.dropna()
 
     # setup decoder, specify all possible label classes, number of neurons, parameters
@@ -146,10 +151,10 @@ def decode_high_value(valid_sess, condition, subpops, subpop_name):
     train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, 8, 1000, 250, 42)
 
     # store the results
-    np.save(os.path.join(OUTPUT_DIR, f"high_val_{condition}_{subpop_name}_train_accs.npy"), train_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"high_val_{condition}_{subpop_name}_rpe_sess_test_accs.npy"), test_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"high_val_{condition}_{subpop_name}_rpe_sess_shuffled_accs.npy"), shuffled_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"high_val_{condition}_{subpop_name}_rpe_sess_models.npy"), models)
+    np.save(os.path.join(OUTPUT_DIR, f"high_val_{condition}_{subpop_name}_{subrials_name}_train_accs.npy"), train_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"high_val_{condition}_{subpop_name}_{subrials_name}_rpe_sess_test_accs.npy"), test_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"high_val_{condition}_{subpop_name}_{subrials_name}_rpe_sess_shuffled_accs.npy"), shuffled_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"high_val_{condition}_{subpop_name}_{subrials_name}_rpe_sess_models.npy"), models)
 
 def main():
     """
@@ -160,17 +165,25 @@ def main():
     parser.add_argument('--condition', default="MaxFeat")
     parser.add_argument('--subpop_path', type=str, help="a path to subpopulation file", default="")
     parser.add_argument('--subpop_name', type=str, help="name of subpopulation", default="all")
+    parser.add_argument('--subtrials_path', type=str, help="a path to subtrials file", default="")
+    parser.add_argument('--subtrials_name', type=str, help="name of subtrials", default="all")
 
     args = parser.parse_args()
     condition = args.condition
     subpop_name = args.subpop_name
+    subtrials_name = args.subtrials_name
+
     if args.subpop_path:
         subpops = pd.read_pickle(args.subpop_path)
     else: 
         subpops = None
+    if args.subtrials_path:
+        subtrials = pd.read_pickle(args.subtrials_path)
+    else: 
+        subtrials = None
 
     valid_sess = pd.read_pickle(SESSIONS_PATH)
-    decode_high_value(valid_sess, condition, subpops, subpop_name)
+    decode_high_value(valid_sess, condition, subpops, subpop_name, subtrials, subtrials_name)
 
 if __name__ == "__main__":
     main()

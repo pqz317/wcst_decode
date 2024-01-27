@@ -340,7 +340,7 @@ def plot_mean_frs_by_group_stim_on(sess_name, unit, frs, beh, group_name, pos, a
             ax,
             label=group,
             right_align=True, 
-            sem=False,
+            sem=True,
             color=color
         )
     unit_pos = pos[pos.UnitID == unit].manual_structure.unique()[0]

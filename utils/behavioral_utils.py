@@ -2,6 +2,14 @@ import numpy as np
 import pandas as pd
 from lfp_tools import startup
 
+# IMPORTANT: order needs to be preserved
+# grabbed from wcst_engine/constants.py
+FEAT_NAMES = np.array([
+    'CIRCLE', 'SQUARE', 'STAR', 'TRIANGLE', 
+    'CYAN', 'GREEN', 'MAGENTA', 'YELLOW', 
+    'ESCHER', 'POLKADOT', 'RIPPLE', 'SWIRL'
+])
+
 # sorted features by shape, color, pattern
 
 def get_trial_intervals(behavioral_data, event="FeedbackOnset", pre_interval=0, post_interval=0):
@@ -360,3 +368,25 @@ def get_rpe_groups_per_session(session, beh):
         return row
     valid_beh_rpes = valid_beh_rpes.apply(add_group, axis=1)
     return valid_beh_rpes
+
+def get_feature_values_per_session(session, beh):
+    # need beh to include selected features already
+    beh_model_path = f"/data/082023_Feat_RLDE_HV/sess-{session}_hv.csv"
+    model_vals = pd.read_csv(beh_model_path)
+    renames = {}
+    for i, feat_name in enumerate(FEAT_NAMES):
+        renames[f"feat_{i}"] = feat_name
+    model_vals = model_vals.rename(columns=renames)
+    valid_beh_vals = pd.merge(beh, model_vals, left_on="TrialNumber", right_on="trial", how="inner")
+    # check 
+    assert(len(valid_beh_vals) == len(beh))
+    def get_highest_val_feat(row):
+        color = row["Color"]
+        shape = row["Shape"]
+        pattern = row["Pattern"]
+        vals = {color: row[color], shape: row[shape], pattern: row[pattern]}
+        max_feat = max(zip(vals.values(), vals.keys()))[1]
+        row["MaxFeat"] = max_feat
+        return row
+    valid_beh_max = valid_beh_vals.apply(get_highest_val_feat, axis=1)
+    return valid_beh_max
