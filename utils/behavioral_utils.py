@@ -390,3 +390,30 @@ def get_feature_values_per_session(session, beh):
         return row
     valid_beh_max = valid_beh_vals.apply(get_highest_val_feat, axis=1)
     return valid_beh_max
+
+
+def get_min_num_trials_by_condition(beh, condition_columns):
+    """
+    Get the minimum number of trials per condition
+    """
+    counts = beh.groupby(condition_columns).count()
+    return np.min(counts.TrialNumber)
+
+def validate_enough_trials_by_condition(beh, condition_columns, min_trials):
+    """
+    Check that in behavioral df, groups grouped by condition columns each 
+    have more than the min number of trials
+    Returns True if condition is satisfied, False if not.
+    """
+    min = get_min_num_trials_by_condition(beh, condition_columns)
+    return min >= min_trials
+
+def balance_trials_by_condition(beh, condition_columns, seed=None):
+    """
+    Balance the number of trials for each condition by choosing 
+    the minimum number of trials 
+    """
+    min = get_min_num_trials_by_condition(beh, condition_columns)
+    sampled = beh.groupby(condition_columns).sample(n=min, random_state=seed)
+    return sampled
+
