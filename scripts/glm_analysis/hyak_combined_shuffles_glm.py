@@ -3,6 +3,8 @@ import utils.information_utils as information_utils
 import utils.io_utils as io_utils
 import pandas as pd
 import argparse
+from utils.glm_constants import *
+
 
 SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
 NUM_SHUFFLES = 1000
@@ -11,11 +13,11 @@ def aggregate_shuffles(sess_name, shuffle_type):
     print(f"Processing {sess_name}")
     shuffles = []
     for i in range(NUM_SHUFFLES):
-        shuffle = pd.read_pickle(f"/data/res/{sess_name}_glm_fr_50_{shuffle_type}_shuffle_{i}.pickle")
+        shuffle = pd.read_pickle(f"/data/res/{sess_name}_glm_{MODE}_{INTERVAL_SIZE}_{NOISE}_{shuffle_type}_shuffle_{i}.pickle")
         shuffle["ShuffleIdx"] = i
         shuffles.append(shuffle)
     shuffles = pd.concat(shuffles)
-    shuffles.to_pickle(f"/data/res/{sess_name}_glm_fr_50_{shuffle_type}_shuffles.pickle")
+    shuffles.to_pickle(f"/data/res/{sess_name}_glm_{MODE}_{INTERVAL_SIZE}_{NOISE}_{shuffle_type}_shuffles.pickle")
 
 def main():
     parser = argparse.ArgumentParser()

@@ -9,7 +9,6 @@ import utils.glm_utils as glm_utils
 from matplotlib import pyplot as plt
 from multiprocessing import Pool
 import time
-from sklearn.linear_model import PoissonRegressor
 
 # the output directory to store the data
 OUTPUT_DIR = "/data/res"
@@ -21,9 +20,6 @@ SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_
 FEATURE_DIMS = ["Color", "Shape", "Pattern"]
 INTERACTIONS = [f"{dim}RPE" for dim in FEATURE_DIMS]
 
-NUM_SHUFFLES = 1000
-
-MODE = "FiringRate"
 
 def calc_and_save_session(sess_name, shuffle_idx):
     start = time.time()
@@ -36,9 +32,9 @@ def calc_and_save_session(sess_name, shuffle_idx):
     shuffle_columns = INTERACTIONS
     shuffled_beh = glm_utils.create_shuffles(beh_inputs_to_shuffle, shuffle_columns, rng)
 
-    shuffled_res = glm_utils.fit_glm_for_data((shuffled_beh, frs), input_columns, mode=MODE)
+    shuffled_res = glm_utils.fit_glm_for_data((shuffled_beh, frs), input_columns)
 
-    shuffled_res.to_pickle(os.path.join(OUTPUT_DIR, f"{sess_name}_glm_fr_50_feature_rpe_shuffle_{shuffle_idx}.pickle"))
+    shuffled_res.to_pickle(os.path.join(OUTPUT_DIR, f"{sess_name}_glm_{MODE}_{INTERVAL_SIZE}_{NOISE}_feature_rpe_shuffle_{shuffle_idx}.pickle"))
     end = time.time()
     print(f"Session {sess_name} took {(end - start) / 60} minutes")
 

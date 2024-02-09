@@ -7,6 +7,7 @@ import pickle
 import torch
 
 from . import behavioral_utils
+from .glm_constants import *
 
 HUMAN_LFP_DIR = 'human-lfp'
 NHP_DIR = 'nhp-lfp'
@@ -17,11 +18,6 @@ SESS_BEHAVIOR_PATH = "/data/rawdata/sub-SA/sess-{sess_name}/behavior/sub-SA_sess
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
 SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_{num_bins_smooth}_smooth.pickle"
 
-EVENT = "FeedbackOnset"  # event in behavior to align on
-PRE_INTERVAL = 1300   # time in ms before event
-POST_INTERVAL = 1500  # time in ms after event
-INTERVAL_SIZE = 50  # size of interval in ms
-NUM_BINS_SMOOTH = 1
 
 FEATURE_DIMS = ["Color", "Shape", "Pattern"]
 

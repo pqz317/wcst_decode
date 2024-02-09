@@ -9,7 +9,7 @@ import utils.glm_utils as glm_utils
 from matplotlib import pyplot as plt
 from multiprocessing import Pool
 import time
-from sklearn.linear_model import PoissonRegressor
+from utils.glm_constants import *
 
 # the output directory to store the data
 OUTPUT_DIR = "/data/res"
@@ -22,16 +22,14 @@ SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_
 FEATURE_DIMS = ["Color", "Shape", "Pattern"]
 INTERACTIONS = [f"{dim}RPE" for dim in FEATURE_DIMS]
 
-MODE = "FiringRate"
-
 def calc_and_save_session(sess_name):
     start = time.time()
     print(f"Processing session {sess_name}")
     data = io_utils.load_rpe_sess_beh_and_frs(sess_name, beh_path=SESS_BEHAVIOR_PATH, fr_path=SESS_SPIKES_PATH)
 
     interaction_input_cols = ["RPEGroup"] + FEATURE_DIMS + INTERACTIONS
-    interaction_reses = glm_utils.fit_glm_for_data(data, interaction_input_cols, mode=MODE)
-    interaction_reses.to_pickle(os.path.join(OUTPUT_DIR, f"{sess_name}_glm_fr_50_feature_rpe_interaction.pickle"))
+    interaction_reses = glm_utils.fit_glm_for_data(data, interaction_input_cols)
+    interaction_reses.to_pickle(os.path.join(OUTPUT_DIR, f"{sess_name}_glm_{MODE}_{INTERVAL_SIZE}_{NOISE}_feature_rpe_interaction.pickle"))
 
     end = time.time()
     print(f"Session {sess_name} took {(end - start) / 60} minutes")

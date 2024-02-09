@@ -5,10 +5,14 @@ from models.trainer import Trainer
 from models.model_wrapper import ModelWrapperRegression
 from models.multinomial_logistic_regressor import MultinomialLogisticRegressor
 from torch.nn import PoissonNLLLoss
-from sklearn.linear_model import PoissonRegressor
+from sklearn.linear_model import (
+    PoissonRegressor,
+    LinearRegression,
+)
+from .glm_constants import *
 
-def fit_glm_torch(df, x_cols, y_col):
-    ys = df[y_col].values
+def fit_glm_torch(df, x_cols):
+    ys = df[MODE].values
     xs = df[x_cols].values
     init_params = {"n_inputs": xs.shape[1], "n_classes": 1}
     # create a trainer object
@@ -23,13 +27,18 @@ def fit_glm_torch(df, x_cols, y_col):
     model = model.fit(xs, ys)
     return pd.Series({"score": model.score(xs, ys)})
 
-def fit_glm(df, x_cols, y_col):
-    ys = df[y_col].values
+def fit_glm(df, x_cols):
+    ys = df[MODE].values
     if np.all(ys == 0): 
         print("All 0 frs, skipping fitting")
         return pd.Series({"score": 0.0})
     xs = df[x_cols].values
-    model = PoissonRegressor(alpha=1)
+    if NOISE == "Gaussian":
+        model = LinearRegression()
+    elif NOISE == "Poisson":
+        model = PoissonRegressor(alpha=1)
+    else:
+        raise ValueError(f"NOISE {NOISE} invalid value")
     model = model.fit(xs, ys)
     return pd.Series({"score": model.score(xs, ys)})
 
@@ -49,16 +58,16 @@ def create_shuffles(data, columns, rng):
         data[column] = vals
     return data
 
-def fit_glms_by_unit_and_time(data, x_inputs, mode="SpikeCounts"):
+def fit_glms_by_unit_and_time(data, x_inputs):
     data, flattened_columns = flatten_columns(data, x_inputs)
-    res = data.groupby(["UnitID", "TimeBins"]).apply(lambda x: fit_glm(x, flattened_columns, mode)).reset_index()
+    res = data.groupby(["UnitID", "TimeBins"]).apply(lambda x: fit_glm(x, flattened_columns)).reset_index()
     return res.fillna(0)
 
-def fit_glm_for_data(data, input_columns, mode="SpikeCounts"):
+def fit_glm_for_data(data, input_columns):
     beh, frs = data
     beh_inputs = beh[input_columns]
     data = pd.merge(beh_inputs, frs, on="TrialNumber")
-    res = fit_glms_by_unit_and_time(data, input_columns, mode)
+    res = fit_glms_by_unit_and_time(data, input_columns)
     return res
 
 def get_sig_bound(group, p_val, num_hyp):
