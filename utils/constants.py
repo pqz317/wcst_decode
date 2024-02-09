@@ -27,3 +27,5 @@ FEATURE_TO_DIM = {
     'RIPPLE': 'Pattern', 
     'SWIRL': 'Pattern'
 }
+
+SESS_BEHAVIOR_PATH = "/data/rawdata/sub-SA/sess-{sess_name}/behavior/sub-SA_sess-{sess_name}_object_features.csv"

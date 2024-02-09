@@ -21,13 +21,15 @@ SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_
 
 FEATURE_DIMS = ["Color", "Shape", "Pattern"]
 
+MODE = "FiringRate"
+
 def calc_and_save_session(sess_name):
     start = time.time()
     print(f"Processing session {sess_name}")
     data = io_utils.load_rpe_sess_beh_and_frs(sess_name, beh_path=SESS_BEHAVIOR_PATH, fr_path=SESS_SPIKES_PATH)
 
     separate_input_cols = ["RPEGroup"] + FEATURE_DIMS
-    interaction_reses = glm_utils.fit_glm_for_data(data, separate_input_cols)
+    interaction_reses = glm_utils.fit_glm_for_data(data, separate_input_cols, mode=MODE)
     interaction_reses.to_pickle(os.path.join(OUTPUT_DIR, f"{sess_name}_glm_feature_rpe_separate.pickle"))
 
     end = time.time()

@@ -1,14 +1,7 @@
 import numpy as np
 import pandas as pd
 from lfp_tools import startup
-
-# IMPORTANT: order needs to be preserved
-# grabbed from wcst_engine/constants.py
-FEAT_NAMES = np.array([
-    'CIRCLE', 'SQUARE', 'STAR', 'TRIANGLE', 
-    'CYAN', 'GREEN', 'MAGENTA', 'YELLOW', 
-    'ESCHER', 'POLKADOT', 'RIPPLE', 'SWIRL'
-])
+from .constants import *
 
 # sorted features by shape, color, pattern
 
@@ -374,7 +367,7 @@ def get_feature_values_per_session(session, beh):
     beh_model_path = f"/data/082023_Feat_RLDE_HV/sess-{session}_hv.csv"
     model_vals = pd.read_csv(beh_model_path)
     renames = {}
-    for i, feat_name in enumerate(FEAT_NAMES):
+    for i, feat_name in enumerate(FEATURES):
         renames[f"feat_{i}"] = feat_name
     model_vals = model_vals.rename(columns=renames)
     valid_beh_vals = pd.merge(beh, model_vals, left_on="TrialNumber", right_on="trial", how="inner")
@@ -399,12 +392,15 @@ def get_min_num_trials_by_condition(beh, condition_columns):
     counts = beh.groupby(condition_columns).count()
     return np.min(counts.TrialNumber)
 
-def validate_enough_trials_by_condition(beh, condition_columns, min_trials):
+def validate_enough_trials_by_condition(beh, condition_columns, min_trials, num_unique_conditions=None):
     """
     Check that in behavioral df, groups grouped by condition columns each 
     have more than the min number of trials
     Returns True if condition is satisfied, False if not.
     """
+    num_unique_conditions_beh = len(beh.groupby(condition_columns))
+    if num_unique_conditions and num_unique_conditions_beh != num_unique_conditions:
+        return False
     min = get_min_num_trials_by_condition(beh, condition_columns)
     return min >= min_trials
 
@@ -417,3 +413,21 @@ def balance_trials_by_condition(beh, condition_columns, seed=None):
     sampled = beh.groupby(condition_columns).sample(n=min, random_state=seed)
     return sampled
 
+def get_beh_model_labels_for_session_feat(session, feat):
+    """
+    Helper method to add RPE group and Max Feature Matches columns to behavioral df. 
+    Adds RPE group and 
+    """
+    behavior_path = SESS_BEHAVIOR_PATH.format(sess_name=session)
+    beh = pd.read_csv(behavior_path)
+    valid_beh = get_valid_trials(beh)
+    feature_selections = get_selection_features(valid_beh)
+    valid_beh_merged = pd.merge(valid_beh, feature_selections, on="TrialNumber", how="inner")
+    feat_dim = FEATURE_TO_DIM[feat]
+    valid_beh_merged = valid_beh_merged[valid_beh_merged[feat_dim] == feat]
+    valid_beh_vals = get_feature_values_per_session(session, valid_beh_merged)
+    valid_beh_vals_conf = get_rpe_groups_per_session(session, valid_beh_vals)
+
+    valid_beh_vals_conf["MaxFeatMatches"] = valid_beh_vals_conf.MaxFeat == feat
+    valid_beh_vals_conf["Session"] = session
+    return valid_beh_vals_conf

@@ -23,6 +23,8 @@ INTERACTIONS = [f"{dim}RPE" for dim in FEATURE_DIMS]
 
 NUM_SHUFFLES = 1000
 
+MODE = "FiringRate"
+
 def calc_and_save_session(sess_name, shuffle_idx):
     start = time.time()
     print(f"Processing session {sess_name} shuffle {shuffle_idx}")
@@ -34,7 +36,7 @@ def calc_and_save_session(sess_name, shuffle_idx):
     shuffle_columns = INTERACTIONS
     shuffled_beh = glm_utils.create_shuffles(beh_inputs_to_shuffle, shuffle_columns, rng)
 
-    shuffled_res = glm_utils.fit_glm_for_data((shuffled_beh, frs), input_columns)
+    shuffled_res = glm_utils.fit_glm_for_data((shuffled_beh, frs), input_columns, mode=MODE)
 
     shuffled_res.to_pickle(os.path.join(OUTPUT_DIR, f"{sess_name}_glm_feature_rpe_shuffle_{shuffle_idx}.pickle"))
     end = time.time()
@@ -43,6 +45,8 @@ def calc_and_save_session(sess_name, shuffle_idx):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('shuffle_idx', type=int, help="int from 0 - 999 denoting which session to run for")
+    parser.add_argument('spike_mode', type=str, default="SpikeCounts")
+
     args = parser.parse_args()
     shuffle_idx = int(args.shuffle_idx)
     valid_sess = pd.read_pickle(SESSIONS_PATH)

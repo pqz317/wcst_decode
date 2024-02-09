@@ -49,16 +49,16 @@ def create_shuffles(data, columns, rng):
         data[column] = vals
     return data
 
-def fit_glms_by_unit_and_time(data, x_inputs):
+def fit_glms_by_unit_and_time(data, x_inputs, mode="SpikeCounts"):
     data, flattened_columns = flatten_columns(data, x_inputs)
-    res = data.groupby(["UnitID", "TimeBins"]).apply(lambda x: fit_glm(x, flattened_columns, "SpikeCounts")).reset_index()
+    res = data.groupby(["UnitID", "TimeBins"]).apply(lambda x: fit_glm(x, flattened_columns, mode)).reset_index()
     return res.fillna(0)
 
-def fit_glm_for_data(data, input_columns):
+def fit_glm_for_data(data, input_columns, mode="SpikeCounts"):
     beh, frs = data
     beh_inputs = beh[input_columns]
     data = pd.merge(beh_inputs, frs, on="TrialNumber")
-    res = fit_glms_by_unit_and_time(data, input_columns)
+    res = fit_glms_by_unit_and_time(data, input_columns, mode)
     return res
 
 def get_sig_bound(group, p_val, num_hyp):
