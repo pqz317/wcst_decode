@@ -31,7 +31,7 @@ def calc_and_save_session(sess_name):
 
     interaction_input_cols = ["RPEGroup"] + FEATURE_DIMS + INTERACTIONS
     interaction_reses = glm_utils.fit_glm_for_data(data, interaction_input_cols, mode=MODE)
-    interaction_reses.to_pickle(os.path.join(OUTPUT_DIR, f"{sess_name}_glm_feature_rpe_interaction.pickle"))
+    interaction_reses.to_pickle(os.path.join(OUTPUT_DIR, f"{sess_name}_glm_fr_50_feature_rpe_interaction.pickle"))
 
     end = time.time()
     print(f"Session {sess_name} took {(end - start) / 60} minutes")

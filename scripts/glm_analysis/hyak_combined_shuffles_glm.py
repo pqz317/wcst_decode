@@ -11,11 +11,11 @@ def aggregate_shuffles(sess_name, shuffle_type):
     print(f"Processing {sess_name}")
     shuffles = []
     for i in range(NUM_SHUFFLES):
-        shuffle = pd.read_pickle(f"/data/res/{sess_name}_glm_{shuffle_type}_shuffle_{i}.pickle")
+        shuffle = pd.read_pickle(f"/data/res/{sess_name}_glm_fr_50_{shuffle_type}_shuffle_{i}.pickle")
         shuffle["ShuffleIdx"] = i
         shuffles.append(shuffle)
     shuffles = pd.concat(shuffles)
-    shuffles.to_pickle(f"/data/res/{sess_name}_glm_{shuffle_type}_shuffles.pickle")
+    shuffles.to_pickle(f"/data/res/{sess_name}_glm_fr_50_{shuffle_type}_shuffles.pickle")
 
 def main():
     parser = argparse.ArgumentParser()

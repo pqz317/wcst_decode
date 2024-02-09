@@ -38,7 +38,7 @@ def calc_and_save_session(sess_name, shuffle_idx):
 
     shuffled_res = glm_utils.fit_glm_for_data((shuffled_beh, frs), input_columns, mode=MODE)
 
-    shuffled_res.to_pickle(os.path.join(OUTPUT_DIR, f"{sess_name}_glm_feature_rpe_shuffle_{shuffle_idx}.pickle"))
+    shuffled_res.to_pickle(os.path.join(OUTPUT_DIR, f"{sess_name}_glm_fr_50_feature_rpe_shuffle_{shuffle_idx}.pickle"))
     end = time.time()
     print(f"Session {sess_name} took {(end - start) / 60} minutes")
 
