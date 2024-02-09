@@ -1,5 +1,5 @@
 MODE = "FiringRate"
-NOISE = "Gaussian"
+MODEL = "Linear"
 EVENT = "FeedbackOnset"  # event in behavior to align on
 PRE_INTERVAL = 1300   # time in ms before event
 POST_INTERVAL = 1500  # time in ms after event

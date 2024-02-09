@@ -9,6 +9,8 @@ import utils.glm_utils as glm_utils
 from matplotlib import pyplot as plt
 from multiprocessing import Pool
 import time
+from utils.glm_constants import *
+
 
 # the output directory to store the data
 OUTPUT_DIR = "/data/res"
@@ -34,7 +36,7 @@ def calc_and_save_session(sess_name, shuffle_idx):
 
     shuffled_res = glm_utils.fit_glm_for_data((shuffled_beh, frs), input_columns)
 
-    shuffled_res.to_pickle(os.path.join(OUTPUT_DIR, f"{sess_name}_glm_{MODE}_{INTERVAL_SIZE}_{NOISE}_feature_rpe_shuffle_{shuffle_idx}.pickle"))
+    shuffled_res.to_pickle(os.path.join(OUTPUT_DIR, f"{sess_name}_glm_{MODE}_{INTERVAL_SIZE}_{MODEL}_feature_rpe_shuffle_{shuffle_idx}.pickle"))
     end = time.time()
     print(f"Session {sess_name} took {(end - start) / 60} minutes")
 

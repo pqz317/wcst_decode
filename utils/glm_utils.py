@@ -34,14 +34,16 @@ def fit_glm(df, x_cols):
         print("All 0 frs, skipping fitting")
         return pd.Series({"score": 0.0})
     xs = df[x_cols].values
-    if NOISE == "Gaussian":
+    if MODEL == "Ridge":
         model = Ridge(alpha=1)
-    elif NOISE == "Poisson":
+    elif MODEL == "Linear":
+        model = LinearRegression()
+    elif MODEL == "Poisson":
         model = PoissonRegressor(alpha=1)
     else:
-        raise ValueError(f"NOISE is specified as {NOISE}, invalid value")
+        raise ValueError(f"MODEL is specified as {MODEL}, invalid value")
     model = model.fit(xs, ys)
-    return pd.Series({"score": model.score(xs, ys)})
+    return pd.Series({"score": model.score(xs, ys), "prediction": model.predict(xs)})
 
 def flatten_columns(beh, columns):
     flattened_columns = []
