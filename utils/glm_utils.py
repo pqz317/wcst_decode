@@ -8,6 +8,7 @@ from torch.nn import PoissonNLLLoss
 from sklearn.linear_model import (
     PoissonRegressor,
     LinearRegression,
+    Ridge,
 )
 from .glm_constants import *
 
@@ -34,11 +35,11 @@ def fit_glm(df, x_cols):
         return pd.Series({"score": 0.0})
     xs = df[x_cols].values
     if NOISE == "Gaussian":
-        model = LinearRegression()
+        model = Ridge(alpha=1)
     elif NOISE == "Poisson":
         model = PoissonRegressor(alpha=1)
     else:
-        raise ValueError(f"NOISE {NOISE} invalid value")
+        raise ValueError(f"NOISE is specified as {NOISE}, invalid value")
     model = model.fit(xs, ys)
     return pd.Series({"score": model.score(xs, ys)})
 
