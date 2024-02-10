@@ -43,7 +43,7 @@ def fit_glm(df, x_cols):
     else:
         raise ValueError(f"MODEL is specified as {MODEL}, invalid value")
     model = model.fit(xs, ys)
-    return pd.Series({"score": model.score(xs, ys), "prediction": model.predict(xs)})
+    return {"score": model.score(xs, ys), "prediction": model.predict(xs)}
 
 def flatten_columns(beh, columns):
     flattened_columns = []
