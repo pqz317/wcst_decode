@@ -17,7 +17,7 @@ import argparse
 EVENT = "FeedbackOnset"  # event in behavior to align on
 PRE_INTERVAL = 1300   # time in ms before event
 POST_INTERVAL = 1500  # time in ms after event
-INTERVAL_SIZE = 50  # size of interval in ms
+INTERVAL_SIZE = 100  # size of interval in ms
 
 # all the possible feature dimensions 
 # NOTE: Capital 1st letter is the convention here
@@ -38,7 +38,7 @@ SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
 # path for each session, specifying behavior
 SESS_BEHAVIOR_PATH = "/data/sub-SA_sess-{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
-SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
+SESS_SPIKES_PATH = "/data/{sess_name}_residual_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 
 # OUTPUT_DIR = "/data/patrick_res/pseudo"
 # # path to a dataframe of sessions to analyze
@@ -49,7 +49,7 @@ SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_
 # # path for each session, for spikes that have been pre-aligned to event time and binned. 
 # SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 
-DATA_MODE = "FiringRate"
+DATA_MODE = "SpikeCounts"
 
 TEST_RATIO = 0.2
 NUM_ITERS = 8
@@ -149,11 +149,15 @@ def decode_feature(feature_dim, valid_sess, is_abstract, abs_cond, subpop, subpo
         abstract_str = "baseline"
 
     # store the results
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_{l2_reg}_{DATA_MODE}_{INTERVAL_SIZE}_train_accs.npy"), train_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_{l2_reg}_{DATA_MODE}_{INTERVAL_SIZE}_test_accs.npy"), test_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_{l2_reg}_{DATA_MODE}_{INTERVAL_SIZE}_shuffled_accs.npy"), shuffled_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_{l2_reg}_{DATA_MODE}_{INTERVAL_SIZE}_models.npy"), models)
+    # np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_{l2_reg}_{DATA_MODE}_{INTERVAL_SIZE}_train_accs.npy"), train_accs)
+    # np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_{l2_reg}_{DATA_MODE}_{INTERVAL_SIZE}_test_accs.npy"), test_accs)
+    # np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_{l2_reg}_{DATA_MODE}_{INTERVAL_SIZE}_shuffled_accs.npy"), shuffled_accs)
+    # np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_{l2_reg}_{DATA_MODE}_{INTERVAL_SIZE}_models.npy"), models)
 
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_{l2_reg}_{DATA_MODE}_{INTERVAL_SIZE}_residiual_train_accs.npy"), train_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_{l2_reg}_{DATA_MODE}_{INTERVAL_SIZE}_residual_test_accs.npy"), test_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_{l2_reg}_{DATA_MODE}_{INTERVAL_SIZE}_residual_shuffled_accs.npy"), shuffled_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_{l2_reg}_{DATA_MODE}_{INTERVAL_SIZE}_residual_models.npy"), models)
 
 def main():
     """
