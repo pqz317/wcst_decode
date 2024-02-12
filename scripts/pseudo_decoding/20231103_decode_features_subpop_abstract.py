@@ -17,7 +17,7 @@ import argparse
 EVENT = "FeedbackOnset"  # event in behavior to align on
 PRE_INTERVAL = 1300   # time in ms before event
 POST_INTERVAL = 1500  # time in ms after event
-INTERVAL_SIZE = 100  # size of interval in ms
+INTERVAL_SIZE = 50  # size of interval in ms
 
 # all the possible feature dimensions 
 # NOTE: Capital 1st letter is the convention here
@@ -49,7 +49,7 @@ SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_
 # # path for each session, for spikes that have been pre-aligned to event time and binned. 
 # SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 
-DATA_MODE = "SpikeCounts"
+DATA_MODE = "FiringRate"
 
 TEST_RATIO = 0.2
 NUM_ITERS = 8
@@ -149,10 +149,10 @@ def decode_feature(feature_dim, valid_sess, is_abstract, abs_cond, subpop, subpo
         abstract_str = "baseline"
 
     # store the results
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_{l2_reg}_train_accs.npy"), train_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_{l2_reg}_test_accs.npy"), test_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_{l2_reg}_shuffled_accs.npy"), shuffled_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_{l2_reg}_models.npy"), models)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_{l2_reg}_{DATA_MODE}_{INTERVAL_SIZE}_train_accs.npy"), train_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_{l2_reg}_{DATA_MODE}_{INTERVAL_SIZE}_test_accs.npy"), test_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_{l2_reg}_{DATA_MODE}_{INTERVAL_SIZE}_shuffled_accs.npy"), shuffled_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_{abstract_str}_{subpop_name}_{subtrials_name}_{proj_name}_{l2_reg}_{DATA_MODE}_{INTERVAL_SIZE}_models.npy"), models)
 
 
 def main():
@@ -170,6 +170,7 @@ def main():
     parser.add_argument('--proj_path', type=str, help="a path to projection file", default="")
     parser.add_argument('--proj_name', type=str, help="a path to projection file", default="no_proj")
     parser.add_argument('--l2_reg', type=float, help="amount of l2 regularization", default=0.0)
+    parser.add_argument('--feature_dim', type=str, help="feature dimension", default="")
 
     args = parser.parse_args()
     is_abstract = args.abstract
@@ -191,8 +192,11 @@ def main():
     else: 
         proj = None
     valid_sess = pd.read_pickle(SESSIONS_PATH)
-    for feature_dim in FEATURE_DIMS: 
-        decode_feature(feature_dim, valid_sess, is_abstract, abs_cond, subpops, subpop_name, subtrials, subtrials_name, proj, proj_name, l2_reg)
+    if args.feature_dim: 
+        decode_feature(args.feature_dim, valid_sess, is_abstract, abs_cond, subpops, subpop_name, subtrials, subtrials_name, proj, proj_name, l2_reg)
+    else: 
+        for feature_dim in FEATURE_DIMS: 
+            decode_feature(feature_dim, valid_sess, is_abstract, abs_cond, subpops, subpop_name, subtrials, subtrials_name, proj, proj_name, l2_reg)
 
 if __name__ == "__main__":
     main()

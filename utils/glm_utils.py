@@ -12,38 +12,34 @@ from sklearn.linear_model import (
 )
 from .glm_constants import *
 
-def fit_glm_torch(df, x_cols):
-    ys = df[MODE].values
-    xs = df[x_cols].values
-    init_params = {"n_inputs": xs.shape[1], "n_classes": 1}
-    # create a trainer object
-    trainer = Trainer(
-        learning_rate=0.05, 
-        max_iter=500, 
-        loss_fn=PoissonNLLLoss(log_input=True),
-        weight_decay=1
-    )
-    # create a wrapper for the decoder
-    model = ModelWrapperRegression(MultinomialLogisticRegressor, init_params, trainer)
-    model = model.fit(xs, ys)
-    return pd.Series({"score": model.score(xs, ys)})
-
-def fit_glm(df, x_cols):
-    ys = df[MODE].values
+def fit_glm(df, x_cols, mode=MODE, model_type=MODEL, include_predictions=INCLUDE_PREDICTIONS):
+    ys = df[mode].values
     if np.all(ys == 0): 
         print("All 0 frs, skipping fitting")
-        return pd.Series({"score": 0.0})
+        predictions = np.zeros(len(ys))
+        if include_predictions:
+            return pd.DataFrame({"TrialNumber": df.index, "score": 0.0, "predicted": predictions, "actual": ys})
+        else: 
+            return pd.Series({"score": 0.0})
     xs = df[x_cols].values
-    if MODEL == "Ridge":
+    if model_type == "Ridge":
         model = Ridge(alpha=1)
-    elif MODEL == "Linear":
+    elif model_type == "Linear":
         model = LinearRegression()
-    elif MODEL == "Poisson":
+    elif model_type == "Poisson":
         model = PoissonRegressor(alpha=1)
     else:
-        raise ValueError(f"MODEL is specified as {MODEL}, invalid value")
+        raise ValueError(f"MODEL is specified as {model_type}, invalid value")
     model = model.fit(xs, ys)
-    return {"score": model.score(xs, ys), "prediction": model.predict(xs)}
+    score = model.score(xs, ys)
+    predictions = model.predict(xs)
+    # df index is TrialNumber
+    if include_predictions:
+        res = pd.DataFrame({"TrialNumber": df.index, "score": score, "predicted": predictions, "actual": ys})
+    else: 
+        res = pd.Series({"score": score})
+    return res
+    # return pd.DataFrame({"score": model.score(xs, ys), "prediction": model.predict(xs)})
 
 def flatten_columns(beh, columns):
     flattened_columns = []
@@ -61,16 +57,18 @@ def create_shuffles(data, columns, rng):
         data[column] = vals
     return data
 
-def fit_glms_by_unit_and_time(data, x_inputs):
+def fit_glms_by_unit_and_time(data, x_inputs, mode=MODE, model_type=MODEL, include_predictions=INCLUDE_PREDICTIONS):
     data, flattened_columns = flatten_columns(data, x_inputs)
-    res = data.groupby(["UnitID", "TimeBins"]).apply(lambda x: fit_glm(x, flattened_columns)).reset_index()
+    res = data.groupby(["UnitID", "TimeBins"]).apply(
+        lambda x: fit_glm(x, flattened_columns, mode, model_type, include_predictions)
+    ).reset_index()
     return res.fillna(0)
 
-def fit_glm_for_data(data, input_columns):
+def fit_glm_for_data(data, input_columns, mode=MODE, model_type=MODEL, include_predictions=INCLUDE_PREDICTIONS):
     beh, frs = data
     beh_inputs = beh[input_columns]
     data = pd.merge(beh_inputs, frs, on="TrialNumber")
-    res = fit_glms_by_unit_and_time(data, input_columns)
+    res = fit_glms_by_unit_and_time(data, input_columns, mode, model_type, include_predictions)
     return res
 
 def get_sig_bound(group, p_val, num_hyp):
