@@ -17,7 +17,7 @@ import argparse
 EVENT = "FeedbackOnset"  # event in behavior to align on
 PRE_INTERVAL = 1300   # time in ms before event
 POST_INTERVAL = 1500  # time in ms after event
-INTERVAL_SIZE = 100  # size of interval in ms
+INTERVAL_SIZE = 50  # size of interval in ms
 
 # all the possible feature dimensions 
 # NOTE: Capital 1st letter is the convention here
@@ -49,7 +49,7 @@ SESS_SPIKES_PATH = "/data/{sess_name}_residual_firing_rates_{pre_interval}_{even
 # # path for each session, for spikes that have been pre-aligned to event time and binned. 
 # SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 
-DATA_MODE = "SpikeCounts"
+DATA_MODE = "FiringRate"
 
 TEST_RATIO = 0.2
 NUM_ITERS = 8
