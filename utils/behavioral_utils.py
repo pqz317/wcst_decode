@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from lfp_tools import startup
-from .constants import *
+from constants.behavioral_constants import *
 
 # sorted features by shape, color, pattern
 

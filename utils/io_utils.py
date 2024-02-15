@@ -7,7 +7,7 @@ import pickle
 import torch
 
 from . import behavioral_utils
-from .glm_constants import *
+from constants.glm_constants import *
 
 HUMAN_LFP_DIR = 'human-lfp'
 NHP_DIR = 'nhp-lfp'

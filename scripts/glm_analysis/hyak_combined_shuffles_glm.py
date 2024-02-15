@@ -3,7 +3,7 @@ import utils.information_utils as information_utils
 import utils.io_utils as io_utils
 import pandas as pd
 import argparse
-from utils.glm_constants import *
+from constants.glm_constants import *
 
 
 SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"

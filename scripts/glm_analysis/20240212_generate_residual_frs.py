@@ -14,7 +14,7 @@ from matplotlib import pyplot as plt
 from multiprocessing import Pool
 import time
 from sklearn.linear_model import PoissonRegressor
-from utils.glm_constants import *
+from constants.glm_constants import *
 
 SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
 SESS_BEHAVIOR_PATH = "/data/sub-SA_sess-{sess_name}_object_features.csv"

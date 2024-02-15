@@ -10,7 +10,7 @@ from sklearn.linear_model import (
     LinearRegression,
     Ridge,
 )
-from .glm_constants import *
+from constants.glm_constants import *
 
 def fit_glm(df, x_cols, mode=MODE, model_type=MODEL, include_predictions=INCLUDE_PREDICTIONS):
     ys = df[mode].values

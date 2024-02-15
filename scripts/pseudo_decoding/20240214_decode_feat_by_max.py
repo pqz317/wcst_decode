@@ -14,7 +14,7 @@ import pandas as pd
 import utils.pseudo_utils as pseudo_utils
 import utils.pseudo_classifier_utils as pseudo_classifier_utils
 import utils.behavioral_utils as behavioral_utils
-from utils.constants import *
+from constants.behavioral_constants import *
 
 from utils.session_data import SessionData
 

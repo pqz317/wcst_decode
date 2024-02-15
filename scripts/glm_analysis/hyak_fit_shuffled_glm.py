@@ -9,7 +9,7 @@ import utils.glm_utils as glm_utils
 from matplotlib import pyplot as plt
 from multiprocessing import Pool
 import time
-from utils.glm_constants import *
+from constants.glm_constants import *
 
 
 # the output directory to store the data
