@@ -61,6 +61,7 @@ SEED = 42
 
 FEATURE_DIM = "Shape"
 CONDITIONS = ["MaxFeatMatches", FEATURE_DIM]
+NUM_UNIQUE_CONDITIONS = 4
 
 MIN_NUM_TRIALS = 20
 
@@ -81,8 +82,14 @@ def label_and_balance_sessions(session, feat_1, feat_2, shuffle):
     beh = pd.concat((feat_1_beh, feat_2_beh))
     # subselect for correct 
     beh = beh[beh.Response == "Correct"]
-    enough_trials = behavioral_utils.validate_enough_trials_by_condition(beh, CONDITIONS, MIN_NUM_TRIALS, num_unique_conditions=8)
+    enough_trials = behavioral_utils.validate_enough_trials_by_condition(
+        beh, 
+        CONDITIONS, 
+        MIN_NUM_TRIALS, 
+        num_unique_conditions=NUM_UNIQUE_CONDITIONS
+    )
     if not enough_trials:
+        print("Not enough trials for session {session}, skipping")
         return None
     balanced_beh = behavioral_utils.balance_trials_by_condition(beh, CONDITIONS)
     return balanced_beh
