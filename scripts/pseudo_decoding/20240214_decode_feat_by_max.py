@@ -68,7 +68,7 @@ CONDITIONS = [COND_TO_SPLIT, FEATURE_DIM]
 NUM_UNIQUE_CONDITIONS = 4
 FILTERS = {}
 
-MIN_NUM_TRIALS = 30
+MIN_NUM_TRIALS = 20
 
 
 def get_feat_beh(session, feat, shuffle):
