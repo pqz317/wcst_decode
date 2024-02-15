@@ -74,7 +74,7 @@ MIN_NUM_TRIALS = 30
 def get_feat_beh(session, feat, shuffle):
     feat_beh = behavioral_utils.get_beh_model_labels_for_session_feat(session, feat, beh_path=SESS_BEHAVIOR_PATH)
     if shuffle:
-        rng = np.random.default_rng(seed=DECODING_SEED)
+        rng = np.random.default_rng(seed=DECODER_SEED)
         vals = feat_beh[COND_TO_SPLIT].values
         rng.shuffle(vals)
         feat_beh[COND_TO_SPLIT] = vals
@@ -116,7 +116,7 @@ def load_session_data(sess_group, use_residual):
     )
     frs = pd.read_pickle(spikes_path)
     frs = frs.rename(columns={DATA_MODE: "Value"})
-    splitter = ConditionTrialSplitter(sess_group, FEATURE_DIM, TEST_RATIO, seed=DECODING_SEED)
+    splitter = ConditionTrialSplitter(sess_group, FEATURE_DIM, TEST_RATIO, seed=DECODER_SEED)
     session_data = SessionData(sess_name, sess_group, frs, splitter)
     session_data.pre_generate_splits(NUM_SPLITS)
     return session_data
@@ -136,7 +136,7 @@ def decode(all_trials, feat_1, feat_2, condition, use_residual, should_shuffle):
     time_bins = np.arange(0, (POST_INTERVAL + PRE_INTERVAL) / 1000, INTERVAL_SIZE / 1000)
     # train and evaluate the decoder per timein 
     train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(
-        model, sess_datas, time_bins, NUM_SPLITS, NUM_TRAIN_PER_COND, NUM_TEST_PER_COND, DECODING_SEED
+        model, sess_datas, time_bins, NUM_SPLITS, NUM_TRAIN_PER_COND, NUM_TEST_PER_COND, DECODER_SEED
     )
 
     # store the results

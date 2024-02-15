@@ -7,6 +7,8 @@ import utils.behavioral_utils as behavioral_utils
 
 from utils.session_data import SessionData
 
+from constants.decoding_constants import *
+
 from models.trainer import Trainer
 from models.model_wrapper import ModelWrapper, ModelWrapperLinearRegression
 from models.multinomial_logistic_regressor import NormedDropoutMultinomialLogisticRegressor
@@ -51,12 +53,7 @@ SESS_SPIKES_PATH = "/data/{sess_name}_residual_firing_rates_{pre_interval}_{even
 
 DATA_MODE = "FiringRate"
 
-TEST_RATIO = 0.2
-NUM_ITERS = 8
-
 # NOTE: this is important to use, especially for cross decoding. Should really have a better way to do this
-SEED=42
-
 def load_session_data(sess_name, condition, is_abstract, abs_cond, subpop, subtrials): 
     """
     Loads the data (behavioral and firing rates) for a given session, 
@@ -106,9 +103,9 @@ def load_session_data(sess_name, condition, is_abstract, abs_cond, subpop, subtr
         # create a trial splitter 
         splitter = ConditionAbstractTrialSplitter(valid_beh_merged, condition, split_conditions)
     else: 
-        splitter = ConditionTrialSplitter(valid_beh_merged, condition, TEST_RATIO, seed=SEED)
+        splitter = ConditionTrialSplitter(valid_beh_merged, condition, TEST_RATIO, seed=DECODER_SEED)
     sess_data = SessionData(sess_name, valid_beh_merged, frs, splitter)
-    sess_data.pre_generate_splits(NUM_ITERS)
+    sess_data.pre_generate_splits(NUM_SPLITS)
     return sess_data
 
 def decode_feature(feature_dim, valid_sess, is_abstract, abs_cond, subpop, subpop_name, subtrials, subtrials_name, proj, proj_name, l2_reg):
@@ -131,15 +128,16 @@ def decode_feature(feature_dim, valid_sess, is_abstract, abs_cond, subpop, subpo
         num_neurons = sess_datas.apply(lambda x: x.get_num_neurons()).sum()
     else: 
         num_neurons = proj.shape[1]
-    init_params = {"n_inputs": num_neurons, "p_dropout": 0.5, "n_classes": len(classes)}
+    init_params = {"n_inputs": num_neurons, "p_dropout": P_DROPOUT, "n_classes": len(classes)}
     # create a trainer object
-    trainer = Trainer(learning_rate=0.05, max_iter=500, batch_size=1000, weight_decay=l2_reg)
+    trainer = Trainer(learning_rate=LEARNING_RATE, max_iter=MAX_ITER, weight_decay=l2_reg)
     # create a wrapper for the decoder
     model = ModelWrapper(NormedDropoutMultinomialLogisticRegressor, init_params, trainer, classes)
     # calculate time bins (in seconds)
     time_bins = np.arange(0, (POST_INTERVAL + PRE_INTERVAL) / 1000, INTERVAL_SIZE / 1000)
     # train and evaluate the decoder per timein 
-    train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, 8, 2000, 500, 42, proj)
+    train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(
+        model, sess_datas, time_bins, NUM_SPLITS, NUM_TRAIN_PER_COND, NUM_TEST_PER_COND, DECODER_SEED, proj)
 
     if abs_cond:
         abstract_str = "abs_" + abs_cond
