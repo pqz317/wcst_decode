@@ -413,12 +413,12 @@ def balance_trials_by_condition(beh, condition_columns, seed=None):
     sampled = beh.groupby(condition_columns).sample(n=min, random_state=seed)
     return sampled
 
-def get_beh_model_labels_for_session_feat(session, feat):
+def get_beh_model_labels_for_session_feat(session, feat, beh_path=SESS_BEHAVIOR_PATH):
     """
     Helper method to add RPE group and Max Feature Matches columns to behavioral df. 
     Adds RPE group and 
     """
-    behavior_path = SESS_BEHAVIOR_PATH.format(sess_name=session)
+    behavior_path = beh_path.format(sess_name=session)
     beh = pd.read_csv(behavior_path)
     valid_beh = get_valid_trials(beh)
     feature_selections = get_selection_features(valid_beh)

@@ -66,7 +66,7 @@ MIN_NUM_TRIALS = 20
 
 
 def get_feat_beh(session, feat, shuffle):
-    feat_beh = behavioral_utils.get_beh_model_labels_for_session_feat(session, feat)
+    feat_beh = behavioral_utils.get_beh_model_labels_for_session_feat(session, feat, beh_path=SESS_BEHAVIOR_PATH)
     if shuffle:
         rng = np.random.default_rng(seed=SEED)
         vals = feat_beh["MaxFeatMatches"].values
