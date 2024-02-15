@@ -56,17 +56,17 @@ PRE_INTERVAL = 1300   # time in ms before event
 POST_INTERVAL = 1500  # time in ms after event
 INTERVAL_SIZE = 50  # size of interval in ms
 
-FEATURE_DIM = "Shape"
-COND_TO_SPLIT = "MaxFeatMatches"
-CONDITIONS = [COND_TO_SPLIT, FEATURE_DIM]
-NUM_UNIQUE_CONDITIONS = 4
-FILTERS = {"Response": "Correct"}
-
 # FEATURE_DIM = "Shape"
-# COND_TO_SPLIT = "Response"
+# COND_TO_SPLIT = "MaxFeatMatches"
 # CONDITIONS = [COND_TO_SPLIT, FEATURE_DIM]
 # NUM_UNIQUE_CONDITIONS = 4
-# FILTERS = {}
+# FILTERS = {"Response": "Correct"}
+
+FEATURE_DIM = "Shape"
+COND_TO_SPLIT = "Response"
+CONDITIONS = [COND_TO_SPLIT, FEATURE_DIM]
+NUM_UNIQUE_CONDITIONS = 4
+FILTERS = {}
 
 MIN_NUM_TRIALS = 30
 
