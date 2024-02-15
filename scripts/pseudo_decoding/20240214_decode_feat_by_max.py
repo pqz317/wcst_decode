@@ -59,20 +59,28 @@ INTERVAL_SIZE = 50  # size of interval in ms
 TEST_RATIO = 0.2
 SEED = 42
 
-FEATURE_DIM = "Shape"
-CONDITIONS = ["MaxFeatMatches", FEATURE_DIM]
-NUM_UNIQUE_CONDITIONS = 4
+# FEATURE_DIM = "Shape"
+# COND_TO_SPLIT = "MaxFeatMatches"
+# CONDITIONS = [COND_TO_SPLIT, FEATURE_DIM]
+# NUM_UNIQUE_CONDITIONS = 4
+# FILTERS = {"Response": "Correct"}
 
-MIN_NUM_TRIALS = 20
+FEATURE_DIM = "Shape"
+COND_TO_SPLIT = "Response"
+CONDITIONS = [COND_TO_SPLIT, FEATURE_DIM]
+NUM_UNIQUE_CONDITIONS = 4
+FILTERS = {}
+
+MIN_NUM_TRIALS = 30
 
 
 def get_feat_beh(session, feat, shuffle):
     feat_beh = behavioral_utils.get_beh_model_labels_for_session_feat(session, feat, beh_path=SESS_BEHAVIOR_PATH)
     if shuffle:
         rng = np.random.default_rng(seed=SEED)
-        vals = feat_beh["MaxFeatMatches"].values
+        vals = feat_beh[COND_TO_SPLIT].values
         rng.shuffle(vals)
-        feat_beh["MaxFeatMatches"] = vals
+        feat_beh[COND_TO_SPLIT] = vals
     return feat_beh
 
 
@@ -81,7 +89,8 @@ def label_and_balance_sessions(session, feat_1, feat_2, shuffle):
     feat_2_beh = get_feat_beh(session, feat_2, shuffle)
     beh = pd.concat((feat_1_beh, feat_2_beh))
     # subselect for correct 
-    beh = beh[beh.Response == "Correct"]
+    for filter_col, filter in FILTERS:
+        beh = beh[beh[filter_col] == filter]
     enough_trials = behavioral_utils.validate_enough_trials_by_condition(
         beh, 
         CONDITIONS, 
@@ -116,10 +125,7 @@ def load_session_data(sess_group, use_residual):
     return session_data
 
 def decode(all_trials, feat_1, feat_2, condition, use_residual, should_shuffle):
-    if condition == "max_val":
-        cond_all_trials = all_trials[all_trials.MaxFeatMatches]
-    else: 
-        cond_all_trials = all_trials[~all_trials.MaxFeatMatches]
+    cond_all_trials = all_trials[all_trials[COND_TO_SPLIT].astype(str) == condition]
 
     sess_datas = cond_all_trials.groupby("Session").apply(lambda group: load_session_data(group, use_residual))
     classes = [feat_1, feat_2]
@@ -137,10 +143,10 @@ def decode(all_trials, feat_1, feat_2, condition, use_residual, should_shuffle):
     # store the results
     residual_str = "residual_fr" if use_residual else "base_fr"
     shuffle_str = "shuffled" if should_shuffle else "unshuffled"
-    np.save(os.path.join(OUTPUT_DIR, f"{feat_1}_vs_{feat_2}_{condition}_{residual_str}_{shuffle_str}_train_accs.npy"), train_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feat_1}_vs_{feat_2}_{condition}_{residual_str}_{shuffle_str}_test_accs.npy"), test_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feat_1}_vs_{feat_2}_{condition}_{residual_str}_{shuffle_str}_shuffled_accs.npy"), shuffled_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feat_1}_vs_{feat_2}_{condition}_{residual_str}_{shuffle_str}_models.npy"), models)
+    np.save(os.path.join(OUTPUT_DIR, f"{feat_1}_vs_{feat_2}_{COND_TO_SPLIT}_{condition}_{residual_str}_{shuffle_str}_train_accs.npy"), train_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feat_1}_vs_{feat_2}_{COND_TO_SPLIT}_{condition}_{residual_str}_{shuffle_str}_test_accs.npy"), test_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feat_1}_vs_{feat_2}_{COND_TO_SPLIT}_{condition}_{residual_str}_{shuffle_str}_shuffled_accs.npy"), shuffled_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feat_1}_vs_{feat_2}_{COND_TO_SPLIT}_{condition}_{residual_str}_{shuffle_str}_models.npy"), models)
 
 
 def main():

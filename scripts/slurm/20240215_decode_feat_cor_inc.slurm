@@ -9,7 +9,7 @@
 #SBATCH --mem=32G
 #SBATCH --time=180
 
-cond_arr=("True" "False")
+cond_arr=("Correct" "Incorrect")
 res_arr=("--use_residual_fr" "")
 shuffle_arr=("--should_shuffle" "")
 
