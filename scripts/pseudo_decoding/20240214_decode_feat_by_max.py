@@ -87,7 +87,7 @@ def label_and_balance_sessions(session, features, shuffle):
         feat_behs.append(get_feat_beh(session, feat, shuffle))
     beh = pd.concat(feat_behs)
     # subselect for correct 
-    for filter_col, filter in FILTERS:
+    for filter_col, filter in FILTERS.items():
         beh = beh[beh[filter_col] == filter]
     enough_trials = behavioral_utils.validate_enough_trials_by_condition(
         beh, 
