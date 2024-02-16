@@ -123,7 +123,10 @@ def load_session_data(sess_group, use_residual):
     return session_data
 
 def decode(all_trials, features, condition, use_residual, should_shuffle):
-    cond_all_trials = all_trials[all_trials[COND_TO_SPLIT].astype(str) == condition]
+    if condition == "all":
+        cond_all_trials = all_trials
+    else: 
+        cond_all_trials = all_trials[all_trials[COND_TO_SPLIT].astype(str) == condition]
 
     sess_datas = cond_all_trials.groupby("Session").apply(lambda group: load_session_data(group, use_residual))
     classes = features
@@ -157,7 +160,7 @@ def main():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--feature_list', default="SQUARE,TRIANGLE", type=str, help="comma separated list of features")
-    parser.add_argument('--condition', default="max_val")
+    parser.add_argument('--condition', default="all")
     parser.add_argument('--use_residual_fr', action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument('--should_shuffle', action=argparse.BooleanOptionalAction, default=False)
 

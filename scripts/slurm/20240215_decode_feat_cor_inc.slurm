@@ -9,10 +9,8 @@
 #SBATCH --mem=32G
 #SBATCH --time=180
 
-cond_arr=("Correct" "Incorrect")
+cond_arr=("Correct" "Incorrect" "all")
 res_arr=("--use_residual_fr" "")
-shuffle_arr=("--should_shuffle" "")
-
 
 module load singularity
 singularity exec --writable-tmpfs --nv \
@@ -20,5 +18,5 @@ singularity exec --writable-tmpfs --nv \
     /gscratch/walkerlab/patrick/singularity/wcst_decode_image.sif \
     /usr/bin/python3 /src/wcst_decode/scripts/pseudo_decoding/20240214_decode_feat_by_max.py \
     --feature_list SQUARE,TRIANGLE,CIRCLE,STAR \
-    --condition ${cond_arr[$(($SLURM_ARRAY_TASK_ID % 2))]} \
-    ${res_arr[$((($SLURM_ARRAY_TASK_ID / 2) % 2))]} ${shuffle_arr[$((($SLURM_ARRAY_TASK_ID / 4) % 2))]}
+    --condition ${cond_arr[$(($SLURM_ARRAY_TASK_ID % 3))]} \
+    ${res_arr[$((($SLURM_ARRAY_TASK_ID / 3) % 2))]}
