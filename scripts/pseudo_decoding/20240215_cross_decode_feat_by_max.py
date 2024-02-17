@@ -62,9 +62,9 @@ INTERVAL_SIZE = 50  # size of interval in ms
 # NUM_UNIQUE_CONDITIONS = 4
 # FILTERS = {"Response": "Correct"}
 
-FEATURE_DIM = "Shape"
+# FEATURE_DIM = "Shape"
 COND_TO_SPLIT = "Response"
-CONDITIONS = [COND_TO_SPLIT, FEATURE_DIM]
+# CONDITIONS = [COND_TO_SPLIT, FEATURE_DIM]
 NUM_UNIQUE_CONDITIONS = 8
 FILTERS = {}
 
@@ -76,7 +76,7 @@ def get_feat_beh(session, feat):
     return feat_beh
 
 
-def label_and_balance_sessions(session, features):
+def label_and_balance_sessions(session, features, feature_dim):
     feat_behs = []
     for feat in features:
         feat_behs.append(get_feat_beh(session, feat))
@@ -84,19 +84,21 @@ def label_and_balance_sessions(session, features):
     # subselect for correct 
     for filter_col, filter in FILTERS.items():
         beh = beh[beh[filter_col] == filter]
+    conditions_cols = [COND_TO_SPLIT, feature_dim]
+
     enough_trials = behavioral_utils.validate_enough_trials_by_condition(
         beh, 
-        CONDITIONS, 
+        conditions_cols, 
         MIN_NUM_TRIALS, 
         num_unique_conditions=NUM_UNIQUE_CONDITIONS
     )
     if not enough_trials:
         print("Not enough trials for session {session}, skipping")
         return None
-    balanced_beh = behavioral_utils.balance_trials_by_condition(beh, CONDITIONS)
+    balanced_beh = behavioral_utils.balance_trials_by_condition(beh, conditions_cols)
     return balanced_beh
 
-def load_session_data(sess_group, use_residual):
+def load_session_data(sess_group, use_residual, feature_dim):
     sess_name = sess_group.Session.iloc[0]
     # load firing rates
     if use_residual:
@@ -112,15 +114,15 @@ def load_session_data(sess_group, use_residual):
     )
     frs = pd.read_pickle(spikes_path)
     frs = frs.rename(columns={DATA_MODE: "Value"})
-    splitter = ConditionTrialSplitter(sess_group, FEATURE_DIM, TEST_RATIO, seed=DECODER_SEED)
+    splitter = ConditionTrialSplitter(sess_group, feature_dim, TEST_RATIO, seed=DECODER_SEED)
     session_data = SessionData(sess_name, sess_group, frs, splitter)
     session_data.pre_generate_splits(NUM_SPLITS)
     return session_data
 
-def decode(all_trials, features, condition, use_residual):
+def decode(all_trials, features, feature_dim, condition, use_residual):
     cond_other_trials = all_trials[all_trials[COND_TO_SPLIT].astype(str) != condition]
 
-    cond_other_sess_datas = cond_other_trials.groupby("Session").apply(lambda group: load_session_data(group, use_residual))
+    cond_other_sess_datas = cond_other_trials.groupby("Session").apply(lambda group: load_session_data(group, use_residual, feature_dim))
     residual_str = "residual_fr" if use_residual else "base_fr"
     features_str = "_vs_".join(features)
 
@@ -143,6 +145,7 @@ def main():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--feature_list', default="SQUARE,TRIANGLE", type=str, help="comma separated list of features")
+    parser.add_argument('--feature_dim', default="Shape", type=str)
     parser.add_argument('--condition', default="all")
     parser.add_argument('--use_residual_fr', action=argparse.BooleanOptionalAction, default=False)
 
@@ -152,12 +155,13 @@ def main():
     balanced_sessions = valid_sess.apply(lambda x: label_and_balance_sessions(
         x.session_name, 
         features,
+        args.feature_dim,
     ), axis=1)
     balanced_sessions = balanced_sessions.dropna()
     print(f"Decoding between {', '.join(features)} using {len(balanced_sessions)} sessions")
 
     balanced_all_trials = pd.concat(balanced_sessions.values)
-    decode(balanced_all_trials, features, args.condition, args.use_residual_fr)
+    decode(balanced_all_trials, features, args.feature_dim, args.condition, args.use_residual_fr)
 
 
 if __name__ == "__main__":
