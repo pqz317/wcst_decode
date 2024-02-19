@@ -16,7 +16,7 @@ from trial_splitters.condition_trial_splitter import ConditionTrialSplitter
 EVENT = "FeedbackOnset"  # event in behavior to align on
 PRE_INTERVAL = 1300   # time in ms before event
 POST_INTERVAL = 1500  # time in ms after event
-INTERVAL_SIZE = 100  # size of interval in ms
+INTERVAL_SIZE = 50  # size of interval in ms
 
 # # the output directory to store the data
 # OUTPUT_DIR = "/data/patrick_res/pseudo"
@@ -38,8 +38,8 @@ SESS_BEHAVIOR_PATH = "/data/sub-SA_sess-{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
 SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 
-DATA_MODE = "SpikeCounts"
-
+# DATA_MODE = "SpikeCounts"
+DATA_MODE = "FiringRate"
 SEED = 42
 
 RPE_GROUPS = ["more neg", "less neg", "less pos", "more pos"]
@@ -119,10 +119,14 @@ def run_decoder(sess_datas, subtrials_name="all", proj=None, proj_name="no_proj"
         model, sess_datas, time_bins, 10, 1000, 200, 42, proj)
 
     # store the results
-    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{subpop_name}_{proj_name}_{subtrials_name}_train_accs.npy"), train_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{subpop_name}_{proj_name}_{subtrials_name}_test_accs.npy"), test_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{subpop_name}_{proj_name}_{subtrials_name}_shuffled_accs.npy"), shuffled_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{subpop_name}_{proj_name}_{subtrials_name}_models.npy"), models)
+    # np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{subpop_name}_{proj_name}_{subtrials_name}_train_accs.npy"), train_accs)
+    # np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{subpop_name}_{proj_name}_{subtrials_name}_test_accs.npy"), test_accs)
+    # np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{subpop_name}_{proj_name}_{subtrials_name}_shuffled_accs.npy"), shuffled_accs)
+    # np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{subpop_name}_{proj_name}_{subtrials_name}_models.npy"), models)
+    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{subpop_name}_{proj_name}_{subtrials_name}_FiringRate_50_train_accs.npy"), train_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{subpop_name}_{proj_name}_{subtrials_name}_FiringRate_50_test_accs.npy"), test_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{subpop_name}_{proj_name}_{subtrials_name}_FiringRate_50_shuffled_accs.npy"), shuffled_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{subpop_name}_{proj_name}_{subtrials_name}_FiringRate_50_models.npy"), models)
 
 def decode_rpe_group(valid_sess, subtrials=None, subtrials_name="all", proj=None, proj_name="no_proj", subpops=None, subpop_name="all"):
     print(f"Decoding")
