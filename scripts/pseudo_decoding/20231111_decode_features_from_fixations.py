@@ -17,7 +17,7 @@ import argparse
 
 PRE_INTERVAL = 300   # time in ms before event
 POST_INTERVAL = 500  # time in ms after event
-INTERVAL_SIZE = 100  # size of interval in ms
+INTERVAL_SIZE = 50  # size of interval in ms
 
 # all the possible feature dimensions 
 # NOTE: Capital 1st letter is the convention here
@@ -49,7 +49,8 @@ SESS_FIXATIONS_PATH = "/data/{sess_name}_fixations.pickle"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
 SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_fixation_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 
-DATA_MODE = "SpikeCounts"
+# DATA_MODE = "SpikeCounts"
+DATA_MODE = "FiringRate"
 
 TEST_RATIO = 0.2
 
@@ -113,10 +114,14 @@ def decode_feature(feature_dim, valid_sess, subpops, subpop_name):
     # train and evaluate the decoder per timein 
     train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, 8, 2000, 500, 42)
 
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixations_{subpop_name}_train_accs.npy"), train_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixations_{subpop_name}_test_accs.npy"), test_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixations_{subpop_name}_shuffled_accs.npy"), shuffled_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixations_{subpop_name}_models.npy"), models)
+    # np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixations_{subpop_name}_train_accs.npy"), train_accs)
+    # np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixations_{subpop_name}_test_accs.npy"), test_accs)
+    # np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixations_{subpop_name}_shuffled_accs.npy"), shuffled_accs)
+    # np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixations_{subpop_name}_models.npy"), models)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixations_{subpop_name}_FiringRate_50_train_accs.npy"), train_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixations_{subpop_name}_FiringRate_50_test_accs.npy"), test_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixations_{subpop_name}_FiringRate_50_shuffled_accs.npy"), shuffled_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_fixations_{subpop_name}_FiringRate_50_models.npy"), models)
 
 def main():
     """
