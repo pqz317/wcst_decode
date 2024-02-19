@@ -17,7 +17,7 @@ import argparse
 EVENT = "FeedbackOnset"  # event in behavior to align on
 PRE_INTERVAL = 1300   # time in ms before event
 POST_INTERVAL = 1500  # time in ms after event
-INTERVAL_SIZE = 100  # size of interval in ms
+INTERVAL_SIZE = 50  # size of interval in ms
 
 # all the possible feature dimensions 
 # NOTE: Capital 1st letter is the convention here
@@ -47,14 +47,15 @@ SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
 SESS_BEHAVIOR_PATH = "/data/sub-SA_sess-{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
 SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
+SESS_RESIDUAL_SPIKES_PATH = "/data/{sess_name}_residual_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 
-DATA_MODE = "SpikeCounts"
-
+# DATA_MODE = "SpikeCounts"
+DATA_MODE = "FiringRate"
 TEST_RATIO = 0.2
 
 SEED = 42
 
-def load_session_data(sess_name, condition, subpops, subtrials): 
+def load_session_data(sess_name, condition, subpops, subtrials, use_residual): 
     """
     Loads the data (behavioral and firing rates) for a given session, 
     generates a TrialSplitter based on a condition (feature dimension) 
@@ -106,7 +107,11 @@ def load_session_data(sess_name, condition, subpops, subtrials):
     valid_beh_max = valid_beh_vals.apply(get_highest_val_feat, axis=1)
 
     # load firing rates
-    spikes_path = SESS_SPIKES_PATH.format(
+    if use_residual:
+        format_path = SESS_RESIDUAL_SPIKES_PATH
+    else: 
+        format_path = SESS_SPIKES_PATH
+    spikes_path = format_path.format(
         sess_name=sess_name, 
         pre_interval=PRE_INTERVAL, 
         event=EVENT, 
@@ -126,7 +131,7 @@ def load_session_data(sess_name, condition, subpops, subtrials):
     session_data.pre_generate_splits(8)
     return session_data
 
-def decode_high_value(valid_sess, condition, subpops, subpop_name, subtrials, subrials_name):
+def decode_high_value(valid_sess, condition, subpops, subpop_name, subtrials, subrials_name, use_residual):
     """
     For a feature dimension and list of sessions, sets up and runs decoding, stores results
     Args: 
@@ -134,7 +139,7 @@ def decode_high_value(valid_sess, condition, subpops, subpop_name, subtrials, su
         valid_sess: a dataframe of valid sessions to be used
     """
     # load all session datas
-    sess_datas = valid_sess.apply(lambda x: load_session_data(x.session_name, condition, subpops, subtrials), axis=1)
+    sess_datas = valid_sess.apply(lambda x: load_session_data(x.session_name, condition, subpops, subtrials, use_residual), axis=1)
     sess_datas = sess_datas.dropna()
 
     # setup decoder, specify all possible label classes, number of neurons, parameters
@@ -149,12 +154,13 @@ def decode_high_value(valid_sess, condition, subpops, subpop_name, subtrials, su
     time_bins = np.arange(0, (POST_INTERVAL + PRE_INTERVAL) / 1000, INTERVAL_SIZE / 1000)
     # train and evaluate the decoder per timein 
     train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, 8, 1000, 250, 42)
+    residual_str = "residual_fr" if use_residual else "base_fr"
 
     # store the results
-    np.save(os.path.join(OUTPUT_DIR, f"high_val_{condition}_{subpop_name}_{subrials_name}_train_accs.npy"), train_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"high_val_{condition}_{subpop_name}_{subrials_name}_rpe_sess_test_accs.npy"), test_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"high_val_{condition}_{subpop_name}_{subrials_name}_rpe_sess_shuffled_accs.npy"), shuffled_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"high_val_{condition}_{subpop_name}_{subrials_name}_rpe_sess_models.npy"), models)
+    np.save(os.path.join(OUTPUT_DIR, f"high_val_{condition}_{subpop_name}_{subrials_name}_{residual_str}_50_rpe_sess_train_accs.npy"), train_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"high_val_{condition}_{subpop_name}_{subrials_name}_{residual_str}_50_rpe_sess_test_accs.npy"), test_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"high_val_{condition}_{subpop_name}_{subrials_name}_{residual_str}_50_rpe_sess_shuffled_accs.npy"), shuffled_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"high_val_{condition}_{subpop_name}_{subrials_name}_{residual_str}_50_rpe_sess_models.npy"), models)
 
 def main():
     """
@@ -167,6 +173,8 @@ def main():
     parser.add_argument('--subpop_name', type=str, help="name of subpopulation", default="all")
     parser.add_argument('--subtrials_path', type=str, help="a path to subtrials file", default="")
     parser.add_argument('--subtrials_name', type=str, help="name of subtrials", default="all")
+    parser.add_argument('--use_residual_fr', action=argparse.BooleanOptionalAction, default=False)
+
 
     args = parser.parse_args()
     condition = args.condition
@@ -183,7 +191,7 @@ def main():
         subtrials = None
 
     valid_sess = pd.read_pickle(SESSIONS_PATH)
-    decode_high_value(valid_sess, condition, subpops, subpop_name, subtrials, subtrials_name)
+    decode_high_value(valid_sess, condition, subpops, subpop_name, subtrials, subtrials_name, args.use_residual_fr)
 
 if __name__ == "__main__":
     main()
