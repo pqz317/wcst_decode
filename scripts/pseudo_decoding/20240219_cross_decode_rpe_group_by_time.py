@@ -53,7 +53,7 @@ FEATURE_DIMS = ["Color", "Shape", "Pattern"]
 SEED = 42
 NUM_SPLITS = 8
 
-def load_session_data(row, subpops): 
+def load_session_data(sess_name, subpops): 
     """
     Loads the data (behavioral and firing rates) for a given session, 
     generates a TrialSplitter based on a condition (feature dimension) 
@@ -62,7 +62,6 @@ def load_session_data(row, subpops):
         sess_name: name of the session to load
     Returns: a SessionData object
     """
-    sess_name = row.session_name
     behavior_path = SESS_BEHAVIOR_PATH.format(sess_name=sess_name)
     beh = pd.read_csv(behavior_path)
 
