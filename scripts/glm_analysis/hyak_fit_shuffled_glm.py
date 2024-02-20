@@ -43,7 +43,6 @@ def calc_and_save_session(sess_name, shuffle_idx):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('shuffle_idx', type=int, help="int from 0 - 999 denoting which session to run for")
-    parser.add_argument('spike_mode', type=str, default="SpikeCounts")
 
     args = parser.parse_args()
     shuffle_idx = int(args.shuffle_idx)
