@@ -41,6 +41,7 @@ SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_
 # DATA_MODE = "SpikeCounts"
 DATA_MODE = "FiringRate"
 SEED = 42
+NUM_SPLITS = 8
 
 RPE_GROUPS = ["more neg", "less neg", "less pos", "more pos"]
 
@@ -88,8 +89,11 @@ def load_session_data(row, subtrials, subpops):
         if len(valid_beh_rpes) == 0: 
             return None
     # create a trial splitter 
-    splitter = ConditionTrialSplitter(valid_beh_rpes, "RPEGroup", 0.2)
-    return SessionData(sess_name, valid_beh_rpes, frs, splitter)
+    splitter = ConditionTrialSplitter(valid_beh_rpes, "RPEGroup", 0.2, seed=SEED)
+    sess_data = SessionData(sess_name, valid_beh_rpes, frs, splitter)
+    sess_data.pre_generate_splits(NUM_SPLITS)
+    return sess_data
+
 
 
 def run_decoder(sess_datas, subtrials_name="all", proj=None, proj_name="no_proj", subpop_name="all"):
@@ -116,7 +120,7 @@ def run_decoder(sess_datas, subtrials_name="all", proj=None, proj_name="no_proj"
     time_bins = np.arange(0, (POST_INTERVAL + PRE_INTERVAL) / 1000, INTERVAL_SIZE / 1000)
     # train and evaluate the decoder per timein 
     train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(
-        model, sess_datas, time_bins, 10, 1000, 200, 42, proj)
+        model, sess_datas, time_bins, NUM_SPLITS, 1000, 200, 42, proj)
 
     # store the results
     # np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_{subpop_name}_{proj_name}_{subtrials_name}_train_accs.npy"), train_accs)
