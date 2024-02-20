@@ -1,6 +1,6 @@
 MODE = "FiringRate"
 MODEL = "Linear"
-INCLUDE_PREDICTIONS = True
+INCLUDE_PREDICTIONS = False
 
 EVENT = "FeedbackOnset"  # event in behavior to align on
 PRE_INTERVAL = 1300   # time in ms before event
