@@ -18,7 +18,7 @@ import argparse
 EVENT = "FeedbackOnset"  # event in behavior to align on
 PRE_INTERVAL = 1300   # time in ms before event
 POST_INTERVAL = 1500  # time in ms after event
-INTERVAL_SIZE = 50  # size of interval in ms
+INTERVAL_SIZE = 100  # size of interval in ms
 
 # # the output directory to store the data
 # OUTPUT_DIR = "/data/patrick_res/pseudo"
@@ -43,8 +43,8 @@ SESS_BEHAVIOR_PATH = "/data/sub-SA_sess-{sess_name}_object_features.csv"
 SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 
 
-# DATA_MODE = "SpikeCounts"
-DATA_MODE = "FiringRate"
+DATA_MODE = "SpikeCounts"
+# DATA_MODE = "FiringRate"
 TEST_RATIO = 0.2
 
 FEATURE_DIMS = ["Color", "Shape", "Pattern"]
@@ -103,10 +103,10 @@ def decode(valid_sess, subpops):
 
     time_bins = np.arange(0, (POST_INTERVAL + PRE_INTERVAL) / 1000, INTERVAL_SIZE / 1000)
     # models = np.load(os.path.join(OUTPUT_DIR, f"{feature_dim}_baseline_{subpop_name}_all_no_proj_0.0_models.npy"), allow_pickle=True)
-    models = np.load(os.path.join(OUTPUT_DIR, f"rpe_groups_all_no_proj_all_FiringRate_50_models.npy"), allow_pickle=True)
+    models = np.load(os.path.join(OUTPUT_DIR, f"rpe_groups_all_no_proj_all_models.npy"), allow_pickle=True)
 
     cross_decode_accs = pseudo_classifier_utils.cross_evaluate_by_time_bins(models, sess_datas, time_bins, avg=False)
-    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_cross_acc_FiringRate_50.npy"), cross_decode_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"rpe_groups_cross_acc.npy"), cross_decode_accs)
 
 def main(subpops, subpop_name):
     """
