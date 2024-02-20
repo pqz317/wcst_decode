@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=shuffled_glm
 
-#SBATCH -p ckpt
+#SBATCH -p gpu-a100
 #SBATCH -A walkerlab
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
