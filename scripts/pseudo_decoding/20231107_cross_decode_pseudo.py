@@ -94,7 +94,19 @@ def load_session_data(sess_name, condition, subpops):
     session_data.pre_generate_splits(8)
     return session_data
 
-def main(subpops, subpop_name):
+def decode(feature_dim, valid_sess, subpops):
+    print(f"Cross decoding {feature_dim}") 
+    sess_datas = valid_sess.apply(lambda x: load_session_data(x.session_name, feature_dim, subpops), axis=1)
+    sess_datas = sess_datas.dropna()
+
+    time_bins = np.arange(0, (POST_INTERVAL + PRE_INTERVAL) / 1000, INTERVAL_SIZE / 1000)
+    # models = np.load(os.path.join(OUTPUT_DIR, f"{feature_dim}_baseline_{subpop_name}_all_no_proj_0.0_models.npy"), allow_pickle=True)
+    models = np.load(os.path.join(OUTPUT_DIR, f"{feature_dim}_baseline_all_all_no_proj_0.0_FiringRate_50_models.npy"), allow_pickle=True)
+
+    cross_decode_accs = pseudo_classifier_utils.cross_evaluate_by_time_bins(models, sess_datas, time_bins, avg=False)
+    np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_cross_acc_FiringRate_50.npy"), cross_decode_accs)
+
+def main(subpops, subpop_name, feature_dim):
     """
     Loads a dataframe specifying sessions to use
     For each feature dimension, runs decoding, stores results. 
@@ -103,23 +115,18 @@ def main(subpops, subpop_name):
     # TODO: remove: 
     print(device)
     valid_sess = pd.read_pickle(SESSIONS_PATH)
-    for feature_dim in FEATURE_DIMS:
-        print(f"Cross decoding {feature_dim}") 
-        sess_datas = valid_sess.apply(lambda x: load_session_data(x.session_name, feature_dim, subpops), axis=1)
-        sess_datas = sess_datas.dropna()
-
-        time_bins = np.arange(0, (POST_INTERVAL + PRE_INTERVAL) / 1000, INTERVAL_SIZE / 1000)
-        # models = np.load(os.path.join(OUTPUT_DIR, f"{feature_dim}_baseline_{subpop_name}_all_no_proj_0.0_models.npy"), allow_pickle=True)
-        models = np.load(os.path.join(OUTPUT_DIR, f"{feature_dim}_baseline_all_all_no_proj_0.0_FiringRate_50_models.npy"), allow_pickle=True)
-
-        cross_decode_accs = pseudo_classifier_utils.cross_evaluate_by_time_bins(models, sess_datas, time_bins, avg=False)
-        np.save(os.path.join(OUTPUT_DIR, f"{feature_dim}_cross_acc_FiringRate_50.npy"), cross_decode_accs)
+    if feature_dim: 
+        decode(feature_dim, valid_sess, subpops)
+    else:
+        for feature_dim in FEATURE_DIMS:
+            decode(feature_dim, valid_sess, subpops)
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--subpop_path', type=str, help="a path to subpopulation file", default="")
     parser.add_argument('--subpop_name', type=str, help="name of subpopulation", default="all")
+    parser.add_argument('--feature_dim', type=str, default=None)
 
     args = parser.parse_args()
     subpop_name = args.subpop_name
@@ -128,4 +135,4 @@ if __name__ == "__main__":
     else: 
         subpops = None
 
-    main(subpops, subpop_name)
+    main(subpops, subpop_name, args.feature_dim)
