@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=separate_glm
+#SBATCH --job-name=res_fr
 
 #SBATCH -p gpu-a100
 #SBATCH -A walkerlab

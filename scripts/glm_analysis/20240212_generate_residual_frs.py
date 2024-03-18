@@ -15,30 +15,43 @@ from multiprocessing import Pool
 import time
 from sklearn.linear_model import PoissonRegressor
 from constants.glm_constants import *
+from scipy.ndimage import gaussian_filter1d
+
 
 SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
 SESS_BEHAVIOR_PATH = "/data/sub-SA_sess-{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
 SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_{num_bins_smooth}_smooth.pickle"
-RESIDUAL_SPIKES_PATH = "/data/{sess_name}_residual_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_{num_bins_smooth}_smooth.pickle"
+# RESIDUAL_SPIKES_PATH = "/data/{sess_name}_residual_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_{num_bins_smooth}_smooth.pickle"
+RESIDUAL_SPIKES_PATH = "/data/{sess_name}_residual_feature_fb_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_{num_bins_smooth}_smooth.pickle"
 
 FEATURE_DIMS = ["Color", "Shape", "Pattern"]
 
 MODES = ["SpikeCounts", "FiringRate"]
 MODEL = "Linear"
 
+def resmooth_frs(frs):
+    def smooth_unit_fr(unit_group):
+        unit_sorted = unit_group.sort_values(by="TimeBins")
+        unit_sorted["FiringRate"] = gaussian_filter1d(unit_sorted.SpikeCounts, NUM_BINS_SMOOTH)
+        return unit_sorted
+    frs.groupby(["UnitID", "TrialNumber"]).apply(smooth_unit_fr)
+    return frs
+
 def calc_and_save_session(sess_name):
     start = time.time()
     print(f"Processing session {sess_name}")
     data = io_utils.load_rpe_sess_beh_and_frs(sess_name, beh_path=SESS_BEHAVIOR_PATH, fr_path=SESS_SPIKES_PATH)
 
-    separate_input_cols = ["RPEGroup"] + FEATURE_DIMS
+    # separate_input_cols = ["RPEGroup"] + FEATURE_DIMS
+    separate_input_cols = ["Response"] + FEATURE_DIMS
     reses = []
     for mode in MODES: 
         res = glm_utils.fit_glm_for_data(data, separate_input_cols, mode=mode, model_type=MODEL, include_predictions=True)
         res[mode] = res.actual - res.predicted
         reses.append(res[["UnitID", "TimeBins", "TrialNumber", mode]])
     merged = pd.merge(reses[0], reses[1], on=["UnitID", "TimeBins", "TrialNumber"])
+    merged = resmooth_frs(merged)
     residual_path = RESIDUAL_SPIKES_PATH.format(
         sess_name=sess_name, 
         pre_interval=PRE_INTERVAL, 
