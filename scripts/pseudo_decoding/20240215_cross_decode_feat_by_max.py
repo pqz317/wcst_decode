@@ -137,7 +137,7 @@ def decode(all_trials, features, feature_dim, condition, use_residual):
     # calculate time bins (in seconds)
     time_bins = np.arange(0, (POST_INTERVAL + PRE_INTERVAL) / 1000, INTERVAL_SIZE / 1000)
     accs = pseudo_classifier_utils.evaluate_model_with_data(cond_model, cond_other_sess_datas, time_bins)
-    print(accs)
+    # print(accs)
     # store the results
     np.save(os.path.join(OUTPUT_DIR, f"{features_str}_{COND_TO_SPLIT}_{condition}_{residual_str}_cross_accs.npy"), accs)
 

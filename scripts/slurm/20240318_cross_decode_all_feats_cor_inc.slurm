@@ -20,6 +20,6 @@ singularity exec --writable-tmpfs --nv \
     /gscratch/walkerlab/patrick/singularity/wcst_decode_image.sif \
     /usr/bin/python3 /src/wcst_decode/scripts/pseudo_decoding/20240215_cross_decode_feat_by_max.py \
     --feature_list ${feat_arr[$(($SLURM_ARRAY_TASK_ID % 3))]} \
-    --feature_dim ${feat_dim_arr[$($SLURM_ARRAY_TASK_ID % 3)]} \
+    --feature_dim ${feat_dim_arr[$(($SLURM_ARRAY_TASK_ID % 3))]} \
     --condition ${cond_arr[$((($SLURM_ARRAY_TASK_ID / 3) % 2))]} \
     --use_residual_fr
