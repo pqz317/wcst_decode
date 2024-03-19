@@ -35,7 +35,8 @@ SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
 SESS_BEHAVIOR_PATH = "/data/sub-SA_sess-{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
 SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
-SESS_RESIDUAL_SPIKES_PATH = "/data/{sess_name}_residual_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
+# SESS_RESIDUAL_SPIKES_PATH = "/data/{sess_name}_residual_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
+SESS_RESIDUAL_SPIKES_PATH = "/data/{sess_name}_residual_feature_fb_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 
 
 # # the output directory to store the data
@@ -123,7 +124,9 @@ def decode(all_trials, features, feature_dim, condition, use_residual):
     cond_other_trials = all_trials[all_trials[COND_TO_SPLIT].astype(str) != condition]
 
     cond_other_sess_datas = cond_other_trials.groupby("Session").apply(lambda group: load_session_data(group, use_residual, feature_dim))
-    residual_str = "residual_fr" if use_residual else "base_fr"
+    # residual_str = "residual_fr" if use_residual else "base_fr"
+    residual_str = "residual_feature_fb_fr" if use_residual else "base_fr"
+
     features_str = "_vs_".join(features)
 
     cond_model = np.load(
