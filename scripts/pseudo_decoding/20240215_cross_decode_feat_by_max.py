@@ -40,7 +40,7 @@ SESS_RESIDUAL_SPIKES_PATH = "/data/{sess_name}_residual_feature_fb_firing_rates_
 
 
 # # the output directory to store the data
-# OUTPUT_DIR = "/data/patrick_res/pseudo"
+# OUTPUT_DIR = "/data/patrick_res/hyak/pseudo"
 # # path to a dataframe of sessions to analyze
 # # SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions.pickle"
 # SESSIONS_PATH = "/data/patrick_res/sessions/valid_sessions_rpe.pickle"
@@ -49,6 +49,7 @@ SESS_RESIDUAL_SPIKES_PATH = "/data/{sess_name}_residual_feature_fb_firing_rates_
 # SESS_BEHAVIOR_PATH = "/data/rawdata/sub-SA/sess-{sess_name}/behavior/sub-SA_sess-{sess_name}_object_features.csv"
 # # path for each session, for spikes that have been pre-aligned to event time and binned. 
 # SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
+# SESS_RESIDUAL_SPIKES_PATH = "/data/patrick_res/firing_rates/{sess_name}_residual_feature_fb_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 
 
 DATA_MODE = "FiringRate"
@@ -136,7 +137,7 @@ def decode(all_trials, features, feature_dim, condition, use_residual):
     # calculate time bins (in seconds)
     time_bins = np.arange(0, (POST_INTERVAL + PRE_INTERVAL) / 1000, INTERVAL_SIZE / 1000)
     accs = pseudo_classifier_utils.evaluate_model_with_data(cond_model, cond_other_sess_datas, time_bins)
-
+    print(accs)
     # store the results
     np.save(os.path.join(OUTPUT_DIR, f"{features_str}_{COND_TO_SPLIT}_{condition}_{residual_str}_cross_accs.npy"), accs)
 

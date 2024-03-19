@@ -124,6 +124,12 @@ def evaluate_model_with_data(models_by_bin, sess_datas, time_bins, num_train_per
 
             x_test = transform_input_data(test_data)
             y_test = transform_label_data(test_data)
+            # print(x_test.shape)
+            # print(x_test[:10, :10])
+            # print(y_test.shape)
+            # print(y_test[:10])
             acc = model.score(x_test, y_test)
+            # print("acc: ")
+            # print(acc)
             accs_across_time[time_bin_idx, split_idx] = acc
     return accs_across_time
