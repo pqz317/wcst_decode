@@ -431,3 +431,18 @@ def get_beh_model_labels_for_session_feat(session, feat, beh_path=SESS_BEHAVIOR_
     valid_beh_vals_conf["MaxFeatMatches"] = valid_beh_vals_conf.MaxFeat == feat
     valid_beh_vals_conf["Session"] = session
     return valid_beh_vals_conf
+
+def get_relative_block_position(beh, num_bins=None):
+    """
+    Assigns a relative block position to each trial
+    If num_bins specified, also asigns a block position bin
+    """
+    def get_block_lengths(block):
+        block["BlockLength"] = len(block)
+        return block
+    beh = beh.groupby("BlockNumber").apply(get_block_lengths).reset_index()
+    beh["BlockPosition"] = beh.TrialAfterRuleChange / (beh.BlockLength - 1)
+    if num_bins:
+        beh["BlockPositionBin"] = (beh.BlockPosition * num_bins).astype(int)
+    return beh
+

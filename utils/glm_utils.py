@@ -51,24 +51,46 @@ def flatten_columns(beh, columns):
     return beh, flattened_columns
 
 def create_shuffles(data, columns, rng):
+    """
+    Shuffles columns specified
+    NOTE: ensures that the columns are shuffled together
+    """
+    shuffled_idxs = np.arange(len(data))
+    rng.shuffle(shuffled_idxs)
     for column in columns:
-        vals = data[column].values
-        rng.shuffle(vals)
+        vals = data[column].values[shuffled_idxs]
         data[column] = vals
     return data
 
-def fit_glms_by_unit_and_time(data, x_inputs, mode=MODE, model_type=MODEL, include_predictions=INCLUDE_PREDICTIONS):
-    data, flattened_columns = flatten_columns(data, x_inputs)
+def fit_glms_by_unit_and_time(data, input_columns, mode=MODE, model_type=MODEL, include_predictions=INCLUDE_PREDICTIONS, columns_to_flatten=None):
+    columns_to_flatten = input_columns if columns_to_flatten is None else columns_to_flatten
+    not_flattened_columns = [col for col in input_columns if col not in columns_to_flatten]
+    data, flattened_columns = flatten_columns(data, columns_to_flatten)
+    glm_columns = flattened_columns + not_flattened_columns
     res = data.groupby(["UnitID", "TimeBins"]).apply(
-        lambda x: fit_glm(x, flattened_columns, mode, model_type, include_predictions)
+        lambda x: fit_glm(x, glm_columns, mode, model_type, include_predictions)
     ).reset_index()
     return res.fillna(0)
 
-def fit_glm_for_data(data, input_columns, mode=MODE, model_type=MODEL, include_predictions=INCLUDE_PREDICTIONS):
+def fit_glm_for_data(
+    data, input_columns, mode=MODE, model_type=MODEL, include_predictions=INCLUDE_PREDICTIONS, columns_to_flatten=None, 
+):
+    """
+    Fits GLMs for each unit, for each timebin, across trials
+    Args: 
+        data: tuple of behavior df, firing rate df
+        input_columns: list of columns names defining GLM params
+        mode: str of whether GLM should be fit on spikes of firing rates
+        model_type: str of type of GLM, ex Ridge, Linear, or Poisson
+        include_predictions: bool of whether or not to include predicted firing rate for each trial
+        columns_to_flatten: list of columns to flatten or one-hot encode, where each unique value within the 
+            becomes its own column. 
+    """
+    
     beh, frs = data
     beh_inputs = beh[input_columns]
     data = pd.merge(beh_inputs, frs, on="TrialNumber")
-    res = fit_glms_by_unit_and_time(data, input_columns, mode, model_type, include_predictions)
+    res = fit_glms_by_unit_and_time(data, input_columns, mode, model_type, include_predictions, columns_to_flatten)
     return res
 
 def get_sig_bound(group, p_val, num_hyp):

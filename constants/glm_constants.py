@@ -1,5 +1,5 @@
 MODE = "FiringRate"
-MODEL = "Linear"
+MODEL = "Poisson"
 INCLUDE_PREDICTIONS = False
 
 EVENT = "FeedbackOnset"  # event in behavior to align on
