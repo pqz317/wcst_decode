@@ -64,7 +64,7 @@ def load_model_outputs(name, interval, split, base_dir="/data/patrick_scratch/")
     splits = pickle.load(open(os.path.join(base_dir, f"{name}_splits_{interval}_{split}.npy"), "rb"))
     return train_accs_by_bin, test_accs_by_bin, shuffled_accs, models, splits
 
-def load_rpe_sess_beh_and_frs(sess_name, beh_path=SESS_BEHAVIOR_PATH, fr_path=SESS_SPIKES_PATH):
+def load_rpe_sess_beh_and_frs(sess_name, beh_path=SESS_BEHAVIOR_PATH, fr_path=SESS_SPIKES_PATH, set_indices=True):
     behavior_path = beh_path.format(sess_name=sess_name)
     beh = pd.read_csv(behavior_path)
 
@@ -96,8 +96,8 @@ def load_rpe_sess_beh_and_frs(sess_name, beh_path=SESS_BEHAVIOR_PATH, fr_path=SE
     for feature_dim in FEATURE_DIMS:
         valid_beh_rpes[f"{feature_dim}RPE"] = valid_beh_rpes[feature_dim] + "_" + valid_beh_rpes["RPEGroup"]
     valid_beh_rpes["Card"] = valid_beh_rpes["Color"] + "_" + valid_beh_rpes["Shape"] + "_" + valid_beh_rpes["Pattern"]
-
-    valid_beh_rpes = valid_beh_rpes.set_index(["TrialNumber"])
+    if set_indices:
+        valid_beh_rpes = valid_beh_rpes.set_index(["TrialNumber"])
 
     spikes_path = fr_path.format(
         sess_name=sess_name, 
@@ -108,5 +108,6 @@ def load_rpe_sess_beh_and_frs(sess_name, beh_path=SESS_BEHAVIOR_PATH, fr_path=SE
         num_bins_smooth=NUM_BINS_SMOOTH,
     )
     frs = pd.read_pickle(spikes_path)
-    frs = frs.set_index(["TrialNumber"])
+    if set_indices:
+        frs = frs.set_index(["TrialNumber"])
     return valid_beh_rpes, frs
