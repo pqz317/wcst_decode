@@ -25,10 +25,11 @@ INTERACTIONS = [f"{dim}RPE" for dim in FEATURE_DIMS]
 def calc_and_save_session(sess_name):
     start = time.time()
     print(f"Processing session {sess_name}")
-    beh, frs = io_utils.load_rpe_sess_beh_and_frs(sess_name, beh_path=SESS_BEHAVIOR_PATH, fr_path=SESS_SPIKES_PATH)
+    beh, frs = io_utils.load_rpe_sess_beh_and_frs(sess_name, beh_path=SESS_BEHAVIOR_PATH, fr_path=SESS_SPIKES_PATH, set_indices=False)
     # get the values
     beh = behavioral_utils.get_feature_values_per_session(sess_name, beh)
     beh = beh.set_index(["TrialNumber"])
+    frs = frs.set_index(["TrialNumber"])
     columns_to_flatten = ["RPEGroup"] + FEATURE_DIMS + INTERACTIONS
     input_columns = columns_to_flatten + FEATURES
     value_reses = glm_utils.fit_glm_for_data((beh, frs), input_columns=input_columns, columns_to_flatten=columns_to_flatten)
