@@ -384,7 +384,6 @@ def get_feature_values_per_session(session, beh):
     valid_beh_max = valid_beh_vals.apply(get_highest_val_feat, axis=1)
     return valid_beh_max
 
-
 def get_min_num_trials_by_condition(beh, condition_columns):
     """
     Get the minimum number of trials per condition

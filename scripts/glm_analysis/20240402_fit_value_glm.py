@@ -20,9 +20,9 @@ SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_
 
 
 FEATURE_DIMS = ["Color", "Shape", "Pattern"]
-INTERACTIONS = [f"{dim}RPE" for dim in FEATURE_DIMS]
+INTERACTIONS = [f"{dim}RPEGroup" for dim in FEATURE_DIMS]
 
-def calc_and_save_session(sess_name):
+def calc_and_save_session(sess_name, feedback_type, use_residual_fr):
     start = time.time()
     print(f"Processing session {sess_name}")
     beh, frs = io_utils.load_rpe_sess_beh_and_frs(sess_name, beh_path=SESS_BEHAVIOR_PATH, fr_path=SESS_SPIKES_PATH, set_indices=False)
@@ -30,8 +30,14 @@ def calc_and_save_session(sess_name):
     beh = behavioral_utils.get_feature_values_per_session(sess_name, beh)
     beh = beh.set_index(["TrialNumber"])
     frs = frs.set_index(["TrialNumber"])
-    columns_to_flatten = ["RPEGroup"] + FEATURE_DIMS + INTERACTIONS
-    input_columns = columns_to_flatten + FEATURES
+
+    if not use_residual_fr:
+        interaction_cols = [f"{dim}{feedback_type}" for dim in FEATURE_DIMS]
+        columns_to_flatten = [feedback_type] + FEATURE_DIMS + interaction_cols
+        input_columns = columns_to_flatten + FEATURES
+    else: 
+        columns_to_flatten = []
+        input_columns = FEATURES
     value_reses = glm_utils.fit_glm_for_data((beh, frs), input_columns=input_columns, columns_to_flatten=columns_to_flatten)
     value_reses.to_pickle(os.path.join(OUTPUT_DIR, f"{sess_name}_glm_{MODE}_{INTERVAL_SIZE}_{MODEL}_values.pickle"))
 
@@ -40,13 +46,15 @@ def calc_and_save_session(sess_name):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('sess_idx', type=int, help="int from 0 - 27 denoting which session to run for")
+    parser.add_argument('--feedback_type', type=str, default="RPEGroup")
+    parser.add_argument('--use_residual_fr', action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument('--sess_idx', type=int, help="int from 0 - 27 denoting which session to run for")
     args = parser.parse_args()
     sess_idx = int(args.sess_idx)
     valid_sess = pd.read_pickle(SESSIONS_PATH)
     print(f"There are {len(valid_sess)} sessions, processing row {sess_idx}")
     sess_name = valid_sess.iloc[sess_idx].session_name
-    calc_and_save_session(sess_name)
+    calc_and_save_session(sess_name, args.feedback_type, args.use_residual_fr)
 
 if __name__ == "__main__":
     main()

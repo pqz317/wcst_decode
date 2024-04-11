@@ -94,7 +94,8 @@ def load_rpe_sess_beh_and_frs(sess_name, beh_path=SESS_BEHAVIOR_PATH, fr_path=SE
         return row
     valid_beh_rpes = valid_beh_rpes.apply(add_group, axis=1)
     for feature_dim in FEATURE_DIMS:
-        valid_beh_rpes[f"{feature_dim}RPE"] = valid_beh_rpes[feature_dim] + "_" + valid_beh_rpes["RPEGroup"]
+        valid_beh_rpes[f"{feature_dim}RPEGroup"] = valid_beh_rpes[feature_dim] + "_" + valid_beh_rpes["RPEGroup"]
+        valid_beh_rpes[f"{feature_dim}Response"] = valid_beh_rpes[feature_dim] + "_" + valid_beh_rpes["Response"]
     valid_beh_rpes["Card"] = valid_beh_rpes["Color"] + "_" + valid_beh_rpes["Shape"] + "_" + valid_beh_rpes["Pattern"]
     if set_indices:
         valid_beh_rpes = valid_beh_rpes.set_index(["TrialNumber"])

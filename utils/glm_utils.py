@@ -16,11 +16,12 @@ def fit_glm(df, x_cols, mode=MODE, model_type=MODEL, include_predictions=INCLUDE
     ys = df[mode].values
     if np.all(ys == 0): 
         print("All 0 frs, skipping fitting")
-        predictions = np.zeros(len(ys))
+        coefs = {f"{col}_coef": 0 for col in x_cols}
         if include_predictions:
-            return pd.DataFrame({"TrialNumber": df.index, "score": 0.0, "predicted": predictions, "actual": ys})
+            predictions = np.zeros(len(ys))
+            return pd.DataFrame({"TrialNumber": df.index, "score": 0.0, "predicted": predictions, "actual": ys} | coefs)
         else: 
-            return pd.Series({"score": 0.0})
+            return pd.Series({"score": 0.0} | coefs)
     xs = df[x_cols].values
     if model_type == "Ridge":
         model = Ridge(alpha=1)
@@ -34,10 +35,11 @@ def fit_glm(df, x_cols, mode=MODE, model_type=MODEL, include_predictions=INCLUDE
     score = model.score(xs, ys)
     predictions = model.predict(xs)
     # df index is TrialNumber
+    coefs = {f"{col}_coef": model.coef_[i] for i, col in enumerate(x_cols)}
     if include_predictions:
-        res = pd.DataFrame({"TrialNumber": df.index, "score": score, "predicted": predictions, "actual": ys})
+        res = pd.DataFrame({"TrialNumber": df.index, "score": score, "predicted": predictions, "actual": ys} | coefs)
     else: 
-        res = pd.Series({"score": score})
+        res = pd.Series({"score": score} | coefs)
     return res
     # return pd.DataFrame({"score": model.score(xs, ys), "prediction": model.predict(xs)})
 
