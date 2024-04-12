@@ -17,6 +17,7 @@ SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
 SESS_BEHAVIOR_PATH = "/data/sub-SA_sess-{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
 SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_{num_bins_smooth}_smooth.pickle"
+RESIDUAL_SPIKES_PATH = "/data/{sess_name}_residual_feature_{feedback_type}_with_interaction_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_{num_bins_smooth}_smooth.pickle"
 
 
 FEATURE_DIMS = ["Color", "Shape", "Pattern"]
@@ -25,7 +26,11 @@ INTERACTIONS = [f"{dim}RPEGroup" for dim in FEATURE_DIMS]
 def calc_and_save_session(sess_name, feedback_type, use_residual_fr):
     start = time.time()
     print(f"Processing session {sess_name}")
-    beh, frs = io_utils.load_rpe_sess_beh_and_frs(sess_name, beh_path=SESS_BEHAVIOR_PATH, fr_path=SESS_SPIKES_PATH, set_indices=False)
+    if use_residual_fr:
+        spikes_path = RESIDUAL_SPIKES_PATH.format(feedback_type=feedback_type)
+    else:
+        spikes_path = SESS_SPIKES_PATH
+    beh, frs = io_utils.load_rpe_sess_beh_and_frs(sess_name, beh_path=SESS_BEHAVIOR_PATH, fr_path=spikes_path, set_indices=False)
     # get the values
     beh = behavioral_utils.get_feature_values_per_session(sess_name, beh)
     beh = beh.set_index(["TrialNumber"])
@@ -46,9 +51,9 @@ def calc_and_save_session(sess_name, feedback_type, use_residual_fr):
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('sess_idx', type=int, help="int from 0 - 27 denoting which session to run for")
     parser.add_argument('--feedback_type', type=str, default="RPEGroup")
     parser.add_argument('--use_residual_fr', action=argparse.BooleanOptionalAction, default=False)
-    parser.add_argument('--sess_idx', type=int, help="int from 0 - 27 denoting which session to run for")
     args = parser.parse_args()
     sess_idx = int(args.sess_idx)
     valid_sess = pd.read_pickle(SESSIONS_PATH)
