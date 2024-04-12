@@ -21,7 +21,6 @@ SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_
 # formatting will replace 'feedback_type' first, then replace others in another function
 RESIDUAL_SPIKES_PATH = "/data/{{sess_name}}_residual_feature_{feedback_type}_with_interaction_firing_rates_{{pre_interval}}_{{event}}_{{post_interval}}_{{interval_size}}_bins_{{num_bins_smooth}}_smooth.pickle"
 
-
 FEATURE_DIMS = ["Color", "Shape", "Pattern"]
 INTERACTIONS = [f"{dim}RPEGroup" for dim in FEATURE_DIMS]
 
