@@ -60,7 +60,7 @@ def visualize_accuracy_across_time_bins(
 
 
 def visualize_accuracy_bars(accuracies, labels, ax):
-    sns.barplot(data=accuracies, capsize=.1, ci="sd", ax=ax)
+    sns.barplot(data=accuracies, capsize=.1, errorbar='sd', ax=ax)
     sns.swarmplot(data=accuracies, color="0", alpha=.35, ax=ax)
     ax.set_xticklabels(labels)
 
