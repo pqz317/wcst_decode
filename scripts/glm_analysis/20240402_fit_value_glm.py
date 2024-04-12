@@ -47,7 +47,8 @@ def calc_and_save_session(sess_name, feedback_type, use_residual_fr):
         columns_to_flatten = []
         input_columns = FEATURES
     value_reses = glm_utils.fit_glm_for_data((beh, frs), input_columns=input_columns, columns_to_flatten=columns_to_flatten)
-    value_reses.to_pickle(os.path.join(OUTPUT_DIR, f"{sess_name}_glm_{MODE}_{INTERVAL_SIZE}_{MODEL}_values.pickle"))
+    residual_str = "residual_fr" if use_residual_fr else "normal_fr"
+    value_reses.to_pickle(os.path.join(OUTPUT_DIR, f"{sess_name}_glm_{feedback_type}_{residual_str}_{MODE}_{INTERVAL_SIZE}_{MODEL}_values.pickle"))
 
     end = time.time()
     print(f"Session {sess_name} took {(end - start) / 60} minutes")
