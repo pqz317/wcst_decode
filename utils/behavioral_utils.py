@@ -368,7 +368,7 @@ def get_feature_values_per_session(session, beh):
     model_vals = pd.read_csv(beh_model_path)
     renames = {}
     for i, feat_name in enumerate(FEATURES):
-        renames[f"feat_{i}"] = feat_name
+        renames[f"feat_{i}"] = f"{feat_name}Value"
     model_vals = model_vals.rename(columns=renames)
     valid_beh_vals = pd.merge(beh, model_vals, left_on="TrialNumber", right_on="trial", how="inner")
     # check 
@@ -377,7 +377,7 @@ def get_feature_values_per_session(session, beh):
         color = row["Color"]
         shape = row["Shape"]
         pattern = row["Pattern"]
-        vals = {color: row[color], shape: row[shape], pattern: row[pattern]}
+        vals = {color: row[color + "Value"], shape: row[shape + "Value"], pattern: row[pattern + "Value"]}
         max_feat = max(zip(vals.values(), vals.keys()))[1]
         row["MaxFeat"] = max_feat
         return row
