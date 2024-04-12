@@ -17,7 +17,9 @@ SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
 SESS_BEHAVIOR_PATH = "/data/sub-SA_sess-{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
 SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_{num_bins_smooth}_smooth.pickle"
-RESIDUAL_SPIKES_PATH = "/data/{sess_name}_residual_feature_{feedback_type}_with_interaction_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_{num_bins_smooth}_smooth.pickle"
+
+# formatting will replace 'feedback_type' first, then replace others in another function
+RESIDUAL_SPIKES_PATH = "/data/{{sess_name}}_residual_feature_{feedback_type}_with_interaction_firing_rates_{{pre_interval}}_{{event}}_{{post_interval}}_{{interval_size}}_bins_{{num_bins_smooth}}_smooth.pickle"
 
 
 FEATURE_DIMS = ["Color", "Shape", "Pattern"]
@@ -27,7 +29,9 @@ def calc_and_save_session(sess_name, feedback_type, use_residual_fr):
     start = time.time()
     print(f"Processing session {sess_name}")
     if use_residual_fr:
-        spikes_path = RESIDUAL_SPIKES_PATH.format(feedback_type=feedback_type)
+        spikes_path = RESIDUAL_SPIKES_PATH.format(
+            feedback_type=feedback_type,
+        )
     else:
         spikes_path = SESS_SPIKES_PATH
     beh, frs = io_utils.load_rpe_sess_beh_and_frs(sess_name, beh_path=SESS_BEHAVIOR_PATH, fr_path=spikes_path, set_indices=False)
