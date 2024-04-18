@@ -20,7 +20,7 @@ SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_
 
 
 FEATURE_DIMS = ["Color", "Shape", "Pattern"]
-INTERACTIONS = [f"{dim}RPE" for dim in FEATURE_DIMS]
+INTERACTIONS = [f"{dim}RPEGroup" for dim in FEATURE_DIMS]
 
 def calc_and_save_session(sess_name):
     start = time.time()

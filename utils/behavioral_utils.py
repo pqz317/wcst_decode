@@ -438,9 +438,11 @@ def get_relative_block_position(beh, num_bins=None):
     """
     def get_block_lengths(block):
         block["BlockLength"] = len(block)
+        block["TrialInBlock"] = range(len(block))
         return block
     beh = beh.groupby("BlockNumber").apply(get_block_lengths).reset_index()
-    beh["BlockPosition"] = beh.TrialAfterRuleChange / (beh.BlockLength - 1)
+    beh["BlockPosition"] = beh.TrialInBlock / beh.BlockLength
+    # beh["BlockPosition"] = beh.TrialAfterRuleChange / beh.BlockLength
     if num_bins:
         beh["BlockPositionBin"] = (beh.BlockPosition * num_bins).astype(int)
     return beh
