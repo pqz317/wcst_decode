@@ -11,6 +11,7 @@ from sklearn.linear_model import (
     Ridge,
 )
 from constants.glm_constants import *
+from constants.behavioral_constants import *
 
 def fit_glm(df, x_cols, mode=MODE, model_type=MODEL, include_predictions=INCLUDE_PREDICTIONS):
     ys = df[mode].values
@@ -113,3 +114,14 @@ def identify_significant_units(res, shuffled_res, time_idxs, alpha=0.01):
         sig = unit_group.score > unit_group.sig_bound
         return pd.Series({"IsSig": np.any(sig)})
     return merged.groupby("UnitID").apply(assess_unit).reset_index()
+
+def calc_normalized_value_coefs(res, value_beh):
+    """
+    calculated value coeficients that are specific to that are
+    normalized to that session's feature value std
+    Normalized coef = coef * value's variance
+    """
+    for feature in FEATURES:
+        std = np.std(value_beh[feature + "Value"])
+        res[feature + "Value_coef_normed"] = res[feature + "Value_coef"] * std
+    return res
