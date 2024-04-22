@@ -311,7 +311,8 @@ def plot_mean_frs_by_group(sess_name, unit, frs, beh, group_name, pos, ax, mode=
         label = group_label[group] if group_label else group
         visualize_accuracy_across_time_bins(
             vals.T,
-            1.3, 1.5, 0.05,
+            # 1.3, 1.5, 0.05,
+            0.5, 0.5, 0.05,
             ax,
             label=label,
             right_align=True, 

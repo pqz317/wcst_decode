@@ -5,9 +5,11 @@ import numpy as np
 import pandas as pd
 import pickle
 import torch
-
+import itertools
 from . import behavioral_utils
 from constants.glm_constants import *
+
+from constants.behavioral_constants import *
 
 HUMAN_LFP_DIR = 'human-lfp'
 NHP_DIR = 'nhp-lfp'
@@ -17,9 +19,6 @@ NHP_WCST_DIR = 'nhp-lfp/wcst-preprocessed/'
 SESS_BEHAVIOR_PATH = "/data/rawdata/sub-SA/sess-{sess_name}/behavior/sub-SA_sess-{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
 SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_{num_bins_smooth}_smooth.pickle"
-
-
-FEATURE_DIMS = ["Color", "Shape", "Pattern"]
 
 
 def get_fixation_times_path(subject, session):
@@ -64,7 +63,7 @@ def load_model_outputs(name, interval, split, base_dir="/data/patrick_scratch/")
     splits = pickle.load(open(os.path.join(base_dir, f"{name}_splits_{interval}_{split}.npy"), "rb"))
     return train_accs_by_bin, test_accs_by_bin, shuffled_accs, models, splits
 
-def load_rpe_sess_beh_and_frs(sess_name, beh_path=SESS_BEHAVIOR_PATH, fr_path=SESS_SPIKES_PATH, set_indices=True):
+def load_rpe_sess_beh_and_frs(sess_name, beh_path=SESS_BEHAVIOR_PATH, fr_path=SESS_SPIKES_PATH, set_indices=True, include_prev=False):
     behavior_path = beh_path.format(sess_name=sess_name)
     beh = pd.read_csv(behavior_path)
 
@@ -97,6 +96,13 @@ def load_rpe_sess_beh_and_frs(sess_name, beh_path=SESS_BEHAVIOR_PATH, fr_path=SE
         valid_beh_rpes[f"{feature_dim}RPEGroup"] = valid_beh_rpes[feature_dim] + "_" + valid_beh_rpes["RPEGroup"]
         valid_beh_rpes[f"{feature_dim}Response"] = valid_beh_rpes[feature_dim] + "_" + valid_beh_rpes["Response"]
     valid_beh_rpes["Card"] = valid_beh_rpes["Color"] + "_" + valid_beh_rpes["Shape"] + "_" + valid_beh_rpes["Pattern"]
+    if include_prev:
+        columns = FEATURES + FEEDBACK_TYPES + ["Card"]
+        for feature_dim, fb_type in itertools.product(FEATURE_DIMS, FEEDBACK_TYPES):
+            columns.append(f"{feature_dim}{fb_type}")
+        for column in columns:
+            valid_beh_rpes[f"Prev{column}"] = valid_beh_rpes[column].shift()
+
     if set_indices:
         valid_beh_rpes = valid_beh_rpes.set_index(["TrialNumber"])
 

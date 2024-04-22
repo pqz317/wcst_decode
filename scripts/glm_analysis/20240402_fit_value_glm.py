@@ -22,7 +22,6 @@ SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_
 RESIDUAL_SPIKES_PATH = "/data/{{sess_name}}_residual_feature_{feedback_type}_with_interaction_firing_rates_{{pre_interval}}_{{event}}_{{post_interval}}_{{interval_size}}_bins_{{num_bins_smooth}}_smooth.pickle"
 
 FEATURE_DIMS = ["Color", "Shape", "Pattern"]
-INTERACTIONS = [f"{dim}RPEGroup" for dim in FEATURE_DIMS]
 
 def calc_and_save_session(sess_name, feedback_type, use_residual_fr):
     start = time.time()
