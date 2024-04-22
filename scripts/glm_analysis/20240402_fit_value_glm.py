@@ -26,7 +26,7 @@ FEATURE_DIMS = ["Color", "Shape", "Pattern"]
 def calc_and_save_session(sess_name, feedback_type, use_residual_fr, use_prev_trial_params):
     start = time.time()
     print(f"Processing session {sess_name}")
-    prev_trial_str = "prev_trial_params_" if use_prev_trial_params else "",
+    prev_trial_str = "prev_trial_params_" if use_prev_trial_params else ""
     if use_residual_fr:
         spikes_path = RESIDUAL_SPIKES_PATH.format(
             feedback_type=feedback_type,
