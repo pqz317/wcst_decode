@@ -97,7 +97,7 @@ def load_rpe_sess_beh_and_frs(sess_name, beh_path=SESS_BEHAVIOR_PATH, fr_path=SE
         valid_beh_rpes[f"{feature_dim}Response"] = valid_beh_rpes[feature_dim] + "_" + valid_beh_rpes["Response"]
     valid_beh_rpes["Card"] = valid_beh_rpes["Color"] + "_" + valid_beh_rpes["Shape"] + "_" + valid_beh_rpes["Pattern"]
     if include_prev:
-        columns = FEATURES + FEEDBACK_TYPES + ["Card"]
+        columns = FEATURE_DIMS + FEEDBACK_TYPES + ["Card"]
         for feature_dim, fb_type in itertools.product(FEATURE_DIMS, FEEDBACK_TYPES):
             columns.append(f"{feature_dim}{fb_type}")
         for column in columns:
