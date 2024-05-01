@@ -447,3 +447,26 @@ def get_relative_block_position(beh, num_bins=None):
         beh["BlockPositionBin"] = (beh.BlockPosition * num_bins).astype(int)
     return beh
 
+def get_prev_choice_fbs(beh):
+    beh["PrevResponse"] = beh.Response.shift()
+    for dim in FEATURE_DIMS:
+        beh[f"Prev{dim}"] = beh[dim].shift()
+    return beh
+
+def get_max_feature_value(beh, num_bins=None):
+    def find_max(row):
+        max_feat = None
+        max_val = 0
+        for feat in FEATURES:
+            if row[f"{feat}Value"] >= max_val:
+                max_val = row[f"{feat}Value"]
+                max_feat = feat
+        row["MaxFeat"] = max_feat
+        row["MaxValue"] = max_val
+        return row        
+    beh = beh.apply(find_max, axis=1)
+    if num_bins:
+        # beh["MaxValueBin"] = (((beh["MaxValue"] - beh["MaxValue"].min()) / (beh["MaxValue"].max() - beh["MaxValue"].min())) * num_bins).astype(int)
+        beh["MaxValueBin"] = pd.cut(beh["MaxValue"], num_bins, labels=False)
+    return beh
+

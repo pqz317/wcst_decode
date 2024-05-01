@@ -350,3 +350,31 @@ def plot_mean_frs_by_group_stim_on(sess_name, unit, frs, beh, group_name, pos, a
     ax.legend()
     ax.set_xlabel("Time Relative to Stim Onset (s)")
     ax.set_ylabel("Firing Rate (Hz)")
+
+def plot_mean_sterrs_by_bin(df, data_column, bin_column, ax, label, num_bins):
+    """
+    Plots data by relative block position
+    """
+    means = df.groupby(bin_column)[data_column].mean()
+    stds = df.groupby(bin_column)[data_column].std()
+    bin_size = 1 / num_bins
+    time_bins = np.arange(0, 1, bin_size)
+    mean_line, = ax.plot(time_bins, means, linewidth=2)
+    sterr = stds / np.sqrt(len(stds))
+    std_line = ax.fill_between(time_bins, means - sterr, means + sterr, alpha=0.5, label=label)
+
+def plot_bars_by_cat(df, data_column, cat_column, ax, order=None):
+    """
+    Plots data by category
+    """
+    sns.barplot(data=df, x=cat_column, y=data_column, capsize=.1, errorbar='se', order=order, ax=ax)
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
+    # sns.swarmplot(data=df, x=cat_column, y=data_column, color="0", alpha=.35, ax=ax)
+
+    # means = df.groupby(cat_column)[data_column].mean()
+    # stds = df.groupby(cat_column)[data_column].std()
+    # bin_size = 1 / num_bins
+    # time_bins = np.arange(0, 1, bin_size)
+    # mean_line, = ax.plot(time_bins, means, linewidth=2)
+    # sterr = stds / np.sqrt(len(stds))
+    # std_line = ax.fill_between(time_bins, means - sterr, means + sterr, alpha=0.5, label=label)

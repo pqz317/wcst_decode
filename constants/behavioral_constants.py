@@ -31,3 +31,4 @@ FEATURE_TO_DIM = {
 FEEDBACK_TYPES = ["Response", "RPEGroup"]
 
 SESS_BEHAVIOR_PATH = "/data/rawdata/sub-SA/sess-{sess_name}/behavior/sub-SA_sess-{sess_name}_object_features.csv"
+SESSIONS_PATH = "/data/patrick_res/sessions/valid_sessions_rpe.pickle"

@@ -277,3 +277,6 @@ def zscore_frs(frs, mode="SpikeCounts"):
         std = group[mode].std()
         group[f"Z{mode}"] = (group[mode] - mean) / std
     frs = frs.groupby("UnitID").apply(zscore_unit).reset_index()
+
+def get_avg_fr_per_interval(frs):
+    return frs.groupby(["UnitID", "TrialNumber"]).mean().reset_index()
