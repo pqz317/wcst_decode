@@ -71,6 +71,10 @@ def load_session_data(row):
     valid_beh = pd.merge(valid_beh, feature_selections, on="TrialNumber", how="inner")
     beh = behavioral_utils.get_feature_values_per_session(sess_name, valid_beh)
     beh = behavioral_utils.get_max_feature_value(beh)
+    num_trials_per_feat = beh.groupby("MaxFeat").TrialNumber.nunique()
+    num_feats = len(num_trials_per_feat)
+    if num_feats < 12 or np.any(num_trials_per_feat.values < 5):
+        return None
 
     # load firing rates
     spikes_path = SESS_SPIKES_PATH.format(
@@ -95,6 +99,7 @@ def load_session_data(row):
 def decode(valid_sess):
     sess_datas = valid_sess.apply(load_session_data, axis=1)
     sess_datas = sess_datas.dropna()
+    print(f"decoding from {len(sess_datas)} sessions")
 
     num_neurons = sess_datas.apply(lambda x: x.get_num_neurons()).sum()
     init_params = {"n_inputs": num_neurons, "p_dropout": P_DROPOUT, "n_classes": 12}
