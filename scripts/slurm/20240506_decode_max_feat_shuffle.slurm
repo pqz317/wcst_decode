@@ -14,4 +14,4 @@ singularity exec --writable-tmpfs --nv \
     --bind /gscratch/walkerlab/patrick:/data,/mmfs1/home/pqz317/wcst_decode:/src/wcst_decode \
     /gscratch/walkerlab/patrick/singularity/wcst_decode_image.sif \
     /usr/bin/python3 /src/wcst_decode/scripts/pseudo_decoding/20240501_decode_max_feat_intertrial.py \
-    --shuffle_seed $SLURM_ARRAY_TASK_ID --shuffle
+    --shuffle --shuffle_seed $SLURM_ARRAY_TASK_ID 
