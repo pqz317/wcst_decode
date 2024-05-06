@@ -9,6 +9,8 @@
 #SBATCH --mem=32G
 #SBATCH --time=180
 
+echo $SLURM_ARRAY_TASK_ID
+
 module load singularity
 singularity exec --writable-tmpfs --nv \
     --bind /gscratch/walkerlab/patrick:/data,/mmfs1/home/pqz317/wcst_decode:/src/wcst_decode \
