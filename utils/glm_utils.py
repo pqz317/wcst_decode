@@ -42,7 +42,6 @@ def fit_glm(df, x_cols, mode=MODE, model_type=MODEL, include_predictions=INCLUDE
     else: 
         res = pd.Series({"score": score} | coefs)
     return res
-    # return pd.DataFrame({"score": model.score(xs, ys), "prediction": model.predict(xs)})
 
 def flatten_columns(beh, columns):
     flattened_columns = []

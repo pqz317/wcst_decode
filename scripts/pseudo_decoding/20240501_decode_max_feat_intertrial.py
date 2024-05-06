@@ -62,7 +62,7 @@ EVENT = "FixationOnCross"
 
 DATA_MODE = "FiringRate"
 
-def load_session_data(row):
+def load_session_data(row, should_shuffle=False, shuffle_seed=None):
     sess_name = row.session_name
     behavior_path = SESS_BEHAVIOR_PATH.format(sess_name=sess_name)
     beh = pd.read_csv(behavior_path)
@@ -71,6 +71,12 @@ def load_session_data(row):
     valid_beh = pd.merge(valid_beh, feature_selections, on="TrialNumber", how="inner")
     beh = behavioral_utils.get_feature_values_per_session(sess_name, valid_beh)
     beh = behavioral_utils.get_max_feature_value(beh)
+    if should_shuffle:
+        trial_numbers = beh.TrialNumber
+        rng = np.random.default_rng(shuffle_seed)
+        rng.shuffle(trial_numbers)
+        beh["TrialNumber"] = trial_numbers
+
     num_trials_per_feat = beh.groupby("MaxFeat").TrialNumber.nunique()
     num_feats = len(num_trials_per_feat)
     if num_feats < 12 or np.any(num_trials_per_feat.values < 5):
@@ -96,7 +102,7 @@ def load_session_data(row):
     session_data.pre_generate_splits(NUM_SPLITS)
     return session_data
 
-def decode(valid_sess):
+def decode(valid_sess, should_shuffle, shuffle_seed):
     sess_datas = valid_sess.apply(load_session_data, axis=1)
     sess_datas = sess_datas.dropna()
     print(f"decoding from {len(sess_datas)} sessions")
@@ -113,12 +119,15 @@ def decode(valid_sess):
     train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(
         model, sess_datas, time_bins, NUM_SPLITS, NUM_TRAIN_PER_COND, NUM_TEST_PER_COND, DECODER_SEED
     )
+    shuffle_str = ""
+    if should_shuffle:
+        shuffle_str = "shuffle_{shuffle_seed}_" if shuffle_seed else "shuffle_"
 
     # store the results
-    np.save(os.path.join(OUTPUT_DIR, f"intertrial_agg_max_feat_train_accs.npy"), train_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"intertrial_agg_max_feat_test_accs.npy"), test_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"intertrial_agg_max_feat_shuffled_accs.npy"), shuffled_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"intertrial_agg_max_feat_models.npy"), models)
+    np.save(os.path.join(OUTPUT_DIR, f"intertrial_agg_max_feat_{shuffle_str}train_accs.npy"), train_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"intertrial_agg_max_feat_{shuffle_str}test_accs.npy"), test_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"intertrial_agg_max_feat_{shuffle_str}shuffled_accs.npy"), shuffled_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"intertrial_agg_max_feat_{shuffle_str}models.npy"), models)
 
 
 def main():
@@ -126,8 +135,13 @@ def main():
     Loads a dataframe specifying sessions to use
     For each feature dimension, runs decoding, stores results. 
     """
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--should_shuffle', action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument('--shuffle_seed', type=int, default=None)
+
+    args = parser.parse_args()
     valid_sess = pd.read_pickle(SESSIONS_PATH)
-    decode(valid_sess)
+    decode(valid_sess, args.should_shuffle, args.shuffle_seed)
 
 
 if __name__ == "__main__":

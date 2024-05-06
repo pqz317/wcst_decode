@@ -10,6 +10,7 @@ import plotly.express as px
 import pandas as pd
 from itertools import accumulate
 import matplotlib.patches as patches
+from scipy import stats
 
 REGION_TO_COLOR = {
     "Amygdala": "#00ff00",
@@ -369,12 +370,12 @@ def plot_bars_by_cat(df, data_column, cat_column, ax, order=None):
     """
     sns.barplot(data=df, x=cat_column, y=data_column, capsize=.1, errorbar='se', order=order, ax=ax)
     ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
-    # sns.swarmplot(data=df, x=cat_column, y=data_column, color="0", alpha=.35, ax=ax)
 
-    # means = df.groupby(cat_column)[data_column].mean()
-    # stds = df.groupby(cat_column)[data_column].std()
-    # bin_size = 1 / num_bins
-    # time_bins = np.arange(0, 1, bin_size)
-    # mean_line, = ax.plot(time_bins, means, linewidth=2)
-    # sterr = stds / np.sqrt(len(stds))
-    # std_line = ax.fill_between(time_bins, means - sterr, means + sterr, alpha=0.5, label=label)
+def plot_and_calc_correlation(var_a, var_b, ax):
+    """
+    Plots a scatterplot of two variables, fits a line
+    """
+    slope, intercept, r_value, p_value, std_err = stats.linregress(var_a, var_b)
+    ax.scatter(var_a, var_b, alpha=0.3, color="black")
+    ax.plot(var_a, var_a * slope + intercept)
+    return slope, intercept, r_value, p_value, std_err

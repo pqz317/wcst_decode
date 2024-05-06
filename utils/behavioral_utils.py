@@ -453,7 +453,12 @@ def get_prev_choice_fbs(beh):
         beh[f"Prev{dim}"] = beh[dim].shift()
     return beh
 
-def get_max_feature_value(beh, num_bins=None):
+def get_max_feature_value(beh, num_bins=None, quantize_bins=False):
+    """
+    Finds the max value'd feature for each trial, assumes beh df already has feature values
+    If num_bins specified, adds additional column of value bin of equal size
+    If quantize_bins is true, creates value bins with quantiles instead
+    """
     def find_max(row):
         max_feat = None
         max_val = 0
@@ -466,7 +471,50 @@ def get_max_feature_value(beh, num_bins=None):
         return row        
     beh = beh.apply(find_max, axis=1)
     if num_bins:
-        # beh["MaxValueBin"] = (((beh["MaxValue"] - beh["MaxValue"].min()) / (beh["MaxValue"].max() - beh["MaxValue"].min())) * num_bins).astype(int)
-        beh["MaxValueBin"] = pd.cut(beh["MaxValue"], num_bins, labels=False)
+        if quantize_bins:
+            beh["MaxValueBin"] = pd.qcut(beh["MaxValue"], num_bins, labels=False)
+        else:
+            beh["MaxValueBin"] = pd.cut(beh["MaxValue"], num_bins, labels=False)
     return beh
+
+def calc_feature_probs(beh):
+    logits = np.empty((len(FEATURES), len(beh)))
+    for i, feat in enumerate(FEATURES):
+        logits[i, :] = np.exp(beh[f"{feat}Value"])
+    probs = logits / np.sum(logits, axis=0)
+    for i, feat in enumerate(FEATURES):
+        beh[f"{feat}Prob"] = probs[i, :]
+    return beh
+
+
+def calc_feature_value_entropy(beh):
+    """
+    Calculates the feature value entropy for each trial
+    """
+    sums = np.zeros(len(beh))
+    for feat in FEATURES:
+        sums += beh[f"{feat}Prob"] * np.log(beh[f"{feat}Prob"])
+    beh[f"FeatEntropy"] = -1 * sums
+    return beh
+
+def zscore_feature_vals_by_block(beh, num_bins=None, quantize_bins=False):
+    def zscore(block):
+        val_cols = [f"{feat}Value" for feat in FEATURES]
+        all_vals = pd.melt(block, value_vars=val_cols)
+        mean = all_vals.value.mean()
+        std = all_vals.value.std()
+        # if std is 0, just set to 0. 
+        for feat in FEATURES:
+            block[f"{feat}ValueBlockZ"] = np.nan_to_num((block[f"{feat}Value"] - mean) / std)
+        block["MaxValueBlockZ"] = np.nan_to_num((block["MaxValue"] - mean) / std)
+        return block
+    beh = beh.groupby("BlockNumber").apply(zscore).reset_index(drop=True)
+    if num_bins:
+        if quantize_bins:
+            beh["MaxValueBlockZBin"] = pd.qcut(beh["MaxValueBlockZ"], num_bins, labels=False)
+        else:
+            beh["MaxValueBlockZBin"] = pd.cut(beh["MaxValueBlockZ"], num_bins, labels=False)
+    return beh
+
+
 

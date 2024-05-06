@@ -271,12 +271,14 @@ def get_subpop_ratios_by_region(subpop, valid_sess):
     merged = merged.sort_values("Ratio", ascending=False)
     return merged
 
-def zscore_frs(frs, mode="SpikeCounts"):
+def zscore_frs(frs, group_cols=["UnitID"], mode="SpikeCounts"):
     def zscore_unit(group):
         mean = group[mode].mean()
         std = group[mode].std()
-        group[f"Z{mode}"] = (group[mode] - mean) / std
-    frs = frs.groupby("UnitID").apply(zscore_unit).reset_index()
+        # if std is 0, just set to 0. 
+        group[f"Z{mode}"] = np.nan_to_num((group[mode] - mean) / std)
+        return group
+    return frs.groupby(group_cols).apply(zscore_unit).reset_index(drop=True)
 
 def get_avg_fr_per_interval(frs):
     return frs.groupby(["UnitID", "TrialNumber"]).mean().reset_index()
