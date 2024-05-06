@@ -27,6 +27,8 @@ from models.multinomial_logistic_regressor import NormedDropoutMultinomialLogist
 from trial_splitters.condition_trial_splitter import ConditionTrialSplitter 
 
 import argparse
+import time
+
 
 # the output directory to store the data
 OUTPUT_DIR = "/data/res/pseudo"
@@ -121,7 +123,7 @@ def decode(valid_sess, should_shuffle, shuffle_seed):
     )
     shuffle_str = ""
     if should_shuffle:
-        shuffle_str = "shuffle_{shuffle_seed}_" if shuffle_seed else "shuffle_"
+        shuffle_str = f"shuffle_{shuffle_seed}_" if shuffle_seed else "shuffle_"
 
     # store the results
     np.save(os.path.join(OUTPUT_DIR, f"intertrial_agg_max_feat_{shuffle_str}train_accs.npy"), train_accs)
@@ -135,6 +137,7 @@ def main():
     Loads a dataframe specifying sessions to use
     For each feature dimension, runs decoding, stores results. 
     """
+    start = time.time()
     parser = argparse.ArgumentParser()
     parser.add_argument('--should_shuffle', action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument('--shuffle_seed', type=int, default=None)
@@ -142,6 +145,8 @@ def main():
     args = parser.parse_args()
     valid_sess = pd.read_pickle(SESSIONS_PATH)
     decode(valid_sess, args.should_shuffle, args.shuffle_seed)
+    end = time.time()
+    print(f"Decoding took {(end - start) / 60} minutes")
 
 
 if __name__ == "__main__":
