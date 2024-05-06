@@ -123,7 +123,7 @@ def decode(valid_sess, should_shuffle, shuffle_seed):
     )
     shuffle_str = ""
     if should_shuffle:
-        shuffle_str = f"shuffle_{shuffle_seed}_" if shuffle_seed else "shuffle_"
+        shuffle_str = "shuffle_" if shuffle_seed is None else f"shuffle_{shuffle_seed}_"
 
     # store the results
     np.save(os.path.join(OUTPUT_DIR, f"intertrial_agg_max_feat_{shuffle_str}train_accs.npy"), train_accs)
