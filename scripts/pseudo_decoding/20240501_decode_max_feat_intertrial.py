@@ -105,7 +105,7 @@ def load_session_data(row, should_shuffle=False, shuffle_seed=None):
     return session_data
 
 def decode(valid_sess, should_shuffle, shuffle_seed):
-    sess_datas = valid_sess.apply(load_session_data, axis=1)
+    sess_datas = valid_sess.apply(lambda x: load_session_data(x, should_shuffle, shuffle_seed), axis=1)
     sess_datas = sess_datas.dropna()
     print(f"decoding from {len(sess_datas)} sessions")
 
