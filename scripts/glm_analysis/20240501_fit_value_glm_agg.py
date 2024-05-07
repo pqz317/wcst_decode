@@ -47,7 +47,7 @@ def calc_and_save_session(sess_name, model, block_zscore_fr):
     if block_zscore_fr:
         # get behavior col, BlockNumber
         agg = pd.merge(beh, agg, on="TrialNumber")
-        agg = spike_utils.zscore_frs(frs, group_cols=["UnitID", "BlockNumber"], mode=MODE)
+        agg = spike_utils.zscore_frs(agg, group_cols=["UnitID", "BlockNumber"], mode=MODE)
         mode = f"Z{MODE}"
     agg = agg.set_index(["TrialNumber"])
 
