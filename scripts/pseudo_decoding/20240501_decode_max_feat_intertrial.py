@@ -74,10 +74,10 @@ def load_session_data(row, should_shuffle=False, shuffle_seed=None):
     beh = behavioral_utils.get_feature_values_per_session(sess_name, valid_beh)
     beh = behavioral_utils.get_max_feature_value(beh)
     if should_shuffle:
-        trial_numbers = beh.TrialNumber.values
-        rng = np.random.default_rng(shuffle_seed)
-        rng.shuffle(trial_numbers)
-        beh["TrialNumber"] = trial_numbers
+        max_feats = beh.MaxFeat.values
+        rng = np.random.default_rng()
+        rng.shuffle(max_feats)
+        beh["MaxFeat"] = max_feats
 
     num_trials_per_feat = beh.groupby("MaxFeat").TrialNumber.nunique()
     num_feats = len(num_trials_per_feat)
