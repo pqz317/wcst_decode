@@ -1,22 +1,13 @@
 # Try to decode the feature with the maximum value
 # during the inter-trial interval, just use aggregated spike counts
 
-"""
-Try to decode between two features, in cases when they're higher valued or not
-Condition on correct trials
-Be able to switch: 
-- using residual firing rates or not
-- whether group we're looking at is max or not
-- feature pairs we're looking at
-TODO: build cross decoder for these conditions
-"""
-
 import os
 import numpy as np
 import pandas as pd
 import utils.pseudo_utils as pseudo_utils
 import utils.pseudo_classifier_utils as pseudo_classifier_utils
 import utils.behavioral_utils as behavioral_utils
+import utils.spike_utils as spike_utils
 from constants.behavioral_constants import *
 from constants.decoding_constants import *
 from utils.session_data import SessionData
@@ -41,8 +32,6 @@ SESS_BEHAVIOR_PATH = "/data/sub-SA_sess-{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
 SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 # SESS_RESIDUAL_SPIKES_PATH = "/data/{sess_name}_residual_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
-SESS_RESIDUAL_SPIKES_PATH = "/data/{sess_name}_residual_feature_fb_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
-
 
 # # the output directory to store the data
 # OUTPUT_DIR = "/data/patrick_res/pseudo"
@@ -64,7 +53,7 @@ EVENT = "FixationOnCross"
 
 DATA_MODE = "FiringRate"
 
-def load_session_data(row, should_shuffle=False, shuffle_seed=None):
+def load_session_data(row, should_shuffle=False, shuffle_seed=None, block_zscore_fr=False):
     sess_name = row.session_name
     behavior_path = SESS_BEHAVIOR_PATH.format(sess_name=sess_name)
     beh = pd.read_csv(behavior_path)
@@ -96,7 +85,14 @@ def load_session_data(row, should_shuffle=False, shuffle_seed=None):
     frs = frs.groupby(["UnitID", "TrialNumber"]).mean().reset_index()
     # hacky, but just pretend there's one timebin. 
     frs["TimeBins"] = 0
-    frs = frs.rename(columns={DATA_MODE: "Value"})
+    if block_zscore_fr:
+        # get behavior col, BlockNumber
+        frs = pd.merge(frs, beh, on="TrialNumber")
+        frs = spike_utils.zscore_frs(frs, group_cols=["UnitID", "BlockNumber"], mode=DATA_MODE)
+        data_mode = f"Z{DATA_MODE}"
+        frs = frs.rename(columns={data_mode: "Value"})
+    else: 
+        frs = frs.rename(columns={DATA_MODE: "Value"})
 
 
     splitter = ConditionTrialSplitter(beh, "MaxFeat", TEST_RATIO, seed=DECODER_SEED)
@@ -104,8 +100,8 @@ def load_session_data(row, should_shuffle=False, shuffle_seed=None):
     session_data.pre_generate_splits(NUM_SPLITS)
     return session_data
 
-def decode(valid_sess, should_shuffle, shuffle_seed):
-    sess_datas = valid_sess.apply(lambda x: load_session_data(x, should_shuffle, shuffle_seed), axis=1)
+def decode(valid_sess, should_shuffle, shuffle_seed, block_zscore_fr, save_sess_datas):
+    sess_datas = valid_sess.apply(lambda x: load_session_data(x, should_shuffle, shuffle_seed, block_zscore_fr), axis=1)
     sess_datas = sess_datas.dropna()
     print(f"decoding from {len(sess_datas)} sessions")
 
@@ -124,13 +120,15 @@ def decode(valid_sess, should_shuffle, shuffle_seed):
     shuffle_str = ""
     if should_shuffle:
         shuffle_str = "shuffle_" if shuffle_seed is None else f"shuffle_{shuffle_seed}_"
-
+    zscore_str = "block_zscore_" if block_zscore_fr else ""
     # store the results
-    np.save(os.path.join(OUTPUT_DIR, f"intertrial_agg_max_feat_{shuffle_str}train_accs.npy"), train_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"intertrial_agg_max_feat_{shuffle_str}test_accs.npy"), test_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"intertrial_agg_max_feat_{shuffle_str}shuffled_accs.npy"), shuffled_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"intertrial_agg_max_feat_{shuffle_str}models.npy"), models)
-
+    run_name = f"intertrial_agg_max_feat_{shuffle_str}{zscore_str}"
+    np.save(os.path.join(OUTPUT_DIR, f"{run_name}train_accs.npy"), train_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{run_name}test_accs.npy"), test_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{run_name}shuffled_accs.npy"), shuffled_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{run_name}models.npy"), models)
+    if save_sess_datas: 
+        sess_datas.to_pickle(os.path.join(OUTPUT_DIR, f"{run_name}sess_datas.pickle"))
 
 def main():
     """
@@ -141,10 +139,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--should_shuffle', action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument('--shuffle_seed', type=int, default=None)
+    parser.add_argument('--block_zscore_fr', action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument('--save_sess_datas', action=argparse.BooleanOptionalAction, default=False)
 
     args = parser.parse_args()
     valid_sess = pd.read_pickle(SESSIONS_PATH)
-    decode(valid_sess, args.should_shuffle, args.shuffle_seed)
+    decode(valid_sess, args.should_shuffle, args.shuffle_seed, args.block_zscore_fr, args.save_sess_datas)
     end = time.time()
     print(f"Decoding took {(end - start) / 60} minutes")
 

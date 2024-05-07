@@ -41,6 +41,7 @@ class SessionData:
         # make is so that an iterator cycles through this list
         # if at each time bin, pseudo data is generated the same num_splits times, t
         # this ensures each time bin comes from the same set of splits
+        self.splits = splits
         self.splitter = cycle(splits)
         return splits
 
