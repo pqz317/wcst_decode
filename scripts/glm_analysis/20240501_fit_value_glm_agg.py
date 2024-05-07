@@ -39,7 +39,6 @@ def calc_and_save_session(sess_name, model, block_zscore_fr):
     # get the values
     beh = behavioral_utils.get_feature_values_per_session(sess_name, beh)
 
-    beh = beh.set_index(["TrialNumber"])
     agg = frs.groupby(["UnitID", "TrialNumber"]).mean().reset_index()
     # hacky, but just pretend there's one timebin. 
     agg["TimeBins"] = 0
@@ -49,6 +48,7 @@ def calc_and_save_session(sess_name, model, block_zscore_fr):
         agg = pd.merge(beh[["TrialNumber", "BlockNumber"]], agg, on="TrialNumber")
         agg = spike_utils.zscore_frs(agg, group_cols=["UnitID", "BlockNumber"], mode=MODE)
         mode = f"Z{MODE}"
+    beh = beh.set_index(["TrialNumber"])
     agg = agg.set_index(["TrialNumber"])
 
 
