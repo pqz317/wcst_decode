@@ -87,7 +87,7 @@ def load_session_data(row, should_shuffle=False, shuffle_seed=None, block_zscore
     frs["TimeBins"] = 0
     if block_zscore_fr:
         # get behavior col, BlockNumber
-        frs = pd.merge(frs, beh, on="TrialNumber")
+        frs = pd.merge(frs, beh[["TrialNumber", "BlockNumber"]], on="TrialNumber")
         frs = spike_utils.zscore_frs(frs, group_cols=["UnitID", "BlockNumber"], mode=DATA_MODE)
         data_mode = f"Z{DATA_MODE}"
         frs = frs.rename(columns={data_mode: "Value"})
