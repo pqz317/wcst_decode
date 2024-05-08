@@ -53,6 +53,8 @@ EVENT = "FixationOnCross"
 
 DATA_MODE = "FiringRate"
 
+BUFFER = 50
+
 def load_session_data(row, should_shuffle=False, shuffle_seed=None, norm_type=None):
     sess_name = row.session_name
     behavior_path = SESS_BEHAVIOR_PATH.format(sess_name=sess_name)
@@ -63,9 +65,14 @@ def load_session_data(row, should_shuffle=False, shuffle_seed=None, norm_type=No
     beh = behavioral_utils.get_feature_values_per_session(sess_name, valid_beh)
     beh = behavioral_utils.get_max_feature_value(beh)
     if should_shuffle:
+        # use shifting shuffle here, probably easiest
         max_feats = beh.MaxFeat.values
         rng = np.random.default_rng()
-        rng.shuffle(max_feats)
+        # rng.shuffle(max_feats)
+        # a random shift index that's between buffers
+        # buffer to prevent shift being still in the same blocks
+        shift_idx = rng.integers(BUFFER, len(beh) - BUFFER, 1)
+        max_feats = np.roll(max_feats, shift_idx)
         beh["MaxFeat"] = max_feats
 
     num_trials_per_feat = beh.groupby("MaxFeat").TrialNumber.nunique()
