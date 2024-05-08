@@ -280,5 +280,12 @@ def zscore_frs(frs, group_cols=["UnitID"], mode="SpikeCounts"):
         return group
     return frs.groupby(group_cols).apply(zscore_unit).reset_index(drop=True)
 
+def mean_sub_frs(frs, group_cols=["UnitID"], mode="SpikeCounts"):
+    def mean_sub_unit(group):
+        mean = group[mode].mean()
+        group[f"MeanSub{mode}"] = group[mode] - mean
+        return group
+    return frs.groupby(group_cols).apply(mean_sub_unit).reset_index(drop=True)
+
 def get_avg_fr_per_interval(frs):
     return frs.groupby(["UnitID", "TrialNumber"]).mean().reset_index()
