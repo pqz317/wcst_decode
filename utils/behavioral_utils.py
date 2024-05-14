@@ -534,6 +534,11 @@ def shuffle_beh_random(beh, column="TrialNumber", rng=None, seed=None):
     return beh
 
 def shuffle_block_rules(beh, rng=None, seed=None):
+    """
+    Shuffles current rules by block. 
+    trials in the same block still have the same CurrentRule, 
+    they're just shuffled across blocks
+    """
     if rng is None: 
         rng = np.random.default_rng(seed)
     def get_rule_of_block(block):
