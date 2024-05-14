@@ -71,7 +71,7 @@ def calc_and_save_session(sess_name, splits, model, norm_mode, shuffle_idx):
         mode = f"MeanSub{MODE}"
     
     # shuffle behavior
-    beh = behavioral_utils.shuffle_block_rules(beh, shuffle_idx)
+    beh = behavioral_utils.shuffle_block_rules(beh, seed=shuffle_idx)
 
     # beh, frs = sub_select_trials(beh, frs)
     beh = beh.set_index(["TrialNumber"])
