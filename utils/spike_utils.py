@@ -287,5 +287,17 @@ def mean_sub_frs(frs, group_cols=["UnitID"], mode="SpikeCounts"):
         return group
     return frs.groupby(group_cols).apply(mean_sub_unit).reset_index(drop=True)
 
+def block_lowest_val_sub_frs(frs, mode="SpikeCounts"):
+    """
+    Finds the trial with the lowest max value in the block, 
+    uses firing rate at that trial as reference
+    """
+    def block_sub_unit(group):
+        lowest_idx = group.MaxValue.idxmin()
+        lowest_fr = group.loc[lowest_idx][mode]
+        group[f"LowestSub{mode}"] = group[mode] - lowest_fr
+        return group
+    return frs.groupby(["UnitID", "BlockNumber"]).apply(block_sub_unit).reset_index(drop=True)
+
 def get_avg_fr_per_interval(frs):
     return frs.groupby(["UnitID", "TrialNumber"]).mean().reset_index()

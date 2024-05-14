@@ -516,5 +516,53 @@ def zscore_feature_vals_by_block(beh, num_bins=None, quantize_bins=False):
             beh["MaxValueBlockZBin"] = pd.cut(beh["MaxValueBlockZ"], num_bins, labels=False)
     return beh
 
+def shuffle_beh_by_shift(beh, column="TrialNumber", buffer=50, rng=None, seed=None):
+    if rng is None: 
+        rng = np.random.default_rng(seed)
+    col_vals = beh[column].values
+    shift_idx = rng.integers(buffer, len(beh) - buffer, 1)
+    shuffled_col_vals = np.roll(col_vals, shift_idx)
+    beh[column] = shuffled_col_vals
+    return beh
 
+def shuffle_beh_random(beh, column="TrialNumber", rng=None, seed=None):
+    if rng is None: 
+        rng = np.random.default_rng(seed)
+    col_vals = beh[column].values
+    rng.shuffle(col_vals)
+    beh[column] = col_vals
+    return beh
 
+def shuffle_block_rules(beh, rng=None, seed=None):
+    if rng is None: 
+        rng = np.random.default_rng(seed)
+    def get_rule_of_block(block):
+        rule = block.CurrentRule.unique()[0]
+        return rule
+    block_to_rule = beh.groupby("BlockNumber").apply(get_rule_of_block).reset_index(name="CurrentRule")
+    labels = block_to_rule.CurrentRule.values.copy()
+    rng.shuffle(labels)
+    block_to_rule["CurrentRule"] = labels
+    beh = beh.drop(columns=["CurrentRule"])  # drop original current rules from beh. 
+    beh = pd.merge(beh, block_to_rule, on="BlockNumber")
+    # new current rules are shuffled by block
+    return beh
+
+def filter_blocks_by_rule_occurence(beh, min_blocks_per_rule):
+    """
+    Get trials that belong in blocks, where rule occurs in at least min_blocks_per_rule blocks
+    """
+    num_rule_blocks = beh.groupby("CurrentRule").BlockNumber.nunique()
+    rules_meets_condition = num_rule_blocks[num_rule_blocks >= min_blocks_per_rule]
+    beh[beh.CurrentRule.isin(rules_meets_condition.index)]
+    return beh
+
+def filter_max_feat_correct(beh):
+    """
+    Get trials where the predicted max-valued feature is the rule, and trial was correct
+    """
+    return beh[
+        (beh.CurrentRule == beh.MaxFeat) &
+        (beh.Response == "Correct")
+    ]
+                         

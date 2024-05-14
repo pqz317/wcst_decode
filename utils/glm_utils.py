@@ -13,17 +13,25 @@ from sklearn.linear_model import (
 from constants.glm_constants import *
 from constants.behavioral_constants import *
 
-def fit_glm(df, x_cols, mode=MODE, model_type=MODEL, include_predictions=INCLUDE_PREDICTIONS):
-    ys = df[mode].values
-    if np.all(ys == 0): 
-        print("All 0 frs, skipping fitting")
-        coefs = {f"{col}_coef": 0 for col in x_cols}
-        if include_predictions:
-            predictions = np.zeros(len(ys))
-            return pd.DataFrame({"TrialNumber": df.index, "score": 0.0, "predicted": predictions, "actual": ys} | coefs)
-        else: 
-            return pd.Series({"score": 0.0} | coefs)
-    xs = df[x_cols].values
+def get_data(df, mode, x_cols, trials):
+    df_trials = df.loc[trials]
+    ys = df_trials[mode].values
+    xs = df_trials[x_cols].values
+    return xs, ys
+
+def fit_glm(df, x_cols, mode=MODE, model_type=MODEL, include_predictions=INCLUDE_PREDICTIONS, train_test_split=None):
+    if train_test_split is not None:
+        train_trials, test_trials = train_test_split
+    else: 
+        train_trials = df.index
+        test_trials = df.index
+    train_xs, train_ys = get_data(df, mode, x_cols, train_trials)
+    test_xs, test_ys = get_data(df, mode, x_cols, test_trials)
+    # print(train_ys.shape)
+    # print(train_xs.shape)
+    # print(test_ys.shape)
+    # print(test_xs.shape)
+
     if model_type == "Ridge":
         model = Ridge(alpha=1)
     elif model_type == "Linear":
@@ -32,15 +40,38 @@ def fit_glm(df, x_cols, mode=MODE, model_type=MODEL, include_predictions=INCLUDE
         model = PoissonRegressor(alpha=1)
     else:
         raise ValueError(f"MODEL is specified as {model_type}, invalid value")
-    model = model.fit(xs, ys)
-    score = model.score(xs, ys)
-    predictions = model.predict(xs)
+    # if np.all(train_ys == 0): 
+    #     print("All 0 frs, skipping fitting")
+    #     coefs = {f"{col}_coef": 0 for col in x_cols}
+    #     if include_predictions:
+    #         predictions = np.zeros(len(ys))
+    #         return pd.DataFrame({"TrialNumber": df.index, "score": 0.0, "predicted": predictions, "actual": ys} | coefs)
+    #     else: 
+    #         return pd.Series({"score": 0.0} | coefs)
+    model = model.fit(train_xs, train_ys)
+    train_score = model.score(train_xs, train_ys)
+    train_predictions = model.predict(train_xs)
+    test_score = model.score(test_xs, test_ys)
+    test_predictions = model.predict(test_xs)
     # df index is TrialNumber
     coefs = {f"{col}_coef": model.coef_[i] for i, col in enumerate(x_cols)}
-    if include_predictions:
-        res = pd.DataFrame({"TrialNumber": df.index, "score": score, "predicted": predictions, "actual": ys} | coefs)
-    else: 
-        res = pd.Series({"score": score} | coefs)
+    if train_test_split is None: 
+        if include_predictions:
+            res = pd.DataFrame({
+                "TrialNumber": df.index, 
+                "score": train_score, 
+                "predicted": train_predictions, 
+                "actual": train_ys
+            } | coefs)
+        else: 
+            res = pd.Series({"score": train_score} | coefs)
+    else:
+        if include_predictions:
+            train_df = pd.DataFrame({"TrialNumber": train_trials, "train_score": train_score, "test_score": test_score, "predicted": train_predictions, "actual": train_ys})
+            test_df = pd.DataFrame({"TrialNumber": test_trials, "train_score": train_score, "test_score": test_score, "predicted": test_predictions, "actual": test_ys})
+            res = pd.concat((train_df, test_df))
+        else: 
+            res = pd.Series({"train_score": train_score, "test_score": test_score} | coefs)
     return res
 
 def flatten_columns(beh, columns):
@@ -64,18 +95,24 @@ def create_shuffles(data, columns, rng):
         data[column] = vals
     return data
 
-def fit_glms_by_unit_and_time(data, input_columns, mode=MODE, model_type=MODEL, include_predictions=INCLUDE_PREDICTIONS, columns_to_flatten=None):
+def fit_glms_by_unit_and_time(data, input_columns, mode=MODE, model_type=MODEL, include_predictions=INCLUDE_PREDICTIONS, columns_to_flatten=None, train_test_split=None):
     columns_to_flatten = input_columns if columns_to_flatten is None else columns_to_flatten
     not_flattened_columns = [col for col in input_columns if col not in columns_to_flatten]
     data, flattened_columns = flatten_columns(data, columns_to_flatten)
     glm_columns = flattened_columns + not_flattened_columns
     res = data.groupby(["UnitID", "TimeBins"]).apply(
-        lambda x: fit_glm(x, glm_columns, mode, model_type, include_predictions)
+        lambda x: fit_glm(x, glm_columns, mode, model_type, include_predictions, train_test_split)
     ).reset_index()
     return res.fillna(0)
 
 def fit_glm_for_data(
-    data, input_columns, mode=MODE, model_type=MODEL, include_predictions=INCLUDE_PREDICTIONS, columns_to_flatten=None, 
+    data, 
+    input_columns, 
+    mode=MODE, 
+    model_type=MODEL, 
+    include_predictions=INCLUDE_PREDICTIONS, 
+    columns_to_flatten=None, 
+    train_test_split=None
 ):
     """
     Fits GLMs for each unit, for each timebin, across trials
@@ -92,7 +129,7 @@ def fit_glm_for_data(
     beh, frs = data
     beh_inputs = beh[input_columns]
     data = pd.merge(beh_inputs, frs, on="TrialNumber")
-    res = fit_glms_by_unit_and_time(data, input_columns, mode, model_type, include_predictions, columns_to_flatten)
+    res = fit_glms_by_unit_and_time(data, input_columns, mode, model_type, include_predictions, columns_to_flatten, train_test_split)
     return res
 
 def get_sig_bound(group, p_val, num_hyp):
