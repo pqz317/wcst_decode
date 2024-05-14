@@ -78,8 +78,8 @@ def calc_and_save_session(sess_name, splits, model, norm_mode):
     input_columns = columns_to_flatten
     split_reses = []
     for i in range(NUM_SPLITS):
-        print(f"Processing session {sess_name} split {i}, {len(split_row.train)} train, {len(split_row.test)} trials")
         split_row = splits[(splits.session == sess_name) & (splits.split_idx == i)].iloc[0]
+        print(f"Processing session {sess_name} split {i}, {len(split_row.train)} train, {len(split_row.test)} trials")
         split_res = glm_utils.fit_glm_for_data(
             (beh, agg), 
             input_columns=input_columns, 
