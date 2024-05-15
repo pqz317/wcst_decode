@@ -4,7 +4,11 @@ import utils.io_utils as io_utils
 import pandas as pd
 import argparse
 from constants.glm_constants import *
+import os
 
+OUTPUT_DIR = "/data/res"
+MODE = "MeanSubFiringRate"
+MODEL = "Linear"
 
 SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
 NUM_SHUFFLES = 1000
@@ -13,11 +17,13 @@ def aggregate_shuffles(sess_name, shuffle_type):
     print(f"Processing {sess_name}")
     shuffles = []
     for i in range(NUM_SHUFFLES):
-        shuffle = pd.read_pickle(f"/data/res/{sess_name}_glm_{MODE}_{INTERVAL_SIZE}_{MODEL}_{shuffle_type}_shuffle_{i}.pickle")
+        # shuffle = pd.read_pickle(f"/data/res/{sess_name}_glm_{MODE}_{INTERVAL_SIZE}_{MODEL}_{shuffle_type}_shuffle_{i}.pickle")
+        shuffle = pd.read_pickle(os.path.join(OUTPUT_DIR, f"{sess_name}_glm_{EVENT}_{MODE}_{INTERVAL_SIZE}_{MODEL}_maxfeat_shuffle_{i}.pickle"))
         shuffle["ShuffleIdx"] = i
         shuffles.append(shuffle)
     shuffles = pd.concat(shuffles)
-    shuffles.to_pickle(f"/data/res/{sess_name}_glm_{MODE}_{INTERVAL_SIZE}_{MODEL}_{shuffle_type}_shuffles.pickle")
+    # shuffles.to_pickle(f"/data/res/{sess_name}_glm_{MODE}_{INTERVAL_SIZE}_{MODEL}_{shuffle_type}_shuffles.pickle")
+    shuffles.to_pickle(os.path.join(OUTPUT_DIR, f"{sess_name}_glm_{EVENT}_{MODEL}_{INTERVAL_SIZE}_{MODEL}_maxfeat_shuffles.pickle"))
 
 def main():
     parser = argparse.ArgumentParser()
