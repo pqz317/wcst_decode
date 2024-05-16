@@ -36,6 +36,8 @@ def fit_glm(df, x_cols, mode=MODE, model_type=MODEL, include_predictions=INCLUDE
         model = Ridge(alpha=1)
     elif model_type == "Linear":
         model = LinearRegression()
+    elif model_type == "LinearNoInt":
+        model = LinearRegression(fit_intercept=False)
     elif model_type == "Poisson":
         model = PoissonRegressor(alpha=1)
     else:
@@ -132,12 +134,12 @@ def fit_glm_for_data(
     res = fit_glms_by_unit_and_time(data, input_columns, mode, model_type, include_predictions, columns_to_flatten, train_test_split)
     return res
 
-def get_sig_bound(group, p_val, num_hyp):
-    percentile = (1 - p_val / num_hyp) * 100
-    return pd.Series({"sig_bound": np.percentile(group.score, percentile, method='higher')})
+def get_sig_bound(group, alpha, num_hyp, score_type="score"):
+    percentile = (1 - alpha / num_hyp) * 100
+    return pd.Series({"sig_bound": np.percentile(group[score_type], percentile, method='higher')})
 
-def calculate_sig_stats(shuffled, p_val, num_hyp):
-    stats = shuffled.groupby(["UnitID", "TimeBins"]).apply(lambda group: get_sig_bound(group, p_val, num_hyp)).reset_index()
+def calculate_sig_stats(shuffled, alpha, num_hyp, score_type="score"):
+    stats = shuffled.groupby(["UnitID", "TimeBins"]).apply(lambda group: get_sig_bound(group, alpha, num_hyp, score_type)).reset_index()
     return stats
 
 def identify_significant_units(res, shuffled_res, time_idxs, alpha=0.01):

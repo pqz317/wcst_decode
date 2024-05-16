@@ -559,8 +559,7 @@ def filter_blocks_by_rule_occurence(beh, min_blocks_per_rule):
     """
     num_rule_blocks = beh.groupby("CurrentRule").BlockNumber.nunique()
     rules_meets_condition = num_rule_blocks[num_rule_blocks >= min_blocks_per_rule]
-    beh[beh.CurrentRule.isin(rules_meets_condition.index)]
-    return beh
+    return beh[beh.CurrentRule.isin(rules_meets_condition.index)]
 
 def filter_max_feat_correct(beh):
     """

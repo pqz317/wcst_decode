@@ -97,7 +97,7 @@ def calc_and_save_session(sess_name, splits, model, norm_mode):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('sess_idx', type=int, help="int from 0 - 27 denoting which session to run for")
-    parser.add_argument('--model', type=str, default="Linear")
+    parser.add_argument('--model', type=str, default="LinearNoInt")
     parser.add_argument('--norm_mode', type=str, default=None)
 
     args = parser.parse_args()

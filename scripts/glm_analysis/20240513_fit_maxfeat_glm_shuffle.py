@@ -102,7 +102,7 @@ def calc_and_save_session(sess_name, splits, model, norm_mode, shuffle_idx):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('shuffle_idx', type=int, help="int from 0 - 999 denoting which shuffle to run")
-    parser.add_argument('--model', type=str, default="Linear")
+    parser.add_argument('--model', type=str, default="LinearNoInt")
     parser.add_argument('--norm_mode', type=str, default=None)
 
     args = parser.parse_args()

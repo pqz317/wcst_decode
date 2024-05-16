@@ -371,6 +371,7 @@ def plot_bars_by_cat(df, data_column, cat_column, ax, order=None):
     sns.barplot(data=df, x=cat_column, y=data_column, capsize=.1, errorbar='se', order=order, ax=ax)
     ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
 
+
 def plot_and_calc_correlation(var_a, var_b, ax):
     """
     Plots a scatterplot of two variables, fits a line
