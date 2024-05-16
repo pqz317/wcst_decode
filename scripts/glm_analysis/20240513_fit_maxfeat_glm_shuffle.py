@@ -71,9 +71,9 @@ def calc_and_save_session(sess_name, splits, model, norm_mode, shuffle_idx):
         mode = f"MeanSub{MODE}"
     
     # shuffle behavior
+    beh, frs = sub_select_trials(beh, frs)
     beh = behavioral_utils.shuffle_block_rules(beh, seed=shuffle_idx)
 
-    # beh, frs = sub_select_trials(beh, frs)
     beh = beh.set_index(["TrialNumber"])
     agg = agg.set_index(["TrialNumber"])
 
@@ -82,19 +82,25 @@ def calc_and_save_session(sess_name, splits, model, norm_mode, shuffle_idx):
     columns_to_flatten = ["CurrentRule"]
     input_columns = columns_to_flatten
     split_reses = []
-    for i in range(NUM_SPLITS):
-        split_row = splits[(splits.session == sess_name) & (splits.split_idx == i)].iloc[0]
-        print(f"Processing session {sess_name} split {i}, {len(split_row.train)} train, {len(split_row.test)} trials")
-        split_res = glm_utils.fit_glm_for_data(
-            (beh, agg), 
-            input_columns=input_columns, 
-            columns_to_flatten=columns_to_flatten,
-            model_type=model,
-            train_test_split=(split_row.train, split_row.test)
-        )
-        split_res["split_idx"] = i
-        split_reses.append(split_res)
-    all_reses = pd.concat(split_reses)
+    # for i in range(NUM_SPLITS):
+    #     split_row = splits[(splits.session == sess_name) & (splits.split_idx == i)].iloc[0]
+    #     print(f"Processing session {sess_name} split {i}, {len(split_row.train)} train, {len(split_row.test)} trials")
+    #     split_res = glm_utils.fit_glm_for_data(
+    #         (beh, agg), 
+    #         input_columns=input_columns, 
+    #         columns_to_flatten=columns_to_flatten,
+    #         model_type=model,
+    #         train_test_split=(split_row.train, split_row.test)
+    #     )
+    #     split_res["split_idx"] = i
+    #     split_reses.append(split_res)
+    # all_reses = pd.concat(split_reses)
+    all_reses = glm_utils.fit_glm_for_data(
+        (beh, agg), 
+        input_columns=input_columns, 
+        columns_to_flatten=columns_to_flatten,
+        model_type=model,
+    )
     all_reses.to_pickle(os.path.join(OUTPUT_DIR, f"{sess_name}_glm_{EVENT}_{mode}_{INTERVAL_SIZE}_{model}_maxfeat_shuffle_{shuffle_idx}.pickle"))
 
     end = time.time()
