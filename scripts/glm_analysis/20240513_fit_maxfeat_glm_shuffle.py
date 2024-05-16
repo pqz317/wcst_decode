@@ -89,6 +89,7 @@ def calc_and_save_session(sess_name, splits, model, norm_mode, shuffle_idx):
             (beh, agg), 
             input_columns=input_columns, 
             columns_to_flatten=columns_to_flatten,
+            model_type=model,
             train_test_split=(split_row.train, split_row.test)
         )
         split_res["split_idx"] = i
