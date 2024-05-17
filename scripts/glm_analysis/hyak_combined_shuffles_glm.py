@@ -27,12 +27,17 @@ def aggregate_shuffles(sess_name, shuffle_type):
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('sess_idx', type=int, help="int from 0 - 27 denoting which session to run for")
     parser.add_argument('--shuffle_type', type=str, help="type of shuffle, card or feature_rpe", default="feature_rpe")
     args = parser.parse_args()
     shuffle_type = args.shuffle_type
+    sess_idx = int(args.sess_idx)
+
     print(f"Processing with shuffle type {shuffle_type}")
     valid_sess = pd.read_pickle(SESSIONS_PATH)
-    valid_sess.apply(lambda x: aggregate_shuffles(x.session_name, shuffle_type), axis=1)
+    sess_name = valid_sess.iloc[sess_idx].session_name
+
+    aggregate_shuffles(sess_name, shuffle_type)
 
 if __name__ == "__main__":
     main()

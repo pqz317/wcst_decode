@@ -100,6 +100,7 @@ def calc_and_save_session(sess_name, splits, model, norm_mode, shuffle_idx):
         input_columns=input_columns, 
         columns_to_flatten=columns_to_flatten,
         model_type=model,
+        mode=mode,
     )
     all_reses.to_pickle(os.path.join(OUTPUT_DIR, f"{sess_name}_glm_{EVENT}_{mode}_{INTERVAL_SIZE}_{model}_maxfeat_shuffle_{shuffle_idx}.pickle"))
 
