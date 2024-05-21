@@ -149,8 +149,10 @@ def main():
     """
     start = time.time()
     parser = argparse.ArgumentParser()
-    parser.add_argument('feature_a', type=str)
-    parser.add_argument('feature_b', type=str)
+    good_pairs = [('CYAN', 'YELLOW'), ('GREEN', 'MAGENTA'), ('GREEN', 'YELLOW'), ('MAGENTA', 'POLKADOT'), ('CIRCLE', 'SQUARE'), ('CYAN', 'MAGENTA')]
+    # parser.add_argument('feature_a', type=str)
+    # parser.add_argument('feature_b', type=str)
+    parser.add_argument("pair_idx", type=int)
     parser.add_argument('--should_shuffle', action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument('--shuffle_seed', type=int, default=None)
     parser.add_argument('--norm_type', type=str, default=None)
@@ -158,7 +160,8 @@ def main():
 
     args = parser.parse_args()
     valid_sess = pd.read_pickle(SESSIONS_PATH)
-    decode(valid_sess, args.feature_a, args.feature_b, args.should_shuffle, args.shuffle_seed, args.norm_type, args.save_sess_datas)
+    feat_a, feat_b = good_pairs[args.pair_idx]
+    decode(valid_sess, feat_a, feat_b, args.should_shuffle, args.shuffle_seed, args.norm_type, args.save_sess_datas)
     end = time.time()
     print(f"Decoding took {(end - start) / 60} minutes")
 
