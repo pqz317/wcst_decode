@@ -16,4 +16,4 @@ module load singularity
 singularity exec --writable-tmpfs --nv \
     --bind /gscratch/walkerlab/patrick:/data,/mmfs1/home/pqz317/wcst_decode:/src/wcst_decode \
     /gscratch/walkerlab/patrick/singularity/wcst_decode_image.sif \
-    /usr/bin/python3 /src/wcst_decode/scripts/pseudo_decoding/20240520_decode_max_feat_pair.py GREEN MAGENTA
+    /usr/bin/python3 /src/wcst_decode/scripts/pseudo_decoding/20240521_decode_max_feat_pair.py GREEN MAGENTA
