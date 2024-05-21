@@ -73,7 +73,7 @@ def load_session_data(row, feat, should_shuffle=False, shuffle_seed=None, norm_t
         return None
     
     if should_shuffle:
-        beh = behavioral_utils.shuffle_block_rules(beh, shuffle_seed)
+        beh = behavioral_utils.shuffle_block_rules(beh, seed=shuffle_seed)
     # assign a column to whether max feat is matching feature of interest
     beh["FeatMatches"] = beh.CurrentRule == feat
 
