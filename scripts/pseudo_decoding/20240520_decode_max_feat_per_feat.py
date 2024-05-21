@@ -89,14 +89,16 @@ def load_session_data(row, feat, should_shuffle=False, shuffle_seed=None, norm_t
     frs = frs.groupby(["UnitID", "TrialNumber"]).mean().reset_index()
     # hacky, but just pretend there's one timebin. 
     frs["TimeBins"] = 0
+
+    # NOTE: need to find block mean/zscore wrt pre-filtered behavior. 
     if norm_type == "block_zscore_fr":
         # get behavior col, BlockNumber
-        frs = pd.merge(frs, beh[["TrialNumber", "BlockNumber"]], on="TrialNumber")
+        frs = pd.merge(frs, valid_beh[["TrialNumber", "BlockNumber"]], on="TrialNumber")
         frs = spike_utils.zscore_frs(frs, group_cols=["UnitID", "BlockNumber"], mode=DATA_MODE)
         data_mode = f"Z{DATA_MODE}"
         frs = frs.rename(columns={data_mode: "Value"})
     elif norm_type == "block_mean_sub":
-        frs = pd.merge(frs, beh[["TrialNumber", "BlockNumber"]], on="TrialNumber")
+        frs = pd.merge(frs, valid_beh[["TrialNumber", "BlockNumber"]], on="TrialNumber")
         frs = spike_utils.mean_sub_frs(frs, group_cols=["UnitID", "BlockNumber"], mode=DATA_MODE)
         data_mode = f"MeanSub{DATA_MODE}"
         frs = frs.rename(columns={data_mode: "Value"})
