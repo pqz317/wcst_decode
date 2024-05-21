@@ -113,7 +113,7 @@ def load_session_data(row, feat, should_shuffle=False, shuffle_seed=None, norm_t
 def decode(valid_sess, feat, should_shuffle, shuffle_seed, norm_type, save_sess_datas):
     sess_datas = valid_sess.apply(lambda x: load_session_data(x, feat, should_shuffle, shuffle_seed, norm_type), axis=1)
     sess_datas = sess_datas.dropna()
-    print(f"decoding from whether {feat} from {len(sess_datas)} sessions")
+    print(f"decoding whether {feat} from {len(sess_datas)} sessions, norm type {norm_type}")
 
     num_neurons = sess_datas.apply(lambda x: x.get_num_neurons()).sum()
     init_params = {"n_inputs": num_neurons, "p_dropout": P_DROPOUT, "n_classes": 2}
