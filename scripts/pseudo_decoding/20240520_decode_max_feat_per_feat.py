@@ -116,7 +116,7 @@ def decode(valid_sess, feat, should_shuffle, shuffle_seed, norm_type, save_sess_
     print(f"decoding from whether {feat} from {len(sess_datas)} sessions")
 
     num_neurons = sess_datas.apply(lambda x: x.get_num_neurons()).sum()
-    init_params = {"n_inputs": num_neurons, "p_dropout": P_DROPOUT, "n_classes": 12}
+    init_params = {"n_inputs": num_neurons, "p_dropout": P_DROPOUT, "n_classes": 2}
     # create a trainer object
     trainer = Trainer(learning_rate=LEARNING_RATE, max_iter=MAX_ITER)
     # create a wrapper for the decoder
