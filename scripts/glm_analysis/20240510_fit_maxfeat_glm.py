@@ -69,6 +69,7 @@ def calc_and_save_session(sess_name, splits, model, norm_mode):
     elif norm_mode == "mean_sub": 
         agg = spike_utils.mean_sub_frs(agg, group_cols=["UnitID", "BlockNumber"], mode=MODE)
         mode = f"MeanSub{MODE}"
+
     beh, frs = sub_select_trials(beh, frs)
     # beh, frs = sub_select_trials(beh, frs)
     beh = beh.set_index(["TrialNumber"])

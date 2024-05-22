@@ -7,7 +7,8 @@ from constants.glm_constants import *
 import os
 
 OUTPUT_DIR = "/data/res"
-MODE = "MeanSubFiringRate"
+# MODE = "MeanSubFiringRate"
+MODE = "FiringRate"
 MODEL = "LinearNoInt"
 
 SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
