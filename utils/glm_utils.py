@@ -14,7 +14,6 @@ from constants.glm_constants import *
 from constants.behavioral_constants import *
 
 def get_data(df, mode, x_cols, trials):
-    print(mode)
     df_trials = df.loc[trials]
     ys = df_trials[mode].values
     xs = df_trials[x_cols].values
@@ -28,10 +27,6 @@ def fit_glm(df, x_cols, mode=MODE, model_type=MODEL, include_predictions=INCLUDE
         test_trials = df.index
     train_xs, train_ys = get_data(df, mode, x_cols, train_trials)
     test_xs, test_ys = get_data(df, mode, x_cols, test_trials)
-    # print(train_ys.shape)
-    # print(train_xs.shape)
-    # print(test_ys.shape)
-    # print(test_xs.shape)
 
     if model_type == "Ridge":
         model = Ridge(alpha=1)
@@ -51,15 +46,12 @@ def fit_glm(df, x_cols, mode=MODE, model_type=MODEL, include_predictions=INCLUDE
     #         return pd.DataFrame({"TrialNumber": df.index, "score": 0.0, "predicted": predictions, "actual": ys} | coefs)
     #     else: 
     #         return pd.Series({"score": 0.0} | coefs)
-    print(train_xs.shape)
-    print(train_ys.shape)
     model = model.fit(train_xs, train_ys)
     train_score = model.score(train_xs, train_ys)
     train_predictions = model.predict(train_xs)
     test_score = model.score(test_xs, test_ys)
     test_predictions = model.predict(test_xs)
     # df index is TrialNumber
-    print(model.coef_)
     coefs = {f"{col}_coef": model.coef_[i] for i, col in enumerate(x_cols)}
     if train_test_split is None: 
         if include_predictions:
@@ -81,7 +73,6 @@ def fit_glm(df, x_cols, mode=MODE, model_type=MODEL, include_predictions=INCLUDE
     return res
 
 def flatten_columns(beh, columns):
-    print(beh.columns)
     flattened_columns = []
     for column in columns:
         values = beh[column].unique()

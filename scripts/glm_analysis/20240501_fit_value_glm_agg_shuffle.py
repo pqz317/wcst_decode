@@ -26,7 +26,7 @@ SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_
 # formatting will replace 'feedback_type' first, then replace others in another function
 FEATURE_DIMS = ["Color", "Shape", "Pattern"]
 
-def calc_and_save_session(sess_name, model, norm_mode):
+def calc_and_save_session(sess_name, model, norm_mode, shuffle_idx):
     start = time.time()
     print(f"Processing session {sess_name}")
     spikes_path = SESS_SPIKES_PATH
@@ -50,6 +50,8 @@ def calc_and_save_session(sess_name, model, norm_mode):
     elif norm_mode == "mean_sub": 
         agg = spike_utils.mean_sub_frs(agg, group_cols=["UnitID", "BlockNumber"], mode=MODE)
         mode = f"MeanSub{MODE}"
+
+    beh = behavioral_utils.shuffle_beh_random(beh, column="TrialNumber", seed=shuffle_idx)
     beh = beh.set_index(["TrialNumber"])
     agg = agg.set_index(["TrialNumber"])
 
@@ -59,24 +61,20 @@ def calc_and_save_session(sess_name, model, norm_mode):
     input_columns = value_cols
     value_reses = glm_utils.fit_glm_for_data((beh, agg), input_columns=input_columns, columns_to_flatten=columns_to_flatten)
 
-    value_reses.to_pickle(os.path.join(OUTPUT_DIR, f"{sess_name}_glm_{EVENT}_{mode}_{INTERVAL_SIZE}_{model}_values_agg.pickle"))
+    value_reses.to_pickle(os.path.join(OUTPUT_DIR, f"{sess_name}_glm_{EVENT}_{mode}_{INTERVAL_SIZE}_{model}_values_agg_shuffle_{shuffle_idx}.pickle"))
 
     end = time.time()
     print(f"Session {sess_name} took {(end - start) / 60} minutes")
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('sess_idx', type=int, help="int from 0 - 27 denoting which session to run for")
+    parser.add_argument('shuffle_idx', type=int, help="int from 0 - 999 denoting which shuffle to run")
     parser.add_argument('--model', type=str, default="Linear")
     parser.add_argument('--norm_mode', type=str, default=None)
 
-
     args = parser.parse_args()
-    sess_idx = int(args.sess_idx)
     valid_sess = pd.read_pickle(SESSIONS_PATH)
-    print(f"There are {len(valid_sess)} sessions, processing row {sess_idx}")
-    sess_name = valid_sess.iloc[sess_idx].session_name
-    calc_and_save_session(sess_name, args.model, args.norm_mode)
+    valid_sess.apply(lambda row: calc_and_save_session(row.session_name, args.model, args.norm_mode, args.shuffle_idx), axis=1)
 
 if __name__ == "__main__":
     main()
