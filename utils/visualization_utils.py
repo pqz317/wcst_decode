@@ -358,11 +358,11 @@ def plot_mean_sterrs_by_bin(df, data_column, bin_column, ax, label, num_bins):
     """
     means = df.groupby(bin_column)[data_column].mean()
     stds = df.groupby(bin_column)[data_column].std()
-    bin_size = 1 / num_bins
-    time_bins = np.arange(0, 1, bin_size)
-    mean_line, = ax.plot(time_bins, means, linewidth=2)
+    # bin_size = 1 / num_bins
+    # time_bins = np.arange(0, 1, bin_size)
+    mean_line, = ax.plot(means.index, means, linewidth=2)
     sterr = stds / np.sqrt(len(stds))
-    std_line = ax.fill_between(time_bins, means - sterr, means + sterr, alpha=0.5, label=label)
+    std_line = ax.fill_between(means.index, means - sterr, means + sterr, alpha=0.5, label=label)
 
 def plot_bars_by_cat(df, data_column, cat_column, ax, order=None):
     """

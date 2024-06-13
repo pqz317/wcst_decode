@@ -440,7 +440,7 @@ def get_relative_block_position(beh, num_bins=None):
         block["BlockLength"] = len(block)
         block["TrialInBlock"] = range(len(block))
         return block
-    beh = beh.groupby("BlockNumber").apply(get_block_lengths).reset_index()
+    beh = beh.groupby("BlockNumber", group_keys=False).apply(get_block_lengths).reset_index()
     beh["BlockPosition"] = beh.TrialInBlock / beh.BlockLength
     # beh["BlockPosition"] = beh.TrialAfterRuleChange / beh.BlockLength
     if num_bins:
@@ -487,7 +487,7 @@ def calc_feature_probs(beh):
     return beh
 
 
-def calc_feature_value_entropy(beh):
+def calc_feature_value_entropy(beh, num_bins=None, quantize_bins=False):
     """
     Calculates the feature value entropy for each trial
     """
@@ -495,6 +495,11 @@ def calc_feature_value_entropy(beh):
     for feat in FEATURES:
         sums += beh[f"{feat}Prob"] * np.log(beh[f"{feat}Prob"])
     beh[f"FeatEntropy"] = -1 * sums
+    if num_bins:
+        if quantize_bins:
+            beh["FeatEntropyBin"] = pd.qcut(beh["FeatEntropy"], num_bins, labels=False)
+        else:
+            beh["FeatEntropyBin"] = pd.cut(beh["FeatEntropy"], num_bins, labels=False)
     return beh
 
 def zscore_feature_vals_by_block(beh, num_bins=None, quantize_bins=False):
@@ -569,4 +574,21 @@ def filter_max_feat_correct(beh):
         (beh.CurrentRule == beh.MaxFeat) &
         (beh.Response == "Correct")
     ]
+
+def get_prob_correct_by_block_pos(beh, max_block_pos):
+    """
+    get probability of choosing correct as a function of position in block
+    """
+    def get_block_lengths(block):
+        block["BlockLength"] = len(block)
+        block["TrialInBlock"] = range(len(block))
+        return block
+    beh = beh.groupby("BlockNumber", group_keys=False).apply(get_block_lengths).reset_index()
+    beh = beh[beh.TrialInBlock < max_block_pos]
+    def calc_prob_correct(group):
+        return len(group[group.Response == "Correct"]) / len(group)
+    prob_correct = beh.groupby("TrialInBlock", group_keys=False).apply(calc_prob_correct).reset_index(name='ProbCorrect')
+    return prob_correct
+
+        
                          
