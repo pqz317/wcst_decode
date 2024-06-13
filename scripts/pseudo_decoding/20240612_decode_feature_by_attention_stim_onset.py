@@ -35,11 +35,14 @@ SESS_SPIKES_PATH = "/data/firing_rates/{sess_name}_firing_rates_{pre_interval}_{
 
 
 DATA_MODE = "FiringRate"
-EVENT = "StimOnset"  # event in behavior to align on
-PRE_INTERVAL = 1000   # time in ms before event
-POST_INTERVAL = 1000  # time in ms after event
+# EVENT = "StimOnset"  # event in behavior to align on
+# PRE_INTERVAL = 1000   # time in ms before event
+# POST_INTERVAL = 1000  # time in ms after event
+# INTERVAL_SIZE = 100  # size of interval in ms
+EVENT = "FeedbackOnset"  # event in behavior to align on
+PRE_INTERVAL = 1300   # time in ms before event
+POST_INTERVAL = 1500  # time in ms after event
 INTERVAL_SIZE = 100  # size of interval in ms
-
 
 def get_feat_beh(session, feat):
     feat_beh = behavioral_utils.get_beh_model_labels_for_session_feat(session, feat, beh_path=SESS_BEHAVIOR_PATH)
