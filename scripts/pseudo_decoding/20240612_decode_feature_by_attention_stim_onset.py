@@ -36,7 +36,7 @@ SESS_SPIKES_PATH = "/data/firing_rates/{sess_name}_firing_rates_{pre_interval}_{
 
 DATA_MODE = "FiringRate"
 EVENT = "StimOnset"  # event in behavior to align on
-PRE_INTERVAL = 500   # time in ms before event
+PRE_INTERVAL = 1000   # time in ms before event
 POST_INTERVAL = 500  # time in ms after event
 INTERVAL_SIZE = 100  # size of interval in ms
 
