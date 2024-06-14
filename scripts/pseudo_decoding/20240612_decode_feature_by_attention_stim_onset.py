@@ -35,21 +35,21 @@ SESS_SPIKES_PATH = "/data/firing_rates/{sess_name}_firing_rates_{pre_interval}_{
 
 
 DATA_MODE = "FiringRate"
-# EVENT = "StimOnset"  # event in behavior to align on
-# PRE_INTERVAL = 1000   # time in ms before event
-# POST_INTERVAL = 1000  # time in ms after event
-# INTERVAL_SIZE = 100  # size of interval in ms
-EVENT = "FeedbackOnset"  # event in behavior to align on
-PRE_INTERVAL = 1300   # time in ms before event
-POST_INTERVAL = 1500  # time in ms after event
+EVENT = "StimOnset"  # event in behavior to align on
+PRE_INTERVAL = 1000   # time in ms before event
+POST_INTERVAL = 1000  # time in ms after event
 INTERVAL_SIZE = 100  # size of interval in ms
+# EVENT = "FeedbackOnset"  # event in behavior to align on
+# PRE_INTERVAL = 1300   # time in ms before event
+# POST_INTERVAL = 1500  # time in ms after event
+# INTERVAL_SIZE = 100  # size of interval in ms
 
 def get_feat_beh(session, feat):
     feat_beh = behavioral_utils.get_beh_model_labels_for_session_feat(session, feat, beh_path=SESS_BEHAVIOR_PATH)
     return feat_beh
 
 
-def load_session_data(row, dim, condition):
+def load_session_data(row, dim, condition, shuffle_idx=None):
     sess_name = row.session
     min_trials = row.MinTrialsPerCond
 
@@ -64,6 +64,15 @@ def load_session_data(row, dim, condition):
         dim = FEATURE_TO_DIM[row.MaxFeat]
         return row[dim] == row.MaxFeat
     beh["MaxFeatChosen"] = beh.apply(get_max_feat_chosen, axis=1)
+
+    # shift TrialNumbers by some random amount
+    if shuffle_idx is not None: 
+        beh = behavioral_utils.shuffle_beh_by_shift(beh, buffer=25, seed=shuffle_idx)
+
+    # filter trials by: 
+    # max feat is chosen
+    # whether max feat is in dimension of interest
+    # balancing across conditions
     beh = beh[beh.MaxFeatChosen]
 
     dim_feats = POSSIBLE_FEATURES[dim]
@@ -90,8 +99,8 @@ def load_session_data(row, dim, condition):
     session_data.pre_generate_splits(NUM_SPLITS)
     return session_data
 
-def decode(dim_sesses, dim, condition):
-    sess_datas = dim_sesses.apply(lambda row: load_session_data(row, dim, condition), axis=1)
+def decode(dim_sesses, dim, condition, shuffle_idx):
+    sess_datas = dim_sesses.apply(lambda row: load_session_data(row, dim, condition, shuffle_idx), axis=1)
 
     # setup decoder, specify all possible label classes, number of neurons, parameters
     classes = POSSIBLE_FEATURES[dim]
@@ -108,12 +117,13 @@ def decode(dim_sesses, dim, condition):
         model, sess_datas, time_bins, NUM_SPLITS, NUM_TRAIN_PER_COND, NUM_TEST_PER_COND, DECODER_SEED
     ) 
     # store the results
-    run_name = f"{dim}_{EVENT}_{condition}_"
+    shuffle_str = "" if shuffle_idx is None else f"shuffle_{shuffle_idx}_"
+    run_name = f"{dim}_{EVENT}_{condition}_{shuffle_str}"
     np.save(os.path.join(OUTPUT_DIR, f"{run_name}train_accs.npy"), train_accs)
     np.save(os.path.join(OUTPUT_DIR, f"{run_name}test_accs.npy"), test_accs)
     np.save(os.path.join(OUTPUT_DIR, f"{run_name}shuffled_accs.npy"), shuffled_accs)
     np.save(os.path.join(OUTPUT_DIR, f"{run_name}models.npy"), models)
-    sess_datas.to_pickle(os.path.join(OUTPUT_DIR, f"{run_name}sess_datas.pickle"))
+    # sess_datas.to_pickle(os.path.join(OUTPUT_DIR, f"{run_name}sess_datas.pickle"))
 
 def main():
     """
@@ -123,14 +133,14 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--feature_dim', default="Shape", type=str)
     parser.add_argument('--condition', default="attended")
+    parser.add_argument('--shuffle_idx', default=None, type=int)
 
     args = parser.parse_args()
     dim = args.feature_dim
     valid_sess = pd.read_pickle(SESSIONS_PATH)
     dim_sesses = valid_sess[valid_sess.dim == dim]
     print(f"Decoding between {dim} using {len(dim_sesses)} sessions")
-
-    decode(dim_sesses, dim, args.condition)
+    decode(dim_sesses, dim, args.condition, args.shuffle_idx)
 
 
 if __name__ == "__main__":
