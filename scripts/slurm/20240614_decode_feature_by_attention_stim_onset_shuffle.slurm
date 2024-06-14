@@ -17,5 +17,5 @@ singularity exec --writable-tmpfs \
     /gscratch/walkerlab/patrick/singularity/wcst_decode_image.sif /usr/bin/python3 \
     /src/wcst_decode/scripts/pseudo_decoding/20240612_decode_feature_by_attention_stim_onset.py \
     --feature_dim ${dim_arr[$((($SLURM_ARRAY_TASK_ID % 6) % 3))]} \
-    --condition ${condition_arr[$(($SLURM_ARRAY_TASK_ID % 6))]} \
+    --condition ${condition_arr[$((($SLURM_ARRAY_TASK_ID % 6) / 3))]} \
     --shuffle_idx $(($SLURM_ARRAY_TASK_ID / 6))
