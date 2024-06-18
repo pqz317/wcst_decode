@@ -49,8 +49,8 @@ def get_feat_beh(session, feat):
     return feat_beh
 
 
-def load_session_data(row, condition, shuffle_idx=None):
-    sess_name = row.session
+def load_session_data(row, shuffle_idx=None):
+    sess_name = row.session_name
 
     behavior_path = SESS_BEHAVIOR_PATH.format(sess_name=sess_name)
     beh = pd.read_csv(behavior_path)
