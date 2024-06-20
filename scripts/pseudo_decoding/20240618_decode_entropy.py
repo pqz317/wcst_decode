@@ -49,7 +49,7 @@ def get_feat_beh(session, feat):
     return feat_beh
 
 
-def load_session_data(row, shuffle_idx=None):
+def load_session_data(row, shuffle_idx=None, use_next_trial_entropy=False):
     sess_name = row.session_name
 
     behavior_path = SESS_BEHAVIOR_PATH.format(sess_name=sess_name)
@@ -61,6 +61,10 @@ def load_session_data(row, shuffle_idx=None):
     beh = behavioral_utils.get_max_feature_value(beh)
     beh = behavioral_utils.calc_feature_probs(beh)
     beh = behavioral_utils.calc_feature_value_entropy(beh, num_bins=2, quantize_bins=True)
+    if use_next_trial_entropy:
+        beh["FeatEntropyBin"] = beh["FeatEntropyBin"].shift(-1)
+        beh = beh[~beh["FeatEntropyBin"].isna()]
+        beh["FeatEntropyBin"] = beh["FeatEntropyBin"].astype(int)
 
     # shift TrialNumbers by some random amount
     if shuffle_idx is not None: 
@@ -80,8 +84,8 @@ def load_session_data(row, shuffle_idx=None):
     session_data.pre_generate_splits(NUM_SPLITS)
     return session_data
 
-def decode(sessions, shuffle_idx):
-    sess_datas = sessions.apply(lambda row: load_session_data(row, shuffle_idx), axis=1)
+def decode(sessions, shuffle_idx, use_next_trial_entropy):
+    sess_datas = sessions.apply(lambda row: load_session_data(row, shuffle_idx, use_next_trial_entropy), axis=1)
 
     # setup decoder, specify all possible label classes, number of neurons, parameters
     classes = [0, 1]
@@ -99,7 +103,8 @@ def decode(sessions, shuffle_idx):
     ) 
     # store the results
     shuffle_str = "" if shuffle_idx is None else f"shuffle_{shuffle_idx}_"
-    run_name = f"entropy_{EVENT}_{shuffle_str}"
+    next_trial_str = "next_trial_entropy_" if use_next_trial_entropy else ""
+    run_name = f"entropy_{EVENT}_{next_trial_str}{shuffle_str}"
     np.save(os.path.join(OUTPUT_DIR, f"{run_name}train_accs.npy"), train_accs)
     np.save(os.path.join(OUTPUT_DIR, f"{run_name}test_accs.npy"), test_accs)
     np.save(os.path.join(OUTPUT_DIR, f"{run_name}shuffled_accs.npy"), shuffled_accs)
@@ -113,11 +118,12 @@ def main():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--shuffle_idx', default=None, type=int)
+    parser.add_argument('--use_next_trial_entropy', action=argparse.BooleanOptionalAction, default=False)
 
     args = parser.parse_args()
     valid_sess = pd.read_pickle(SESSIONS_PATH)
     print(f"Decoding entropy using {len(valid_sess)} sessions")
-    decode(valid_sess, args.shuffle_idx)
+    decode(valid_sess, args.shuffle_idx, args.use_next_trial_entropy)
 
 
 if __name__ == "__main__":
