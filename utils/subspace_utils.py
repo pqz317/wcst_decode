@@ -1,6 +1,10 @@
 import scipy
 import numpy as np
 
+"""
+Utils for computing subspace distances
+"""
+
 def calculate_grassmann_distance(A, B):
     """
     A: N x M matrix as an np array

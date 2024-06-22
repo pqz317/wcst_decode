@@ -478,6 +478,7 @@ def get_max_feature_value(beh, num_bins=None, quantize_bins=False):
     return beh
 
 def calc_feature_probs(beh):
+
     logits = np.empty((len(FEATURES), len(beh)))
     for i, feat in enumerate(FEATURES):
         logits[i, :] = np.exp(beh[f"{feat}Value"])
@@ -490,6 +491,7 @@ def calc_feature_probs(beh):
 def calc_feature_value_entropy(beh, num_bins=None, quantize_bins=False):
     """
     Calculates the feature value entropy for each trial
+    Requires beh to have Prob per feature
     """
     sums = np.zeros(len(beh))
     for feat in FEATURES:
@@ -501,6 +503,21 @@ def calc_feature_value_entropy(beh, num_bins=None, quantize_bins=False):
         else:
             beh["FeatEntropyBin"] = pd.cut(beh["FeatEntropy"], num_bins, labels=False)
     return beh
+
+def calc_confidence(beh, num_bins=None, quantize_bins=False):
+    """
+    Calcs confidence, just normalized 1/ Entropy. 
+    requires beh to have FeatEntropy
+    """
+    conf = 1 / beh["FeatEntropy"]
+    beh["Confidence"] = (conf - conf.min()) / (conf.max() - conf.min())
+    if num_bins:
+        if quantize_bins:
+            beh["ConfidenceBin"] = pd.qcut(beh["Confidence"], num_bins, labels=False)
+        else:
+            beh["ConfidenceBin"] = pd.cut(beh["Confidence"], num_bins, labels=False)
+    return beh
+
 
 def zscore_feature_vals_by_block(beh, num_bins=None, quantize_bins=False):
     def zscore(block):
