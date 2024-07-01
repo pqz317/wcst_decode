@@ -219,6 +219,7 @@ def visualize_weights(positions, weights, structure_level, interval_size=100, co
     # get re-ordered indexes
     pos_unit_sorted = positions.sort_values(by="PseudoUnitID")
     pos_unit_sorted["np_idx"] = np.arange(0, len(pos_unit_sorted))
+    pos_unit_sorted = pos_unit_sorted[pos_unit_sorted[structure_level] != "unknown"]
     if mean_weights_df is None:
         pos_structure_sorted = pos_unit_sorted.sort_values(by=structure_level)
         reordered_idxs = pos_structure_sorted.np_idx.values
@@ -251,17 +252,17 @@ def visualize_weights(positions, weights, structure_level, interval_size=100, co
         colors = ax.matshow(reordered, aspect='auto')
     else: 
         colors = ax.matshow(reordered, aspect='auto', cmap=cmap)
-    # tick_labels = np.array([-1.2, -0.9, -0.6, -0.3, 0, 0.3, 0.6, 0.9, 1.2])
-    ratio = 1000 / interval_size
-    tick_labels = np.array([-1, -0.5, 0, 0.5, 1.0, 1.5])
-    tick_pos = (tick_labels + 1.3) * ratio - 0.5
-    # fig.colorbar(colors)
-    # axis = np.arange(0, 28, 3)s
-    # labels = np.around((axis - 13) * 0.1, 1)
-    ax.set_xticks(tick_pos)
-    ax.set_xticklabels(tick_labels)
-    ax.xaxis.tick_bottom()
-    ax.set_xlabel("Time Relative to Feedback (s)")
+    # # tick_labels = np.array([-1.2, -0.9, -0.6, -0.3, 0, 0.3, 0.6, 0.9, 1.2])
+    # ratio = 1000 / interval_size
+    # tick_labels = np.array([-1, -0.5, 0, 0.5, 1.0, 1.5])
+    # tick_pos = (tick_labels + 1.3) * ratio - 0.5
+    # # fig.colorbar(colors)
+    # # axis = np.arange(0, 28, 3)s
+    # # labels = np.around((axis - 13) * 0.1, 1)
+    # ax.set_xticks(tick_pos)
+    # ax.set_xticklabels(tick_labels)
+    # ax.xaxis.tick_bottom()
+    # ax.set_xlabel("Time Relative to Feedback (s)")
     ax.get_yaxis().set_visible(False)
     ax.set_ylabel([])
     # y_axis = np.arange(0, 59, 5)
@@ -293,8 +294,8 @@ def visualize_weights(positions, weights, structure_level, interval_size=100, co
         facecolor="gray",
         clip_on=False,
     )
-    ax.add_patch(gray_rect)
-    ax.axvline(13.48, color="gray", linestyle="dotted", linewidth=1.5)
+    # ax.add_patch(gray_rect)
+    # ax.axvline(13.48, color="gray", linestyle="dotted", linewidth=1.5)
 
 def get_fr_np_array(fr_df, mode):
     return fr_df.sort_values(by=["TrialNumber", "TimeBins"])[mode].to_numpy().reshape(
@@ -312,8 +313,8 @@ def plot_mean_frs_by_group(sess_name, unit, frs, beh, group_name, pos, ax, mode=
         label = group_label[group] if group_label else group
         visualize_accuracy_across_time_bins(
             vals.T,
-            # 1.3, 1.5, 0.05,
-            0.5, 0.5, 0.05,
+            1.3, 1.5, 0.1,
+            # 0.5, 0.5, 0.05,
             ax,
             label=label,
             right_align=True, 

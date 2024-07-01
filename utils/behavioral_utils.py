@@ -467,6 +467,7 @@ def get_max_feature_value(beh, num_bins=None, quantize_bins=False):
                 max_val = row[f"{feat}Value"]
                 max_feat = feat
         row["MaxFeat"] = max_feat
+        row["MaxFeatDim"] = FEATURE_TO_DIM[max_feat]
         row["MaxValue"] = max_val
         return row        
     beh = beh.apply(find_max, axis=1)
@@ -591,6 +592,15 @@ def filter_max_feat_correct(beh):
         (beh.CurrentRule == beh.MaxFeat) &
         (beh.Response == "Correct")
     ]
+
+def filter_max_feat_chosen(beh):
+    def get_max_feat_chosen(row):
+        dim = FEATURE_TO_DIM[row.MaxFeat]
+        return row[dim] == row.MaxFeat
+    beh["MaxFeatChosen"] = beh.apply(get_max_feat_chosen, axis=1)
+    beh = beh[beh.MaxFeatChosen]
+    return beh
+
 
 def get_prob_correct_by_block_pos(beh, max_block_pos):
     """
