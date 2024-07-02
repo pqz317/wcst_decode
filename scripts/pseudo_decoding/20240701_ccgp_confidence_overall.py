@@ -51,7 +51,7 @@ INTERVAL_SIZE = 100  # size of interval in ms
 # POST_INTERVAL = 1500  # time in ms after event
 # INTERVAL_SIZE = 100  # size of interval in ms
 
-def load_session_data(row, dim, seed_idx=None, use_next_trial_confidence=False):
+def load_session_data(row, dim, seed_idx=None, subsample=True):
     sess_name = row.session_name
 
     behavior_path = SESS_BEHAVIOR_PATH.format(sess_name=sess_name)
@@ -63,15 +63,10 @@ def load_session_data(row, dim, seed_idx=None, use_next_trial_confidence=False):
     beh = behavioral_utils.get_max_feature_value(beh)
     beh = behavioral_utils.calc_feature_probs(beh)
     beh = behavioral_utils.calc_feature_value_entropy(beh)
+    beh = behavioral_utils.calc_confidence(beh, num_bins=2, quantize_bins=True)
 
     # filter by max chosen, also by dimension of interest
     beh = behavioral_utils.filter_max_feat_chosen(beh)
-
-    beh = behavioral_utils.calc_confidence(beh, num_bins=2, quantize_bins=True)
-    if use_next_trial_confidence:
-        beh["ConfidenceBin"] = beh["ConfidenceBin"].shift(-1)
-        beh = beh[~beh["ConfidenceBin"].isna()]
-        beh["ConfidenceBin"] = beh["ConfidenceBin"].astype(int)
 
     # balance the conditions out: 
     beh = behavioral_utils.balance_trials_by_condition(beh, ["MaxFeatDim", "ConfidenceBin"], seed=seed_idx)
@@ -125,12 +120,12 @@ def decode(sessions, seed_idx):
             sess_datas = sessions.apply(lambda row: load_session_data(row, other_dim, seed_idx), axis=1)
             accs_across_time = pseudo_classifier_utils.evaluate_model_with_data(models, sess_datas, time_bins, num_test_per_cond=NUM_TEST_PER_COND)
             across_cond_accs.append(accs_across_time)
-        np.save(os.path.join(OUTPUT_DIR, f"ccgp_confidence_label_after_filter_seed_{seed_idx}_{dim}_models.npy"), models)
+        np.save(os.path.join(OUTPUT_DIR, f"ccgp_confidence_seed_{seed_idx}_{dim}_models.npy"), models)
 
     within_cond_accs = np.hstack(within_cond_accs)
     across_cond_accs = np.hstack(across_cond_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"ccgp_confidence_label_after_filter_seed_{seed_idx}_within_dim_accs.npy"), within_cond_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"ccgp_confidence_label_after_filter_seed_{seed_idx}_across_dim_accs.npy"), across_cond_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"ccgp_confidence_seed_{seed_idx}_within_dim_accs.npy"), within_cond_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"ccgp_confidence_seed_{seed_idx}_across_dim_accs.npy"), across_cond_accs)
 
 
 def main():
@@ -140,6 +135,7 @@ def main():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--seed_idx', default=None, type=int)
+    parser.add_argument('--subsample', default=None, type=int)
 
     args = parser.parse_args()
     valid_sess = pd.read_pickle(SESSIONS_PATH)
