@@ -42,14 +42,14 @@ SESS_SPIKES_PATH = "/data/firing_rates/{sess_name}_firing_rates_{pre_interval}_{
 
 
 DATA_MODE = "FiringRate"
-EVENT = "StimOnset"  # event in behavior to align on
-PRE_INTERVAL = 1000   # time in ms before event
-POST_INTERVAL = 1000  # time in ms after event
-INTERVAL_SIZE = 100  # size of interval in ms
-# EVENT = "FeedbackOnset"  # event in behavior to align on
-# PRE_INTERVAL = 1300   # time in ms before event
-# POST_INTERVAL = 1500  # time in ms after event
+# EVENT = "StimOnset"  # event in behavior to align on
+# PRE_INTERVAL = 1000   # time in ms before event
+# POST_INTERVAL = 1000  # time in ms after event
 # INTERVAL_SIZE = 100  # size of interval in ms
+EVENT = "FeedbackOnset"  # event in behavior to align on
+PRE_INTERVAL = 1300   # time in ms before event
+POST_INTERVAL = 1500  # time in ms after event
+INTERVAL_SIZE = 100  # size of interval in ms
 
 def load_session_data(row, dim, seed_idx=None, use_next_trial_confidence=False):
     sess_name = row.session_name
@@ -63,11 +63,11 @@ def load_session_data(row, dim, seed_idx=None, use_next_trial_confidence=False):
     beh = behavioral_utils.get_max_feature_value(beh)
     beh = behavioral_utils.calc_feature_probs(beh)
     beh = behavioral_utils.calc_feature_value_entropy(beh)
+    beh = behavioral_utils.calc_confidence(beh, num_bins=2, quantize_bins=True)
 
     # filter by max chosen, also by dimension of interest
     beh = behavioral_utils.filter_max_feat_chosen(beh)
 
-    beh = behavioral_utils.calc_confidence(beh, num_bins=2, quantize_bins=True)
     if use_next_trial_confidence:
         beh["ConfidenceBin"] = beh["ConfidenceBin"].shift(-1)
         beh = beh[~beh["ConfidenceBin"].isna()]
@@ -93,12 +93,14 @@ def load_session_data(row, dim, seed_idx=None, use_next_trial_confidence=False):
     session_data.pre_generate_splits(NUM_SPLITS)
     return session_data
 
-def decode(sessions, seed_idx):
+def decode(sessions, seed_idx, use_next_trial_conf):
     within_cond_accs = []
     across_cond_accs = []
+    next_trial_str = "next_trial_conf_" if use_next_trial_conf else ""
+
     for dim in FEATURE_DIMS:
         # load up session data to train network
-        sess_datas = sessions.apply(lambda row: load_session_data(row, dim, seed_idx), axis=1)
+        sess_datas = sessions.apply(lambda row: load_session_data(row, dim, seed_idx, use_next_trial_conf), axis=1)
 
         # train the network
         # setup decoder, specify all possible label classes, number of neurons, parameters
@@ -122,15 +124,15 @@ def decode(sessions, seed_idx):
         for other_dim in FEATURE_DIMS:
             if other_dim == dim: 
                 continue
-            sess_datas = sessions.apply(lambda row: load_session_data(row, other_dim, seed_idx), axis=1)
+            sess_datas = sessions.apply(lambda row: load_session_data(row, other_dim, seed_idx, use_next_trial_conf), axis=1)
             accs_across_time = pseudo_classifier_utils.evaluate_model_with_data(models, sess_datas, time_bins, num_test_per_cond=NUM_TEST_PER_COND)
             across_cond_accs.append(accs_across_time)
-        np.save(os.path.join(OUTPUT_DIR, f"ccgp_confidence_label_after_filter_seed_{seed_idx}_{dim}_models.npy"), models)
+        np.save(os.path.join(OUTPUT_DIR, f"ccgp_confidence_{EVENT}_{seed_idx}_{next_trial_str}{dim}_models.npy"), models)
 
     within_cond_accs = np.hstack(within_cond_accs)
     across_cond_accs = np.hstack(across_cond_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"ccgp_confidence_label_after_filter_seed_{seed_idx}_within_dim_accs.npy"), within_cond_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"ccgp_confidence_label_after_filter_seed_{seed_idx}_across_dim_accs.npy"), across_cond_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"ccgp_confidence_{EVENT}_{seed_idx}_{next_trial_str}within_dim_accs.npy"), within_cond_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"ccgp_confidence_{EVENT}_{seed_idx}_{next_trial_str}across_dim_accs.npy"), across_cond_accs)
 
 
 def main():
@@ -140,11 +142,12 @@ def main():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--seed_idx', default=None, type=int)
+    parser.add_argument('--use_next_trial_conf', action=argparse.BooleanOptionalAction, default=False)
 
     args = parser.parse_args()
     valid_sess = pd.read_pickle(SESSIONS_PATH)
     print(f"Decoding confidence using {len(valid_sess)} sessions")
-    decode(valid_sess, args.seed_idx)
+    decode(valid_sess, args.seed_idx, args.use_next_trial_conf)
 
 
 if __name__ == "__main__":
