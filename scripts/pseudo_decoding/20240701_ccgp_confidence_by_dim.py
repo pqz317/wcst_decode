@@ -64,14 +64,12 @@ def load_session_data(row, dim, seed_idx=None, use_next_trial_confidence=False):
     beh = behavioral_utils.calc_feature_probs(beh)
     beh = behavioral_utils.calc_feature_value_entropy(beh)
     beh = behavioral_utils.calc_confidence(beh, num_bins=2, quantize_bins=True)
-
-    # filter by max chosen, also by dimension of interest
-    beh = behavioral_utils.filter_max_feat_chosen(beh)
-
     if use_next_trial_confidence:
         beh["ConfidenceBin"] = beh["ConfidenceBin"].shift(-1)
         beh = beh[~beh["ConfidenceBin"].isna()]
         beh["ConfidenceBin"] = beh["ConfidenceBin"].astype(int)
+        # filter by max chosen, also by dimension of interest
+    beh = behavioral_utils.filter_max_feat_chosen(beh)
 
     # balance the conditions out: 
     beh = behavioral_utils.balance_trials_by_condition(beh, ["MaxFeatDim", "ConfidenceBin"], seed=seed_idx)
