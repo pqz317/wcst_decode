@@ -16,4 +16,5 @@ singularity exec --writable-tmpfs \
     --bind /gscratch/walkerlab/patrick:/data,/mmfs1/home/pqz317/wcst_decode:/src/wcst_decode \
     /gscratch/walkerlab/patrick/singularity/wcst_decode_image.sif /usr/bin/python3 \
     /src/wcst_decode/scripts/pseudo_decoding/20240701_ccgp_confidence_by_dim.py \
-    $(($SLURM_ARRAY_TASK_ID % 2)) --seed_idx $(($SLURM_ARRAY_TASK_ID / 2)) 
+    --seed_idx $(($SLURM_ARRAY_TASK_ID / 2)) \
+    ${condition_arr[$(($SLURM_ARRAY_TASK_ID % 2))]} \
