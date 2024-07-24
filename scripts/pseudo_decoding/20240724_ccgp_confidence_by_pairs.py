@@ -32,12 +32,11 @@ import argparse
 # the output directory to store the data
 OUTPUT_DIR = "/data/res/pseudo"
 # path to a dataframe of sessions to analyze
-# SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions.pickle"
-# SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
-# PAIRS_PATH = "/data/pairs_at_least_3blocks_10sess.pickle"
+SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
+PAIRS_PATH = "/data/pairs_at_least_3blocks_10sess.pickle"
 
-SESSIONS_PATH = "/data/patrick_res/sessions/valid_sessions_rpe.pickle"
-PAIRS_PATH = "/data/patrick_res/sessions/pairs_at_least_3blocks_10sess.pickle"
+# SESSIONS_PATH = "/data/patrick_res/sessions/valid_sessions_rpe.pickle"
+# PAIRS_PATH = "/data/patrick_res/sessions/pairs_at_least_3blocks_10sess.pickle"
 
 # path for each session, specifying behavior
 SESS_BEHAVIOR_PATH = "/data/behavior/sub-SA_sess-{sess_name}_object_features.csv"
