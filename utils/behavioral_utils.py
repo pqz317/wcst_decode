@@ -617,5 +617,35 @@ def get_prob_correct_by_block_pos(beh, max_block_pos):
     prob_correct = beh.groupby("TrialInBlock", group_keys=False).apply(calc_prob_correct).reset_index(name='ProbCorrect')
     return prob_correct
 
+
+def is_choosing_prev_rule(row, prev_rule):
+    if prev_rule is None:
+        return False
+    rule_dim = FEATURE_TO_DIM[prev_rule]
+    return row[rule_dim] == prev_rule
+
+
+def get_perseveration_trials(beh):
+    # define perseveration trials as ones where subject 
+    # still chooses card that contains previous rule after a block switch
+    beh["Perseverating"] = False
+    beh["CurrentInferredRule"] = beh["CurrentRule"]
+    blocks = beh.BlockNumber.unique()
+    prev_rule = None
+    for block in blocks: 
+        trials = beh[beh.BlockNumber == block]
+        for i, row in trials.iterrows():
+            if is_choosing_prev_rule(row, prev_rule):
+                print("here")
+                beh.loc[i, "Perseverating"] = True
+                beh.loc[i, "CurrentInferredRule"] = prev_rule
+            else: 
+                break
+        prev_rule = beh.CurrentRule.iloc[0]
+    return beh
+            
+            
+
+
         
                          
