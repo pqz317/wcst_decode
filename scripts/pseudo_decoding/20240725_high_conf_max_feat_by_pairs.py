@@ -54,7 +54,7 @@ INTERVAL_SIZE = 100  # size of interval in ms
 # POST_INTERVAL = 1500  # time in ms after event
 # INTERVAL_SIZE = 100  # size of interval in ms
 
-def load_session_data(row, pair, seed_idx=None):
+def load_session_data(row, pair, shuffle_idx=None, seed_idx=None):
     feat1, feat2 = pair
     sess_name = row.session_name
 
@@ -69,7 +69,11 @@ def load_session_data(row, pair, seed_idx=None):
     beh = behavioral_utils.calc_feature_value_entropy(beh)
     beh = behavioral_utils.calc_confidence(beh, num_bins=2, quantize_bins=True)
     beh["ConfidenceLabel"] = beh.apply(lambda row: f"High {row.MaxFeat}" if row.ConfidenceBin == 1 else "Low", axis=1)
-    
+
+    # shift TrialNumbers by some random amount
+    if shuffle_idx is not None: 
+        beh = behavioral_utils.shuffle_beh_by_shift(beh, buffer=50, seed=shuffle_idx)
+
     sub_beh = beh[beh["ConfidenceLabel"].isin([f"High {feat1}", f"High {feat2}"])]
 
 
@@ -90,12 +94,12 @@ def load_session_data(row, pair, seed_idx=None):
     session_data.pre_generate_splits(NUM_SPLITS)
     return session_data
 
-def decode(sessions, row):
+def decode(sessions, row, shuffle_idx=None):
     pair = row.pair
     pair_str = "_".join(pair)
 
     # load up session data to train network
-    sess_datas = sessions.apply(lambda row: load_session_data(row, pair), axis=1)
+    sess_datas = sessions.apply(lambda row: load_session_data(row, pair, shuffle_idx), axis=1)
 
     # train the network
     # setup decoder, specify all possible label classes, number of neurons, parameters
@@ -112,7 +116,9 @@ def decode(sessions, row):
     train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(
         model, sess_datas, time_bins, NUM_SPLITS, NUM_TRAIN_PER_COND, NUM_TEST_PER_COND
     )
-    run_name = f"high_conf_max_feat_by_pairs_{EVENT}_pair_{pair_str}_"
+
+    shuffle_str = f"shuffle_{shuffle_idx}_" if shuffle_idx is not None else ""
+    run_name = f"high_conf_max_feat_by_pairs_{EVENT}_pair_{pair_str}_{shuffle_str}"
 
     np.save(os.path.join(OUTPUT_DIR, f"{run_name}train_accs.npy"), train_accs)
     np.save(os.path.join(OUTPUT_DIR, f"{run_name}test_accs.npy"), test_accs)
@@ -127,6 +133,7 @@ def main():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--pair_idx', default=None, type=int)
+    parser.add_argument('--shuffle_idx', default=None, type=int)
 
     args = parser.parse_args()
     pairs = pd.read_pickle(PAIRS_PATH)
@@ -134,7 +141,7 @@ def main():
     valid_sess = pd.read_pickle(SESSIONS_PATH)
     valid_sess = valid_sess[valid_sess.session_name.isin(row.sessions)]
     print(f"Decoding between {row.pair} using between {row.num_sessions} sessions")
-    decode(valid_sess, row)
+    decode(valid_sess, row, args.shuffle_idx)
 
 
 if __name__ == "__main__":
