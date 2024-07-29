@@ -42,7 +42,7 @@ PAIRS_PATH = "/data/pairs_at_least_3blocks_10sess.pickle"
 SESS_BEHAVIOR_PATH = "/data/behavior/sub-SA_sess-{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
 SESS_SPIKES_PATH = "/data/firing_rates/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
-
+SIMULATED_SPIKES_PATH = "/data/firing_rates/{sess_name}_firing_rates_simulated_noise_{noise}.pickle"
 
 DATA_MODE = "FiringRate"
 EVENT = "StimOnset"  # event in behavior to align on
@@ -54,7 +54,9 @@ INTERVAL_SIZE = 100  # size of interval in ms
 # POST_INTERVAL = 1500  # time in ms after event
 # INTERVAL_SIZE = 100  # size of interval in ms
 
-def load_session_data(row, feat, seed_idx=None):
+SIM_NOISE_LEVELS = [0.0, 0.1, 0.2, 0.3, 0.4]
+
+def load_session_data(row, feat, seed_idx=None, sim_noise=None):
     sess_name = row.session_name
 
     behavior_path = SESS_BEHAVIOR_PATH.format(sess_name=sess_name)
@@ -73,14 +75,19 @@ def load_session_data(row, feat, seed_idx=None):
 
     # balance the conditions out: 
     sub_beh = behavioral_utils.balance_trials_by_condition(sub_beh, ["ConfidenceBin"], seed=seed_idx)
-
-    spikes_path = SESS_SPIKES_PATH.format(
-        sess_name=sess_name, 
-        pre_interval=PRE_INTERVAL, 
-        event=EVENT, 
-        post_interval=POST_INTERVAL, 
-        interval_size=INTERVAL_SIZE
-    )
+    if sim_noise is None: 
+        spikes_path = SESS_SPIKES_PATH.format(
+            sess_name=sess_name, 
+            pre_interval=PRE_INTERVAL, 
+            event=EVENT, 
+            post_interval=POST_INTERVAL, 
+            interval_size=INTERVAL_SIZE
+        )
+    else: 
+        spikes_path = SIMULATED_SPIKES_PATH.format(
+            sess_name=sess_name, 
+            noise=sim_noise,
+        )
     frs = pd.read_pickle(spikes_path)
     frs = frs.rename(columns={DATA_MODE: "Value"})
     splitter = ConditionTrialSplitter(sub_beh, "ConfidenceBin", TEST_RATIO, seed=seed_idx)
@@ -88,15 +95,16 @@ def load_session_data(row, feat, seed_idx=None):
     session_data.pre_generate_splits(NUM_SPLITS)
     return session_data
 
-def decode(sessions, row):
+def decode(sessions, row, sim_noise=None):
     pair = row.pair
     pair_str = "_".join(pair)
+    event_str = EVENT if sim_noise is None else f"simulation_noise_{sim_noise}"
     within_cond_accs = []
     across_cond_accs = []
 
     for feat in pair:
         # load up session data to train network
-        sess_datas = sessions.apply(lambda row: load_session_data(row, feat), axis=1)
+        sess_datas = sessions.apply(lambda row: load_session_data(row, feat, sim_noise), axis=1)
 
         # train the network
         # setup decoder, specify all possible label classes, number of neurons, parameters
@@ -119,16 +127,16 @@ def decode(sessions, row):
 
         # next, evaluate network on other dimensions
         other_feat = [f for f in pair if f != feat][0]
-        sess_datas = sessions.apply(lambda row: load_session_data(row, other_feat), axis=1)
+        sess_datas = sessions.apply(lambda row: load_session_data(row, other_feat, sim_noise), axis=1)
         accs_across_time = pseudo_classifier_utils.evaluate_model_with_data(models, sess_datas, time_bins, num_test_per_cond=NUM_TEST_PER_COND)
         across_cond_accs.append(accs_across_time)
 
-        np.save(os.path.join(OUTPUT_DIR, f"ccgp_confidence_{EVENT}_pair_{pair_str}_feat_{feat}_models.npy"), models)
+        np.save(os.path.join(OUTPUT_DIR, f"ccgp_confidence_{event_str}_pair_{pair_str}_feat_{feat}_models.npy"), models)
 
     within_cond_accs = np.hstack(within_cond_accs)
     across_cond_accs = np.hstack(across_cond_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"ccgp_confidence_{EVENT}_pair_{pair_str}_within_dim_accs.npy"), within_cond_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"ccgp_confidence_{EVENT}_pair_{pair_str}_across_dim_accs.npy"), across_cond_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"ccgp_confidence_{event_str}_pair_{pair_str}_within_dim_accs.npy"), within_cond_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"ccgp_confidence_{event_str}_pair_{pair_str}_across_dim_accs.npy"), across_cond_accs)
 
 
 def main():
@@ -138,14 +146,15 @@ def main():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--pair_idx', default=None, type=int)
-
+    parser.add_argument('--noise_idx', default=None, type=int)
     args = parser.parse_args()
     pairs = pd.read_pickle(PAIRS_PATH)
     row = pairs.iloc[args.pair_idx]
     valid_sess = pd.read_pickle(SESSIONS_PATH)
     valid_sess = valid_sess[valid_sess.session_name.isin(row.sessions)]
+    sim_noise = None if args.noise_idx is None else SIM_NOISE_LEVELS[args.noise_idx]
     print(f"Computing CCGP of conf between {row.pair} using between {row.num_sessions} sessions")
-    decode(valid_sess, row)
+    decode(valid_sess, row, sim_noise)
 
 
 if __name__ == "__main__":
