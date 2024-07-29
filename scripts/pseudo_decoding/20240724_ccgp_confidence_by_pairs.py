@@ -104,7 +104,7 @@ def decode(sessions, row, sim_noise=None):
 
     for feat in pair:
         # load up session data to train network
-        sess_datas = sessions.apply(lambda row: load_session_data(row, feat, sim_noise), axis=1)
+        sess_datas = sessions.apply(lambda row: load_session_data(row, feat, sim_noise=sim_noise), axis=1)
 
         # train the network
         # setup decoder, specify all possible label classes, number of neurons, parameters
@@ -127,7 +127,7 @@ def decode(sessions, row, sim_noise=None):
 
         # next, evaluate network on other dimensions
         other_feat = [f for f in pair if f != feat][0]
-        sess_datas = sessions.apply(lambda row: load_session_data(row, other_feat, sim_noise), axis=1)
+        sess_datas = sessions.apply(lambda row: load_session_data(row, other_feat, sim_noise=sim_noise), axis=1)
         accs_across_time = pseudo_classifier_utils.evaluate_model_with_data(models, sess_datas, time_bins, num_test_per_cond=NUM_TEST_PER_COND)
         across_cond_accs.append(accs_across_time)
 
