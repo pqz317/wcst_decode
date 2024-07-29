@@ -117,7 +117,11 @@ def decode(sessions, row, sim_noise=None):
         model = ModelWrapper(NormedDropoutMultinomialLogisticRegressor, init_params, trainer, classes)
 
         # calculate time bins (in seconds)
-        time_bins = np.arange(0, (POST_INTERVAL + PRE_INTERVAL) / 1000, INTERVAL_SIZE / 1000)
+        # NOTE: Hack sigh
+        if sim_noise is None: 
+            time_bins = np.arange(0, (POST_INTERVAL + PRE_INTERVAL) / 1000, INTERVAL_SIZE / 1000)
+        else:
+            time_bins = np.arange(0, 0.1, 0.1)
         train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(
             model, sess_datas, time_bins, NUM_SPLITS, NUM_TRAIN_PER_COND, NUM_TEST_PER_COND
         ) 
