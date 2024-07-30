@@ -11,7 +11,7 @@
 
 
 module load singularity
-singularity exec --writable-tmpfs \
+singularity exec --writable-tmpfs --nv \
     --bind /gscratch/walkerlab/patrick:/data,/mmfs1/home/pqz317/wcst_decode:/src/wcst_decode \
     /gscratch/walkerlab/patrick/singularity/wcst_decode_image.sif /usr/bin/python3 \
     /src/wcst_decode/scripts/pseudo_decoding/20240724_ccgp_confidence_by_pairs.py \
