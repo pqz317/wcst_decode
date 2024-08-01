@@ -14,6 +14,8 @@ services:
       - "S3_SECRET_KEY=${S3_SECRET_KEY}"
     deploy:
       resources:
+        limits: 
+          memory: 32G
         reservations:
           devices:
             - driver: nvidia

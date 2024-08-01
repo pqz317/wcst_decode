@@ -403,12 +403,13 @@ def validate_enough_trials_by_condition(beh, condition_columns, min_trials, num_
     min = get_min_num_trials_by_condition(beh, condition_columns)
     return min >= min_trials
 
-def balance_trials_by_condition(beh, condition_columns, seed=None):
+def balance_trials_by_condition(beh, condition_columns, seed=None, min=None):
     """
     Balance the number of trials for each condition by choosing 
     the minimum number of trials 
     """
-    min = get_min_num_trials_by_condition(beh, condition_columns)
+    if min is None: 
+        min = get_min_num_trials_by_condition(beh, condition_columns)
     sampled = beh.groupby(condition_columns).sample(n=min, random_state=seed)
     return sampled
 
