@@ -5,6 +5,7 @@
 #SBATCH -A walkerlab
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=6
+#SBATCH --gpus=1
 #SBATCH --mem=64G
 #SBATCH --time=180
 
