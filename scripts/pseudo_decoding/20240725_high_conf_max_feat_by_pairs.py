@@ -33,7 +33,8 @@ import argparse
 OUTPUT_DIR = "/data/res/pseudo"
 # path to a dataframe of sessions to analyze
 SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
-PAIRS_PATH = "/data/pairs_at_least_3blocks_10sess.pickle"
+PAIRS_PATH = "/data/pairs_at_least_3blocks_7sess.pickle"
+MIN_TRIALS_FOR_PAIRS_PATH = "/data/pairs_at_least_3blocks_7sess_min_trials.pickle"
 
 # SESSIONS_PATH = "/data/patrick_res/sessions/valid_sessions_rpe.pickle"
 # PAIRS_PATH = "/data/patrick_res/sessions/pairs_at_least_3blocks_10sess.pickle"
@@ -77,8 +78,14 @@ def load_session_data(row, pair, shuffle_idx=None, seed_idx=None):
     sub_beh = beh[beh["ConfidenceLabel"].isin([f"High {feat1}", f"High {feat2}"])]
 
 
-    # balance the conditions out: 
-    sub_beh = behavioral_utils.balance_trials_by_condition(sub_beh, ["ConfidenceLabel"], seed=seed_idx)
+    # balance the conditions out:
+    # use minimum number of trials stored for the session/pair
+    min_trials = pd.read_pickle(MIN_TRIALS_FOR_PAIRS_PATH) 
+    min_num_trials = min_trials[
+        (min_trials.pair.isin([pair])) & 
+        (min_trials.session == sess_name)
+    ].iloc[0].min_all
+    sub_beh = behavioral_utils.balance_trials_by_condition(sub_beh, ["ConfidenceLabel"], seed=seed_idx, min=min_num_trials)
 
     spikes_path = SESS_SPIKES_PATH.format(
         sess_name=sess_name, 
@@ -118,7 +125,7 @@ def decode(sessions, row, shuffle_idx=None):
     )
 
     shuffle_str = f"shuffle_{shuffle_idx}_" if shuffle_idx is not None else ""
-    run_name = f"high_conf_max_feat_by_pairs_{EVENT}_pair_{pair_str}_{shuffle_str}"
+    run_name = f"high_conf_fixed_max_feat_by_pairs_{EVENT}_pair_{pair_str}_{shuffle_str}"
 
     np.save(os.path.join(OUTPUT_DIR, f"{run_name}train_accs.npy"), train_accs)
     np.save(os.path.join(OUTPUT_DIR, f"{run_name}test_accs.npy"), test_accs)
@@ -140,6 +147,7 @@ def main():
     row = pairs.iloc[args.pair_idx]
     valid_sess = pd.read_pickle(SESSIONS_PATH)
     valid_sess = valid_sess[valid_sess.session_name.isin(row.sessions)]
+
     print(f"Decoding between {row.pair} using between {row.num_sessions} sessions")
     decode(valid_sess, row, args.shuffle_idx)
 
