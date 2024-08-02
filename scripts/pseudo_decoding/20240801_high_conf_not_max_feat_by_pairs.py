@@ -33,8 +33,8 @@ import argparse
 OUTPUT_DIR = "/data/res/pseudo"
 # path to a dataframe of sessions to analyze
 SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
-PAIRS_PATH = "/data/pairs_at_least_3blocks_10sess.pickle"
-# MIN_TRIALS_FOR_PAIRS_PATH = 
+PAIRS_PATH = "/data/pairs_at_least_3blocks_7sess.pickle"
+MIN_TRIALS_FOR_PAIRS_PATH = "/data/pairs_at_least_3blocks_7sess_min_trials.pickle"
 
 # SESSIONS_PATH = "/data/patrick_res/sessions/valid_sessions_rpe.pickle"
 # PAIRS_PATH = "/data/patrick_res/sessions/pairs_at_least_3blocks_10sess.pickle"
@@ -77,9 +77,15 @@ def load_session_data(row, pair, shuffle_idx=None, seed_idx=None):
 
     sub_beh = beh[beh["ConfidenceLabel"].isin([f"High {feat1}", f"High {feat2}"])]
 
-
+    # balance the conditions out:
+    # use minimum number of trials stored for the session/pair
+    min_trials = pd.read_pickle(MIN_TRIALS_FOR_PAIRS_PATH) 
+    min_num_trials = min_trials[
+        (min_trials.pair.isin([pair])) & 
+        (min_trials.session == sess_name)
+    ].iloc[0].min_all
     # balance the conditions out: 
-    sub_beh = behavioral_utils.balance_trials_by_condition(sub_beh, ["ConfidenceLabel"], seed=seed_idx)
+    sub_beh = behavioral_utils.balance_trials_by_condition(sub_beh, ["ConfidenceLabel"], seed=seed_idx, min=min_num_trials)
 
     spikes_path = SESS_SPIKES_PATH.format(
         sess_name=sess_name, 
