@@ -33,7 +33,7 @@ import argparse
 OUTPUT_DIR = "/data/res/pseudo"
 # path to a dataframe of sessions to analyze
 SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
-PAIRS_PATH = "/data/pairs_at_least_3blocks_10sess_fixed.pickle"
+PAIRS_PATH = "/data/pairs_at_least_3blocks_7sess_fixed.pickle"
 
 # SESSIONS_PATH = "/data/patrick_res/sessions/valid_sessions_rpe.pickle"
 # PAIRS_PATH = "/data/patrick_res/sessions/pairs_at_least_3blocks_10sess.pickle"
