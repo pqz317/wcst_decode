@@ -645,6 +645,46 @@ def get_perseveration_trials(beh):
         prev_rule = beh.CurrentRule.iloc[0]
     return beh
             
+def get_chosen_preferred_trials(pair, beh):
+    """
+    Find trials where either features in the pair are preferred, (high conf for that feature)
+    and chosen. 
+    """
+    feat1, feat2 = pair
+    chosen_preferred = beh[
+        ((beh[FEATURE_TO_DIM[feat1]] == feat1) & (beh.ConfidenceLabel == f"High {feat1}")) |
+        ((beh[FEATURE_TO_DIM[feat2]] == feat2) & (beh.ConfidenceLabel == f"High {feat2}"))
+    ]
+    return chosen_preferred
+
+def get_chosen_not_preferred_trials(pair, beh):
+    """
+    Find trials where either features in the pair are chosen, but are not preferred. 
+    Additionally, require that they are high confidence, 
+    and the features are not chosen in the same trial. 
+    Add additional Choice column
+    """
+    feat1, feat2 = pair
+    # find minimum number of trials, when high confidence, 
+    # either features are not preferred, but still chosen, 
+    not_pref_beh = beh[
+        (~beh.ConfidenceLabel.isin([f"High {feat1}", f"High {feat2}"])) & 
+        (beh.ConfidenceLabel != "Low")
+    ]
+    # chose_feat_1 = not_pref_beh[not_pref_beh[FEATURE_TO_DIM[feat1]] == feat1].TrialNumber
+    # chose_feat_2 = not_pref_beh[not_pref_beh[FEATURE_TO_DIM[feat2]] == feat2].TrialNumber
+    chose_feat_1_not_pref = not_pref_beh[
+        (not_pref_beh[FEATURE_TO_DIM[feat1]] == feat1) & 
+        (not_pref_beh[FEATURE_TO_DIM[feat2]] != feat2)
+    ]
+    chose_feat_1_not_pref["Choice"] = feat1
+    # vice versa
+    chose_feat_2_not_pref = not_pref_beh[
+        (not_pref_beh[FEATURE_TO_DIM[feat2]] == feat2) & 
+        (not_pref_beh[FEATURE_TO_DIM[feat1]] != feat1)
+    ]
+    chose_feat_2_not_pref["Choice"] = feat2
+    return pd.concat((chose_feat_1_not_pref, chose_feat_2_not_pref))
             
 
 

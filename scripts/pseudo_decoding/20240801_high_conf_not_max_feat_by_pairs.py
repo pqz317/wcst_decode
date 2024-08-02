@@ -36,9 +36,6 @@ SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
 PAIRS_PATH = "/data/pairs_at_least_3blocks_7sess.pickle"
 MIN_TRIALS_FOR_PAIRS_PATH = "/data/pairs_at_least_3blocks_7sess_min_trials.pickle"
 
-# SESSIONS_PATH = "/data/patrick_res/sessions/valid_sessions_rpe.pickle"
-# PAIRS_PATH = "/data/patrick_res/sessions/pairs_at_least_3blocks_10sess.pickle"
-
 # path for each session, specifying behavior
 SESS_BEHAVIOR_PATH = "/data/behavior/sub-SA_sess-{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
@@ -75,7 +72,7 @@ def load_session_data(row, pair, shuffle_idx=None, seed_idx=None):
     if shuffle_idx is not None: 
         beh = behavioral_utils.shuffle_beh_by_shift(beh, buffer=50, seed=shuffle_idx)
 
-    sub_beh = beh[beh["ConfidenceLabel"].isin([f"High {feat1}", f"High {feat2}"])]
+    sub_beh = behavioral_utils.get_chosen_not_preferred_trials(pair, beh)
 
     # balance the conditions out:
     # use minimum number of trials stored for the session/pair
@@ -85,7 +82,7 @@ def load_session_data(row, pair, shuffle_idx=None, seed_idx=None):
         (min_trials.session == sess_name)
     ].iloc[0].min_all
     # balance the conditions out: 
-    sub_beh = behavioral_utils.balance_trials_by_condition(sub_beh, ["ConfidenceLabel"], seed=seed_idx, min=min_num_trials)
+    sub_beh = behavioral_utils.balance_trials_by_condition(sub_beh, ["Choice"], seed=seed_idx, min=min_num_trials)
 
     spikes_path = SESS_SPIKES_PATH.format(
         sess_name=sess_name, 
@@ -110,13 +107,12 @@ def decode(sessions, row, shuffle_idx=None):
 
     # train the network
     # setup decoder, specify all possible label classes, number of neurons, parameters
-    classes = [f"High {pair[0]}", f"High {pair[1]}"]
     num_neurons = sess_datas.apply(lambda x: x.get_num_neurons()).sum()
-    init_params = {"n_inputs": num_neurons, "p_dropout": 0.5, "n_classes": len(classes)}
+    init_params = {"n_inputs": num_neurons, "p_dropout": 0.5, "n_classes": len(pair)}
     # create a trainer object
     trainer = Trainer(learning_rate=0.05, max_iter=500, batch_size=1000)
     # create a wrapper for the decoder
-    model = ModelWrapper(NormedDropoutMultinomialLogisticRegressor, init_params, trainer, classes)
+    model = ModelWrapper(NormedDropoutMultinomialLogisticRegressor, init_params, trainer, pair)
 
     # calculate time bins (in seconds)
     time_bins = np.arange(0, (POST_INTERVAL + PRE_INTERVAL) / 1000, INTERVAL_SIZE / 1000)
@@ -125,7 +121,7 @@ def decode(sessions, row, shuffle_idx=None):
     )
 
     shuffle_str = f"shuffle_{shuffle_idx}_" if shuffle_idx is not None else ""
-    run_name = f"high_conf_max_feat_by_pairs_{EVENT}_pair_{pair_str}_{shuffle_str}"
+    run_name = f"high_conf_not_max_feat_by_pairs_{EVENT}_pair_{pair_str}_{shuffle_str}"
 
     np.save(os.path.join(OUTPUT_DIR, f"{run_name}train_accs.npy"), train_accs)
     np.save(os.path.join(OUTPUT_DIR, f"{run_name}test_accs.npy"), test_accs)
