@@ -93,7 +93,7 @@ def load_session_data(row, pair, shuffle_idx=None, seed_idx=None):
     )
     frs = pd.read_pickle(spikes_path)
     frs = frs.rename(columns={DATA_MODE: "Value"})
-    splitter = ConditionTrialSplitter(sub_beh, "ConfidenceLabel", TEST_RATIO, seed=seed_idx)
+    splitter = ConditionTrialSplitter(sub_beh, "Choice", TEST_RATIO, seed=seed_idx)
     session_data = SessionData(sess_name, sub_beh, frs, splitter)
     session_data.pre_generate_splits(NUM_SPLITS)
     return session_data
