@@ -75,8 +75,12 @@ def load_session_data(row, pair, shuffle_idx=None, seed_idx=None):
     if shuffle_idx is not None: 
         beh = behavioral_utils.shuffle_beh_by_shift(beh, buffer=50, seed=shuffle_idx)
 
-    sub_beh = beh[beh["ConfidenceLabel"].isin([f"High {feat1}", f"High {feat2}"])]
-
+    # high conf, preferring feat1 or feat2, and also chose feat1 or feat2
+    sub_beh = beh[
+        ((beh[FEATURE_TO_DIM[feat1]] == feat1) & (beh.ConfidenceLabel == f"High {feat1}")) |
+        ((beh[FEATURE_TO_DIM[feat2]] == feat2) & (beh.ConfidenceLabel == f"High {feat2}"))
+    ]
+    
 
     # balance the conditions out:
     # use minimum number of trials stored for the session/pair

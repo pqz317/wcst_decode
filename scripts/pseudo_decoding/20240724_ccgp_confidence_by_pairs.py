@@ -71,8 +71,11 @@ def load_session_data(row, feat, seed_idx=None, sim_noise=None):
     beh = behavioral_utils.calc_confidence(beh, num_bins=2, quantize_bins=True)
     beh["ConfidenceLabel"] = beh.apply(lambda row: f"High {row.MaxFeat}" if row.ConfidenceBin == 1 else "Low", axis=1)
 
-    sub_beh = beh[beh["ConfidenceLabel"].isin([f"High {feat}", "Low"])]
-
+    # subselect for either low conf, or high conf preferring feat, where feat is also chosen
+    sub_beh = beh[
+        ((beh[FEATURE_TO_DIM[feat]] == feat) & (beh.ConfidenceLabel == f"High {feat}")) |
+        (beh.ConfidenceLabel == "Low")
+    ]
 
     # balance the conditions out: 
     sub_beh = behavioral_utils.balance_trials_by_condition(sub_beh, ["ConfidenceBin"], seed=seed_idx)
