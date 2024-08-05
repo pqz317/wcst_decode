@@ -665,14 +665,12 @@ def get_chosen_not_preferred_trials(pair, beh):
     Add additional Choice column
     """
     feat1, feat2 = pair
-    # find minimum number of trials, when high confidence, 
-    # either features are not preferred, but still chosen, 
+    # find trials when high confidence and neither features are preferred
     not_pref_beh = beh[
         (~beh.ConfidenceLabel.isin([f"High {feat1}", f"High {feat2}"])) & 
         (beh.ConfidenceLabel != "Low")
     ]
-    # chose_feat_1 = not_pref_beh[not_pref_beh[FEATURE_TO_DIM[feat1]] == feat1].TrialNumber
-    # chose_feat_2 = not_pref_beh[not_pref_beh[FEATURE_TO_DIM[feat2]] == feat2].TrialNumber
+    # chose feature 1 and not 2
     chose_feat_1_not_pref = not_pref_beh[
         (not_pref_beh[FEATURE_TO_DIM[feat1]] == feat1) & 
         (not_pref_beh[FEATURE_TO_DIM[feat2]] != feat2)

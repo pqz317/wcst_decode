@@ -43,14 +43,14 @@ SESS_SPIKES_PATH = "/data/firing_rates/{sess_name}_firing_rates_{pre_interval}_{
 
 
 DATA_MODE = "FiringRate"
-EVENT = "StimOnset"  # event in behavior to align on
-PRE_INTERVAL = 1000   # time in ms before event
-POST_INTERVAL = 1000  # time in ms after event
-INTERVAL_SIZE = 100  # size of interval in ms
-# EVENT = "FeedbackOnset"  # event in behavior to align on
-# PRE_INTERVAL = 1300   # time in ms before event
-# POST_INTERVAL = 1500  # time in ms after event
+# EVENT = "StimOnset"  # event in behavior to align on
+# PRE_INTERVAL = 1000   # time in ms before event
+# POST_INTERVAL = 1000  # time in ms after event
 # INTERVAL_SIZE = 100  # size of interval in ms
+EVENT = "FeedbackOnset"  # event in behavior to align on
+PRE_INTERVAL = 1300   # time in ms before event
+POST_INTERVAL = 1500  # time in ms after event
+INTERVAL_SIZE = 100  # size of interval in ms
 
 def load_session_data(row, pair, shuffle_idx=None, seed_idx=None):
     feat1, feat2 = pair
