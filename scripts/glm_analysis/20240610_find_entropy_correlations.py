@@ -33,6 +33,7 @@ from scipy import stats
 
 num_bins = 10
 
+
 def calc_and_save_session(row):
     start = time.time()
     session = row.session_name
@@ -48,6 +49,9 @@ def calc_and_save_session(row):
     beh = behavioral_utils.get_max_feature_value(beh, num_bins)
     beh = behavioral_utils.calc_feature_probs(beh)
     beh = behavioral_utils.calc_feature_value_entropy(beh, num_bins)
+
+    # beh = behavioral_utils.get_prev_choice_fbs(beh)
+    # beh = beh[beh.PrevResponse == "Correct"]
 
     fr_path = f"/data/patrick_res/firing_rates/{session}_firing_rates_{PRE_INTERVAL}_{EVENT}_{POST_INTERVAL}_{INTERVAL_SIZE}_bins_{NUM_BINS_SMOOTH}_smooth.pickle"
     frs = pd.read_pickle(fr_path)
@@ -76,6 +80,7 @@ def main():
     all_sess_reses = valid_sess.apply(calc_and_save_session, axis=1)
     all_reses = pd.concat(all_sess_reses.values)
     all_reses.to_pickle("/data/patrick_res/glm_2/feat_entropy_correlations.pickle")
+    # all_reses.to_pickle("/data/patrick_res/glm_2/feat_entropy_correlations_cond_cor.pickle")
 
 if __name__ == "__main__":
     main()

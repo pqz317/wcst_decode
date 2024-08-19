@@ -479,11 +479,11 @@ def get_max_feature_value(beh, num_bins=None, quantize_bins=False):
             beh["MaxValueBin"] = pd.cut(beh["MaxValue"], num_bins, labels=False)
     return beh
 
-def calc_feature_probs(beh):
+def calc_feature_probs(beh, beta=1):
 
     logits = np.empty((len(FEATURES), len(beh)))
     for i, feat in enumerate(FEATURES):
-        logits[i, :] = np.exp(beh[f"{feat}Value"])
+        logits[i, :] = np.exp(beh[f"{feat}Value"] * beta)
     probs = logits / np.sum(logits, axis=0)
     for i, feat in enumerate(FEATURES):
         beh[f"{feat}Prob"] = probs[i, :]
