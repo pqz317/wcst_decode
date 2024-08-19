@@ -42,7 +42,6 @@ PAIRS_PATH = "/data/pairs_at_least_3blocks_7sess.pickle"
 SESS_BEHAVIOR_PATH = "/data/behavior/sub-SA_sess-{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
 SESS_SPIKES_PATH = "/data/firing_rates/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
-SIMULATED_SPIKES_PATH = "/data/firing_rates/{sess_name}_firing_rates_simulated_noise_{noise}.pickle"
 
 DATA_MODE = "FiringRate"
 EVENT = "StimOnset"  # event in behavior to align on
@@ -54,10 +53,9 @@ INTERVAL_SIZE = 100  # size of interval in ms
 # POST_INTERVAL = 1500  # time in ms after event
 # INTERVAL_SIZE = 100  # size of interval in ms
 
-SIM_NOISE_LEVELS = [0.0, 0.1, 0.2, 0.3, 0.4]
-
-def load_session_data(row, feat, seed_idx=None, sim_noise=None):
+def load_session_data(row, pair, seed_idx=None):
     sess_name = row.session_name
+    feat1, feat2 = pair
 
     behavior_path = SESS_BEHAVIOR_PATH.format(sess_name=sess_name)
     beh = pd.read_csv(behavior_path)
@@ -73,25 +71,20 @@ def load_session_data(row, feat, seed_idx=None, sim_noise=None):
 
     # subselect for either low conf, or high conf preferring feat, where feat is also chosen
     sub_beh = beh[
-        ((beh[FEATURE_TO_DIM[feat]] == feat) & (beh.ConfidenceLabel == f"High {feat}")) |
+        ((beh[FEATURE_TO_DIM[feat1]] == feat1) & (beh.ConfidenceLabel == f"High {feat1}")) |
+        ((beh[FEATURE_TO_DIM[feat2]] == feat2) & (beh.ConfidenceLabel == f"High {feat2}"))
         (beh.ConfidenceLabel == "Low")
     ]
 
     # balance the conditions out: 
     sub_beh = behavioral_utils.balance_trials_by_condition(sub_beh, ["ConfidenceBin"], seed=seed_idx)
-    if sim_noise is None: 
-        spikes_path = SESS_SPIKES_PATH.format(
-            sess_name=sess_name, 
-            pre_interval=PRE_INTERVAL, 
-            event=EVENT, 
-            post_interval=POST_INTERVAL, 
-            interval_size=INTERVAL_SIZE
-        )
-    else: 
-        spikes_path = SIMULATED_SPIKES_PATH.format(
-            sess_name=sess_name, 
-            noise=sim_noise,
-        )
+    spikes_path = SESS_SPIKES_PATH.format(
+        sess_name=sess_name, 
+        pre_interval=PRE_INTERVAL, 
+        event=EVENT, 
+        post_interval=POST_INTERVAL, 
+        interval_size=INTERVAL_SIZE
+    )
     frs = pd.read_pickle(spikes_path)
     frs = frs.rename(columns={DATA_MODE: "Value"})
     splitter = ConditionTrialSplitter(sub_beh, "ConfidenceBin", TEST_RATIO, seed=seed_idx)
