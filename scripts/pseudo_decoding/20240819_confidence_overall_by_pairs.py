@@ -72,7 +72,7 @@ def load_session_data(row, pair, seed_idx=None):
     # subselect for either low conf, or high conf preferring feat, where feat is also chosen
     sub_beh = beh[
         ((beh[FEATURE_TO_DIM[feat1]] == feat1) & (beh.ConfidenceLabel == f"High {feat1}")) |
-        ((beh[FEATURE_TO_DIM[feat2]] == feat2) & (beh.ConfidenceLabel == f"High {feat2}"))
+        ((beh[FEATURE_TO_DIM[feat2]] == feat2) & (beh.ConfidenceLabel == f"High {feat2}")) |
         (beh.ConfidenceLabel == "Low")
     ]
 
