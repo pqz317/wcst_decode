@@ -381,3 +381,14 @@ def plot_and_calc_correlation(var_a, var_b, ax):
     ax.scatter(var_a, var_b, alpha=0.3, color="black")
     ax.plot(var_a, var_a * slope + intercept)
     return slope, intercept, r_value, p_value, std_err
+
+def plot_accs_seaborn(datas, labels, pre_interval, interval_size, ax):
+    dfs = []
+    for i, data in enumerate(datas): 
+        df = pd.DataFrame(data).reset_index(names=["Time"])
+        df["Time"] = (df["Time"] * interval_size + interval_size - pre_interval) / 1000
+        df = df.melt(id_vars="Time", value_vars=list(range(data.shape[1])), var_name="run", value_name="Accuracy")
+        df["label"] = labels[i]
+        dfs.append(df)
+    res = pd.concat(dfs)
+    sns.lineplot(res, x="Time", y="Accuracy", hue="label", linewidth=2, ax=ax)

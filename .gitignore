@@ -15,6 +15,7 @@ notebooks/.ipynb_checkpoints/
 
 # workspace configs
 wcst_decode.code-workspace
+src.code-workspace
 
 .DS_Store
 

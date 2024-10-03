@@ -292,6 +292,20 @@ def evaluate_model_weights_by_time_bins(models_by_bin, num_neurons, num_classes)
 
     return max_across_classes.T
 
+def evaluate_model_weight_diffs(models):
+    """
+    If a binary logistic regressor, compute the difference between w1, w2 for each 
+    Returns a weights matrix of [num_time_bins, num_splits, num_neurons]
+    """
+    if not models[0, 0].coef_.shape[0] == 2: 
+        raise ValueError("models must only have 2 classes")
+    weights_mat = np.empty((models.shape[0], models.shape[1], models[0, 0].coef_.shape[1]))
+    for time_idx, splits_idx in np.ndindex(models.shape):
+        model = models[time_idx, splits_idx]
+        # weights in num_neurons x num_classes
+        weights_diff = model.coef_[0, :] - model.coef_[1, :]
+        weights_mat[time_idx, splits_idx, :] = weights_diff
+    return weights_mat
 
 def convert_model_weights_to_df(weights, pre_interval, interval_size):
     """

@@ -683,6 +683,17 @@ def get_chosen_not_preferred_trials(pair, beh):
     ]
     chose_feat_2_not_pref["Choice"] = feat2
     return pd.concat((chose_feat_1_not_pref, chose_feat_2_not_pref))
+
+def get_beliefs_per_session(beh, session_name, subject="SA"):
+    beliefs_path = f"/data/patrick_res/behavior/models/belief_state_agent/sub-{subject}/{session_name}_beliefs.pickle"
+    beliefs_df = pd.read_pickle(beliefs_path)
+    return pd.merge(beh, beliefs_df, on="TrialNumber")
+
+def get_belief_value_labels(beh):
+    med = beh.BeliefStateValue.median()
+    beh["BeliefStateValueBin"] = beh.apply(lambda x: 0 if x.BeliefStateValue < med else 1, axis=1)
+    beh["PreferredBelief"] = beh[[f"{feat}Prob" for feat in FEATURES]].idxmax(axis=1).apply(lambda x: x[:-4])
+    
             
 
 
