@@ -39,10 +39,11 @@ PRE_INTERVAL = 1000   # time in ms before event
 POST_INTERVAL = 1000  # time in ms after event
 INTERVAL_SIZE = 100  # size of interval in ms
 
-def load_session_data(sess_name, cond):
+def load_session_data(row, cond):
     """
     cond: either a feature or a pair of features: 
     """
+    sess_name = row.session_name
     behavior_path = SESS_BEHAVIOR_PATH.format(sess_name=sess_name)
     beh = pd.read_csv(behavior_path)
     beh = behavioral_utils.get_belief_value_labels(beh)
