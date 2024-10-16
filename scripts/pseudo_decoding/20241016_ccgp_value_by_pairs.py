@@ -62,9 +62,9 @@ def load_session_data(row, cond):
     elif len(cond) == 2: 
         feat1, feat2 = cond
         sub_beh = beh[
-            ((beh[FEATURE_TO_DIM[feat1]] == feat1) & (beh.ConfidenceLabel == f"High {feat1}")) |
-            ((beh[FEATURE_TO_DIM[feat2]] == feat2) & (beh.ConfidenceLabel == f"High {feat2}")) |
-            (beh.ConfidenceLabel == "Low")
+            ((beh[FEATURE_TO_DIM[feat1]] == feat1) & (beh.BeliefStateValueLabel == f"High {feat1}")) |
+            ((beh[FEATURE_TO_DIM[feat2]] == feat2) & (beh.BeliefStateValueLabel == f"High {feat2}")) |
+            (beh.BeliefStateValueLabel == "Low")
         ]
     else: 
         raise ValueError("cond must be either 1 or 2 elements")
