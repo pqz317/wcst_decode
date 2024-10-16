@@ -109,7 +109,7 @@ def decode(sessions, row):
     for feat in pair: 
         print(f"Training decoder for low vs.  high {feat}")
         # load up session data to train network
-        train_feat_sess_datas = sessions.apply(lambda row: load_session_data(row, [feat]))
+        train_feat_sess_datas = sessions.apply(lambda row: load_session_data(row, [feat]), axis=1)
         train_accs, test_accs, shuffled_accs, models = train_decoder(train_feat_sess_datas)
         within_cond_accs.append(test_accs)
 
@@ -123,7 +123,7 @@ def decode(sessions, row):
     within_cond_accs = np.hstack(within_cond_accs)
     across_cond_accs = np.hstack(across_cond_accs)
 
-    overall_sess_datas = sessions.apply(lambda row: load_session_data(row, pair))
+    overall_sess_datas = sessions.apply(lambda row: load_session_data(row, pair), axis=1)
     train_accs, test_accs, shuffled_accs, models = train_decoder(overall_sess_datas)
     np.save(os.path.join(OUTPUT_DIR, f"{name}_overall_accs.npy"), test_accs)
     np.save(os.path.join(OUTPUT_DIR, f"{name}_overall_models.npy"), models)
