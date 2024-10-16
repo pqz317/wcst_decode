@@ -46,6 +46,10 @@ def load_session_data(row, cond):
     sess_name = row.session_name
     behavior_path = SESS_BEHAVIOR_PATH.format(sess_name=sess_name)
     beh = pd.read_csv(behavior_path)
+    beh = behavioral_utils.get_valid_trials(beh)
+    feature_selections = behavioral_utils.get_selection_features(beh)
+    beh = pd.merge(beh, feature_selections, on="TrialNumber", how="inner")
+    beh = behavioral_utils.get_beliefs_per_session(beh, sess_name)
     beh = behavioral_utils.get_belief_value_labels(beh)
 
     # subselect for either low conf, or high conf preferring feat, where feat is also chosen

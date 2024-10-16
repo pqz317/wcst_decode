@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from lfp_tools import startup
 from constants.behavioral_constants import *
+import os
 
 # sorted features by shape, color, pattern
 
@@ -684,8 +685,8 @@ def get_chosen_not_preferred_trials(pair, beh):
     chose_feat_2_not_pref["Choice"] = feat2
     return pd.concat((chose_feat_1_not_pref, chose_feat_2_not_pref))
 
-def get_beliefs_per_session(beh, session_name, subject="SA"):
-    beliefs_path = f"/data/patrick_res/behavior/models/belief_state_agent/sub-{subject}/{session_name}_beliefs.pickle"
+def get_beliefs_per_session(beh, session_name, subject="SA", base_dir="/data/patrick_res"):
+    beliefs_path = os.path.join(base_dir, f"behavior/models/belief_state_agent/sub-{subject}/{session_name}_beliefs.pickle")
     beliefs_df = pd.read_pickle(beliefs_path)
     return pd.merge(beh, beliefs_df, on="TrialNumber")
 
