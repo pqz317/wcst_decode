@@ -98,7 +98,7 @@ def decode(sessions, pair_row):
     
     sess_datas = sessions.apply(lambda row: load_session_data(row, pair), axis=1)
     time_bins = np.arange(0, (POST_INTERVAL + PRE_INTERVAL) / 1000, INTERVAL_SIZE / 1000)
-    models = np.load(os.path.join(OUTPUT_DIR, f"{name}_feat_overall_models.npy"), allow_pickle=True)
+    models = np.load(os.path.join(OUTPUT_DIR, f"{name}_overall_models.npy"), allow_pickle=True)
     cross_decode_accs = pseudo_classifier_utils.cross_evaluate_by_time_bins(models, sess_datas, time_bins, avg=False)
     np.save(os.path.join(OUTPUT_DIR, f"{name}_overall_cross_accs.npy"), cross_decode_accs)
 
