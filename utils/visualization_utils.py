@@ -391,4 +391,4 @@ def plot_accs_seaborn(datas, labels, pre_interval, interval_size, ax):
         df["label"] = labels[i]
         dfs.append(df)
     res = pd.concat(dfs)
-    sns.lineplot(res, x="Time", y="Accuracy", hue="label", linewidth=2, ax=ax)
+    sns.lineplot(res, x="Time", y="Accuracy", hue="label", linewidth=3, ax=ax)

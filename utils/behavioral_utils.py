@@ -332,6 +332,15 @@ def get_valid_trials(beh):
     ]  
     return valid_beh
 
+def get_valid_trials_blanche(beh):
+    last_block = beh.BlockNumber.max()
+    valid_beh = beh[
+        (beh.Response.isin(["Correct", "Incorrect"])) & 
+        (beh.BlockNumber >= 1) &
+        (beh.BlockNumber != last_block)
+    ]
+    return valid_beh
+
 def get_rpes_per_session(session, beh):
     probs_path = f"/data/082023_RL_Probs/sess-{session}_hv.csv"
     probs = pd.read_csv(probs_path)
@@ -619,6 +628,32 @@ def get_prob_correct_by_block_pos(beh, max_block_pos):
     prob_correct = beh.groupby("TrialInBlock", group_keys=False).apply(calc_prob_correct).reset_index(name='ProbCorrect')
     return prob_correct
 
+def get_prev_rule(beh):
+    group_rules =  beh.groupby("BlockNumber", group_keys=True).apply(lambda group: pd.Series({"CurrentRule": group.CurrentRule.iloc[0]})).reset_index()
+    group_rules["PrevRule"] = group_rules["CurrentRule"].shift()
+    beh = pd.merge(beh, group_rules[["BlockNumber", "PrevRule"]], on="BlockNumber")
+    return beh 
+
+def get_perseveration(beh):
+    beh["Perseveration"] = beh.apply(lambda row: row[FEATURE_TO_DIM[row["PrevRule"]]] == row["PrevRule"] if row["PrevRule"] else False, axis=1)
+    return beh
+
+def get_prob_perseveration_by_block_pos(beh, max_block_pos):
+    """
+    get probability of choosing correct as a function of position in block
+    """
+    beh = get_prev_rule(beh)
+    beh = get_perseveration(beh)
+    def get_block_lengths(block):
+        block["BlockLength"] = len(block)
+        block["TrialInBlock"] = range(len(block))
+        return block
+    beh = beh.groupby("BlockNumber", group_keys=False).apply(get_block_lengths).reset_index()
+    beh = beh[beh.TrialInBlock < max_block_pos]
+    def calc_prob_perseverate(group):
+        return len(group[group.Perseveration]) / len(group)
+    prob_correct = beh.groupby("TrialInBlock", group_keys=False).apply(calc_prob_perseverate).reset_index(name='Prob Perseverate')
+    return prob_correct
 
 def is_choosing_prev_rule(row, prev_rule):
     if prev_rule is None:
@@ -696,6 +731,34 @@ def get_belief_value_labels(beh):
     beh["PreferredBelief"] = beh[[f"{feat}Prob" for feat in FEATURES]].idxmax(axis=1).apply(lambda x: x[:-4])
     beh["BeliefStateValueLabel"] = beh.apply(lambda x: f"High {x.PreferredBelief}" if x.BeliefStateValueBin == 1 else "Low", axis=1)
     return beh
+
+
+def get_good_pairs_across_sessions(all_beh, block_thresh):
+    """
+    Find pairs of features, and associated sessions where
+    each item in the pair shows up in the session at least 
+    block_thresh number of blocks. 
+    Input: 
+        all_beh, concatenated beh with sessions column
+    output: 
+        df of pair, sessions, num_sessions, dim_type
+    """
+    num_blocks = all_beh.groupby(["session", "CurrentRule"]).apply(lambda x: len(x.BlockNumber.unique())).reset_index()
+    pairs = []
+    for i in range(12):
+        for j in range(i + 1, 12):
+            feat1 = FEATURES[i]
+            feat2 = FEATURES[j]
+            sess_1 = num_blocks[(num_blocks.CurrentRule == feat1) & (num_blocks[0] >= block_thresh)].session
+            sess_2 = num_blocks[(num_blocks.CurrentRule == feat2) & (num_blocks[0] >= block_thresh)].session
+            joints = sess_1[sess_1.isin(sess_2)].values
+            if FEATURE_TO_DIM[feat1] == FEATURE_TO_DIM[feat2]:
+                dim_type = "within dim"
+            else: 
+                dim_type = "across dim"
+            pairs.append({"pair": [feat1, feat2], "sessions": joints, "num_sessions": len(joints), "dim_type": dim_type})
+    pairs = pd.DataFrame(pairs)
+    return pairs
     
             
 
