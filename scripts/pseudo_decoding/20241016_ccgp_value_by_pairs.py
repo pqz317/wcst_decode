@@ -39,7 +39,10 @@ PRE_INTERVAL = 1000   # time in ms before event
 POST_INTERVAL = 1000  # time in ms after event
 INTERVAL_SIZE = 100  # size of interval in ms
 
-def load_session_data(row, cond):
+REGIONS = ["anterior", "temporal"]
+UNITS_PATH = "/data/patrick_res/firing_rates/all_units.pickle"
+
+def load_session_data(row, cond, region_units):
     """
     cond: either a feature or a pair of features: 
     """
@@ -80,6 +83,9 @@ def load_session_data(row, cond):
     )
     frs = pd.read_pickle(spikes_path)
     frs = frs.rename(columns={DATA_MODE: "Value"})
+    if region_units: 
+        frs["PseudoUnitID"] = int(sess_name) * 100 + int(frs.UnitID)
+        frs = frs[frs.PseudoUnitID.isin(region_units)]
     splitter = ConditionTrialSplitter(sub_beh, "BeliefStateValueBin", TEST_RATIO)
     session_data = SessionData(sess_name, sub_beh, frs, splitter)
     session_data.pre_generate_splits(NUM_SPLITS)
@@ -104,22 +110,35 @@ def train_decoder(sess_datas):
     ) 
     return train_accs, test_accs, shuffled_accs, models
 
-def decode(sessions, row):
+def get_region_units(region):
+    if region is None: 
+        return None
+    all_units = pd.read_pickle(UNITS_PATH)
+    if region == "anterior": 
+        return all_units[all_units.Channel.str.contains('a')].PseudoUnitID.unique()
+    elif region == "temporal":
+        return all_units[~all_units.Channel.str.contains('a')].PseudoUnitID.unique()
+    else: 
+        raise ValueError(f"unrecognized region {region}")
+    
+def decode(sessions, row, region):
     pair = row.pair
     pair_str = "_".join(pair)
     within_cond_accs = []
     across_cond_accs = []
-    name = f"ccgp_belief_state_value_{EVENT}_pair_{pair_str}"
+    region_str = "" if region is None else f"_{region}"
+    name = f"ccgp_belief_state_value_{EVENT}_pair_{pair_str}{region_str}"
+    region_units = get_region_units(region)
     for feat in pair: 
         print(f"Training decoder for low vs.  high {feat}")
         # load up session data to train network
-        train_feat_sess_datas = sessions.apply(lambda row: load_session_data(row, [feat]), axis=1)
+        train_feat_sess_datas = sessions.apply(lambda row: load_session_data(row, [feat], region_units), axis=1)
         train_accs, test_accs, shuffled_accs, models = train_decoder(train_feat_sess_datas)
         within_cond_accs.append(test_accs)
 
         # next, evaluate network on other dimensions
         test_feat = [f for f in pair if f != feat][0]
-        test_feat_sess_datas = sessions.apply(lambda row: load_session_data(row, [test_feat]), axis=1)
+        test_feat_sess_datas = sessions.apply(lambda row: load_session_data(row, [test_feat], region_units), axis=1)
         time_bins = np.arange(0, (POST_INTERVAL + PRE_INTERVAL) / 1000, INTERVAL_SIZE / 1000)
         accs_across_time = pseudo_classifier_utils.evaluate_model_with_data(models, test_feat_sess_datas, time_bins, num_test_per_cond=NUM_TEST_PER_COND)
         across_cond_accs.append(accs_across_time)
@@ -127,7 +146,7 @@ def decode(sessions, row):
     within_cond_accs = np.hstack(within_cond_accs)
     across_cond_accs = np.hstack(across_cond_accs)
 
-    overall_sess_datas = sessions.apply(lambda row: load_session_data(row, pair), axis=1)
+    overall_sess_datas = sessions.apply(lambda row: load_session_data(row, pair, region_units), axis=1)
     train_accs, test_accs, shuffled_accs, models = train_decoder(overall_sess_datas)
     np.save(os.path.join(OUTPUT_DIR, f"{name}_overall_accs.npy"), test_accs)
     np.save(os.path.join(OUTPUT_DIR, f"{name}_overall_models.npy"), models)
@@ -143,13 +162,17 @@ def main():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--pair_idx', default=None, type=int)
+    parser.add_argument('--region_idx', default=None, type=str)
     args = parser.parse_args()
     pairs = pd.read_pickle(PAIRS_PATH)
     row = pairs.iloc[args.pair_idx]
     valid_sess = pd.read_pickle(SESSIONS_PATH)
     valid_sess = valid_sess[valid_sess.session_name.isin(row.sessions)]
+
+    region =  None if args.region_idx is None else REGIONS[args.region_idx]
+
     print(f"Computing CCGP of belief state value between {row.pair} using between {row.num_sessions} sessions")
-    decode(valid_sess, row)
+    decode(valid_sess, row, region)
 
 if __name__ == "__main__":
     main()
