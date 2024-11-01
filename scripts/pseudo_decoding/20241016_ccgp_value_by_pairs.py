@@ -162,7 +162,7 @@ def main():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--pair_idx', default=None, type=int)
-    parser.add_argument('--region_idx', default=None, type=str)
+    parser.add_argument('--region_idx', default=None, type=int)
     args = parser.parse_args()
     pairs = pd.read_pickle(PAIRS_PATH)
     row = pairs.iloc[args.pair_idx]
