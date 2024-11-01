@@ -83,7 +83,7 @@ def load_session_data(row, cond, region_units):
     )
     frs = pd.read_pickle(spikes_path)
     frs = frs.rename(columns={DATA_MODE: "Value"})
-    if region_units: 
+    if region_units is not None: 
         frs["PseudoUnitID"] = int(sess_name) * 100 + int(frs.UnitID)
         frs = frs[frs.PseudoUnitID.isin(region_units)]
     splitter = ConditionTrialSplitter(sub_beh, "BeliefStateValueBin", TEST_RATIO)
