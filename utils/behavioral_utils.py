@@ -313,7 +313,7 @@ def get_first_n_corrects_per_block(beh, n):
     ).reset_index()
     return last_ns
 
-def get_valid_trials(beh):
+def get_valid_trials_sa(beh):
     """
     Filters trials where *usually* are not wanted for decoding, specifically filters out: 
     - any trials that don't result in correct/incorrect response (incomplete or error trials)
@@ -341,6 +341,14 @@ def get_valid_trials_blanche(beh):
     ]
     return valid_beh
 
+def get_valid_trials(beh, sub="SA"):
+    if sub == "SA":
+        return get_valid_trials_sa(beh)
+    elif sub == "BL":
+        return get_valid_trials_blanche(beh)
+    else: 
+        raise ValueError("unknown subject")
+    
 def get_rpes_per_session(session, beh):
     probs_path = f"/data/082023_RL_Probs/sess-{session}_hv.csv"
     probs = pd.read_csv(probs_path)

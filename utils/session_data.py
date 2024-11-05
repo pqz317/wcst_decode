@@ -72,6 +72,8 @@ class SessionData:
         pseudo_pop["Session"] = self.sess_name
         # NOTE: very hacky way of giving unique ID to units across sessions
         pseudo_pop["PseudoUnitID"] = int(self.sess_name) * 100 + pseudo_pop["UnitID"]
+        # print(pseudo_pop[:5])
+        # print(pseudo_pop.PseudoUnitID.unique())
         return pseudo_pop
 
     def get_num_neurons(self):

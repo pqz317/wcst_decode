@@ -19,11 +19,11 @@ UnitID, TrialNumber, TimeBins, and some data columns, like SpikeCounts or Firing
 SPECIES = 'nhp'
 SUBJECT = 'BL'
 
-# PRE_INTERVAL = 500
-# POST_INTERVAL = 500
-# INTERVAL_SIZE = 50
-# NUM_BINS_SMOOTH = 1
-# EVENT = "FixationOnCross"
+PRE_INTERVAL = 500
+POST_INTERVAL = 500
+INTERVAL_SIZE = 50
+NUM_BINS_SMOOTH = 1
+EVENT = "FixationOnCross"
 
 # PRE_INTERVAL = 1000
 # POST_INTERVAL = 1000
@@ -31,11 +31,11 @@ SUBJECT = 'BL'
 # NUM_BINS_SMOOTH = 1
 # EVENT = "StimOnset"
 
-PRE_INTERVAL = 1300
-POST_INTERVAL = 1500
-INTERVAL_SIZE = 100
-NUM_BINS_SMOOTH = 1
-EVENT = "FeedbackOnset"
+# PRE_INTERVAL = 1300
+# POST_INTERVAL = 1500
+# INTERVAL_SIZE = 100
+# NUM_BINS_SMOOTH = 1
+# EVENT = "FeedbackOnset"
 
 
 def calc_firing_rate_for_interval(row):
@@ -53,7 +53,7 @@ def calc_firing_rate_for_interval(row):
     sess_name = row.session_name
     print(f"Processing session {sess_name}")
     print("Loading files")
-    behavior_path = f"/data/rawdata/sub-{SUBJECT}/sess-{sess_name}/behavior/sub-{SUBJECT}_sess-{sess_name}_object_features.csv"
+    behavior_path = f"/data/patrick_res/behavior/{SUBJECT}/{sess_name}_object_features.csv"
     beh = pd.read_csv(behavior_path)
     valid_beh = beh[beh.Response.isin(["Correct", "Incorrect"])]
     spike_times = spike_general.get_spike_times(None, SUBJECT, sess_name, species_dir="/data")
@@ -78,18 +78,13 @@ def calc_firing_rate_for_interval(row):
     if not len(firing_rates.UnitID.unique()) == len(all_units.UnitID.unique()):
         raise ValueError(f"Session {sess_name}: {len(firing_rates.UnitID.unique())} units in firing rates when {len(all_units.UnitID.unique())} total")
     print("Saving")
-    dir_path = f"/data/patrick_res/firing_rates/"
+    dir_path = f"/data/patrick_res/firing_rates/{SUBJECT}"
     if not os.path.isdir(dir_path):
         os.mkdir(dir_path)
-    firing_rates.to_pickle(os.path.join(dir_path, f"{SUBJECT}_{sess_name}_firing_rates_{PRE_INTERVAL}_{EVENT}_{POST_INTERVAL}_{INTERVAL_SIZE}_bins_{NUM_BINS_SMOOTH}_smooth.pickle"))
+    firing_rates.to_pickle(os.path.join(dir_path, f"{sess_name}_firing_rates_{PRE_INTERVAL}_{EVENT}_{POST_INTERVAL}_{INTERVAL_SIZE}_bins_{NUM_BINS_SMOOTH}_smooth.pickle"))
 
 def main():
-    if SUBJECT == "SA": 
-        valid_sess = pd.read_pickle("/data/patrick_res/sessions/valid_sessions_rpe.pickle")
-    elif SUBJECT == "BL":
-        valid_sess = pd.read_pickle("/data/patrick_res/sessions/all_sessions_blanche.pickle")
-    else: 
-        raise ValueError("wrong subject")
+    valid_sess = pd.read_pickle(f"/data/patrick_res/sessions/{SUBJECT}/valid_sessions.pickle")
     valid_sess.apply(calc_firing_rate_for_interval, axis=1)
 
 if __name__ == "__main__":
