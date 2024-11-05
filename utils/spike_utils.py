@@ -301,3 +301,14 @@ def block_lowest_val_sub_frs(frs, mode="SpikeCounts"):
 
 def get_avg_fr_per_interval(frs):
     return frs.groupby(["UnitID", "TrialNumber"]).mean().reset_index()
+
+def get_region_units(region, units_path):
+    if region is None: 
+        return None
+    all_units = pd.read_pickle(units_path)
+    if region == "anterior": 
+        return all_units[all_units.Channel.str.contains('a')].PseudoUnitID.unique()
+    elif region == "temporal":
+        return all_units[~all_units.Channel.str.contains('a')].PseudoUnitID.unique()
+    else: 
+        raise ValueError(f"unrecognized region {region}")

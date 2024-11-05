@@ -7,6 +7,8 @@ import pandas as pd
 import utils.pseudo_utils as pseudo_utils
 import utils.pseudo_classifier_utils as pseudo_classifier_utils
 import utils.behavioral_utils as behavioral_utils
+import utils.spike_utils as spike_utils
+
 from constants.behavioral_constants import *
 from constants.decoding_constants import *
 from utils.session_data import SessionData
@@ -20,7 +22,6 @@ import argparse
 
 # the output directory to store the data
 OUTPUT_DIR = "/data/res/pseudo"
-SUBJECT = "SA"
 # path to a dataframe of sessions to analyze
 SESSIONS_PATH = "/data/patrick_res/sessions/{sub}/valid_sessions.pickle"
 SA_PAIRS_PATH = "/data/patrick_res/sessions/SA/pairs_at_least_3blocks_7sess.pickle"
@@ -117,17 +118,6 @@ def train_decoder(sess_datas):
         model, sess_datas, time_bins, NUM_SPLITS, NUM_TRAIN_PER_COND, NUM_TEST_PER_COND
     ) 
     return train_accs, test_accs, shuffled_accs, models
-
-def get_region_units(region, subject):
-    if region is None: 
-        return None
-    all_units = pd.read_pickle(UNITS_PATH.format(sub=subject))
-    if region == "anterior": 
-        return all_units[all_units.Channel.str.contains('a')].PseudoUnitID.unique()
-    elif region == "temporal":
-        return all_units[~all_units.Channel.str.contains('a')].PseudoUnitID.unique()
-    else: 
-        raise ValueError(f"unrecognized region {region}")
     
 def decode(sessions, row, region, subject):
     pair = row.pair
@@ -136,7 +126,7 @@ def decode(sessions, row, region, subject):
     across_cond_accs = []
     region_str = "" if region is None else f"_{region}"
     name = f"{subject}_ccgp_belief_state_value_{EVENT}_pair_{pair_str}{region_str}"
-    region_units = get_region_units(region, subject)
+    region_units = spike_utils.get_region_units(region, UNITS_PATH.format(sub=subject))
     for feat in pair: 
         print(f"Training decoder for low vs.  high {feat}")
         # load up session data to train network
