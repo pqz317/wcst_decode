@@ -20,6 +20,7 @@ from trial_splitters.condition_trial_splitter import ConditionTrialSplitter
 from tqdm import tqdm
 import argparse
 
+
 # the output directory to store the data
 OUTPUT_DIR = "/data/res/pseudo"
 # path to a dataframe of sessions to analyze
@@ -38,15 +39,11 @@ SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sub}/{sess_name}_firing_rate
 SIMULATED_SPIKES_PATH = "/data/patrick_res/firing_rates/{sess_name}_firing_rates_simulated_noise_{noise}.pickle"
 
 DATA_MODE = "FiringRate"
-EVENT = "StimOnset"  # event in behavior to align on
-PRE_INTERVAL = 1000   # time in ms before event
-POST_INTERVAL = 1000  # time in ms after event
-INTERVAL_SIZE = 100  # size of interval in ms
 
-REGIONS = ["anterior", "temporal"]
+REGIONS = ["anterior", "temporal", None]
 UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/all_units.pickle"
 
-def load_session_data(row, cond, region_units, subject):
+def load_session_data(row, cond, region_units, subject, trial_interval, use_next_trial_value):
     """
     cond: either a feature or a pair of features: 
     """
@@ -61,6 +58,11 @@ def load_session_data(row, cond, region_units, subject):
     beh = pd.merge(beh, feature_selections, on="TrialNumber", how="inner")
     beh = behavioral_utils.get_beliefs_per_session(beh, sess_name, subject)
     beh = behavioral_utils.get_belief_value_labels(beh)
+    if use_next_trial_value:
+        beh["BeliefStateValueLabel"] = beh["BeliefStateValueLabel"].shift(-1)
+        beh["BeliefStateValueBin"] = beh["BeliefStateValueBin"].shift(-1)
+        beh = beh[~(beh["BeliefStateValueLabel"].isna() | beh["BeliefStateValueBin"].isna())]
+        beh["BeliefStateValueBin"] = beh["BeliefStateValueBin"].astype(int)
 
     # subselect for either low conf, or high conf preferring feat, where feat is also chosen
     if len(cond) == 1:
@@ -84,10 +86,10 @@ def load_session_data(row, cond, region_units, subject):
     spikes_path = SESS_SPIKES_PATH.format(
         sub=subject,
         sess_name=sess_name, 
-        pre_interval=PRE_INTERVAL, 
-        event=EVENT, 
-        post_interval=POST_INTERVAL, 
-        interval_size=INTERVAL_SIZE
+        pre_interval=trial_interval.pre_interval, 
+        event=trial_interval.event, 
+        post_interval=trial_interval.post_interval, 
+        interval_size=trial_interval.interval_size
     )
     print(spikes_path)
     frs = pd.read_pickle(spikes_path)
@@ -101,7 +103,7 @@ def load_session_data(row, cond, region_units, subject):
     return session_data
 
 
-def train_decoder(sess_datas):
+def train_decoder(sess_datas, time_bins):
     # train the network
     # setup decoder, specify all possible label classes, number of neurons, parameters
     classes = [0, 1]
@@ -113,45 +115,46 @@ def train_decoder(sess_datas):
     model = ModelWrapper(NormedDropoutMultinomialLogisticRegressor, init_params, trainer, classes)
 
     # calculate time bins (in seconds)
-    time_bins = np.arange(0, (POST_INTERVAL + PRE_INTERVAL) / 1000, INTERVAL_SIZE / 1000)
     train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(
         model, sess_datas, time_bins, NUM_SPLITS, NUM_TRAIN_PER_COND, NUM_TEST_PER_COND
     ) 
     return train_accs, test_accs, shuffled_accs, models
     
-def decode(sessions, row, region, subject):
+def decode(sessions, row, region, subject, trial_interval, use_next_trial_value):
     pair = row.pair
     pair_str = "_".join(pair)
     within_cond_accs = []
     across_cond_accs = []
     region_str = "" if region is None else f"_{region}"
-    name = f"{subject}_ccgp_belief_state_value_{EVENT}_pair_{pair_str}{region_str}"
+    next_trial_str = "_next_trial_value" if use_next_trial_value else ""
+    name = f"{subject}_ccgp_belief_state_value_{trial_interval.event}_pair_{pair_str}{region_str}{next_trial_str}"
+
     region_units = spike_utils.get_region_units(region, UNITS_PATH.format(sub=subject))
     for feat in pair: 
         print(f"Training decoder for low vs.  high {feat}")
         # load up session data to train network
-        train_feat_sess_datas = sessions.apply(lambda row: load_session_data(row, [feat], region_units, subject), axis=1)
-        train_accs, test_accs, shuffled_accs, models = train_decoder(train_feat_sess_datas)
+        train_feat_sess_datas = sessions.apply(lambda row: load_session_data(row, [feat], region_units, subject, trial_interval, use_next_trial_value), axis=1)
+
+        time_bins = np.arange(0, (trial_interval.post_interval + trial_interval.pre_interval) / 1000, trial_interval.interval_size / 1000)
+        train_accs, test_accs, shuffled_accs, models = train_decoder(train_feat_sess_datas, time_bins)
         within_cond_accs.append(test_accs)
 
         # next, evaluate network on other dimensions
         test_feat = [f for f in pair if f != feat][0]
-        test_feat_sess_datas = sessions.apply(lambda row: load_session_data(row, [test_feat], region_units, subject), axis=1)
-        time_bins = np.arange(0, (POST_INTERVAL + PRE_INTERVAL) / 1000, INTERVAL_SIZE / 1000)
+        test_feat_sess_datas = sessions.apply(lambda row: load_session_data(row, [test_feat], region_units, subject, trial_interval, use_next_trial_value), axis=1)
         accs_across_time = pseudo_classifier_utils.evaluate_model_with_data(models, test_feat_sess_datas, time_bins, num_test_per_cond=NUM_TEST_PER_COND)
         across_cond_accs.append(accs_across_time)
         np.save(os.path.join(OUTPUT_DIR, f"{name}_feat_{feat}_models.npy"), models)
     within_cond_accs = np.hstack(within_cond_accs)
     across_cond_accs = np.hstack(across_cond_accs)
 
-    overall_sess_datas = sessions.apply(lambda row: load_session_data(row, pair, region_units, subject), axis=1)
-    train_accs, test_accs, shuffled_accs, models = train_decoder(overall_sess_datas)
+    overall_sess_datas = sessions.apply(lambda row: load_session_data(row, pair, region_units, subject, trial_interval, use_next_trial_value), axis=1)
+    train_accs, test_accs, shuffled_accs, models = train_decoder(overall_sess_datas, time_bins)
     np.save(os.path.join(OUTPUT_DIR, f"{name}_overall_accs.npy"), test_accs)
     np.save(os.path.join(OUTPUT_DIR, f"{name}_overall_models.npy"), models)
 
     np.save(os.path.join(OUTPUT_DIR, f"{name}_within_cond_accs.npy"), within_cond_accs)
     np.save(os.path.join(OUTPUT_DIR, f"{name}_across_cond_accs.npy"), across_cond_accs)
-
 
 def main():
     """
@@ -162,6 +165,8 @@ def main():
     parser.add_argument('--pair_idx', default=None, type=int)
     parser.add_argument('--region_idx', default=None, type=int)
     parser.add_argument('--subject', default="SA", type=str)
+    parser.add_argument('--trial_event', default="StimOnset", type=str)
+    parser.add_argument('--use_next_trial_value', action=argparse.BooleanOptionalAction, default=False)
     args = parser.parse_args()
     subject = args.subject
     if subject == "SA": 
@@ -173,9 +178,11 @@ def main():
     valid_sess = valid_sess[valid_sess.session_name.isin(row.sessions)]
 
     region =  None if args.region_idx is None else REGIONS[args.region_idx]
-
-    print(f"Computing CCGP for {subject} of belief state value between {row.pair} using between {row.num_sessions} sessions")
-    decode(valid_sess, row, region, subject)
+    trial_interval = get_trial_interval(args.trial_event)
+    print(f"Computing CCGP for {subject} of belief state value in interval {args.trial_event}")
+    print(f"Loking at region {region}, using use_next_trial_value {args.use_next_trial_value}")
+    print(f"examining conditions between {row.pair} using between {row.num_sessions} sessions")
+    decode(valid_sess, row, region, subject, trial_interval, args.use_next_trial_value)
 
 if __name__ == "__main__":
     main()

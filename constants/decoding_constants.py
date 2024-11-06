@@ -1,3 +1,5 @@
+from collections import namedtuple
+
 LEARNING_RATE = 0.05
 MAX_ITER = 500
 NUM_TRAIN_PER_COND = 1000
@@ -8,3 +10,30 @@ DECODER_SEED = 42
 TEST_RATIO = 0.2
 
 NUM_SPLITS = 8
+
+FB_ONSET_PRE_INTERVAL = 1300
+FB_ONSET_POST_INTERVAL = 1500
+
+STIM_ONSET_PRE_INTERVAL = 1000
+STIM_ONSET_POST_INTERVAL = 1000
+
+INTERVAL_SIZE = 100
+
+def get_trial_interval(trial_event):
+    TrialInterval = namedtuple('TrialInterval', ['event', 'pre_interval', 'post_interval', 'interval_size'])
+    if trial_event == "StimOnset":
+        return TrialInterval(
+            "StimOnset", 
+            STIM_ONSET_PRE_INTERVAL, 
+            STIM_ONSET_POST_INTERVAL, 
+            INTERVAL_SIZE
+        )
+    elif trial_event == "FeedbackOnset":
+        return TrialInterval(
+            "FeedbackOnset", 
+            FB_ONSET_PRE_INTERVAL, 
+            FB_ONSET_POST_INTERVAL, 
+            INTERVAL_SIZE
+        )
+    else: 
+        raise ValueError("unknown trial event")
