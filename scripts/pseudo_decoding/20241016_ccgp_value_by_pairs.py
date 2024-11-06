@@ -179,9 +179,9 @@ def main():
 
     region =  None if args.region_idx is None else REGIONS[args.region_idx]
     trial_interval = get_trial_interval(args.trial_event)
-    print(f"Computing CCGP for {subject} of belief state value in interval {args.trial_event}")
-    print(f"Loking at region {region}, using use_next_trial_value {args.use_next_trial_value}")
-    print(f"examining conditions between {row.pair} using between {row.num_sessions} sessions")
+    print(f"Computing CCGP for {subject} of belief state value in interval {args.trial_event}", flush=True)
+    print(f"Loking at region {region}, using use_next_trial_value {args.use_next_trial_value}", flush=True)
+    print(f"examining conditions between {row.pair} using between {row.num_sessions} sessions", flush=True)
     decode(valid_sess, row, region, subject, trial_interval, args.use_next_trial_value)
 
 if __name__ == "__main__":
