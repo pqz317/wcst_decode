@@ -26,7 +26,8 @@ OUTPUT_DIR = "/data/res/pseudo"
 # path to a dataframe of sessions to analyze
 SESSIONS_PATH = "/data/patrick_res/sessions/{sub}/valid_sessions.pickle"
 SA_PAIRS_PATH = "/data/patrick_res/sessions/SA/pairs_at_least_3blocks_7sess.pickle"
-BL_PAIRS_PATH = "/data/patrick_res/sessions/BL/pairs_at_least_1blocks_3sess.pickle"
+# BL_PAIRS_PATH = "/data/patrick_res/sessions/BL/pairs_at_least_1blocks_3sess.pickle"
+BL_PAIRS_PATH = "/data/patrick_res/sessions/BL/pairs_at_least_2blocks_1sess.pickle"
 
 
 # SESSIONS_PATH = "/data/patrick_res/sessions/valid_sessions_rpe.pickle"
@@ -127,7 +128,8 @@ def decode(sessions, row, region, subject, trial_interval, use_next_trial_value)
     across_cond_accs = []
     region_str = "" if region is None else f"_{region}"
     next_trial_str = "_next_trial_value" if use_next_trial_value else ""
-    name = f"{subject}_ccgp_belief_state_value_{trial_interval.event}_pair_{pair_str}{region_str}{next_trial_str}"
+    name = f"{subject}_less_sess_ccgp_belief_state_value_{trial_interval.event}_pair_{pair_str}{region_str}{next_trial_str}"
+    # name = f"{subject}_ccgp_belief_state_value_{trial_interval.event}_pair_{pair_str}{region_str}{next_trial_str}"
 
     region_units = spike_utils.get_region_units(region, UNITS_PATH.format(sub=subject))
     for feat in pair: 
