@@ -62,10 +62,10 @@ def load_session_data(row, cond, region_units, args):
         beh = behavioral_utils.shift_beliefs(beh)
 
     if args.prev_response is not None: 
-        sub_beh["PrevResponse"] = sub_beh.Response if args.use_next_trial_value else sub_beh.Response.shift()
-        sub_beh = sub_beh[~sub_beh.PrevResponse.isna()]
-        sub_beh = behavioral_utils.balance_trials_by_condition(sub_beh, ["PrevResponse", "BeliefStateValueBin"])
-        sub_beh = sub_beh[sub_beh.PrevResponse == args.prev_response]
+        beh["PrevResponse"] = beh.Response if args.use_next_trial_value else beh.Response.shift()
+        beh = beh[~beh.PrevResponse.isna()]
+        beh = behavioral_utils.balance_trials_by_condition(beh, ["PrevResponse"])
+        beh = beh[beh.PrevResponse == args.prev_response]
 
     beh = behavioral_utils.get_belief_value_labels(beh)
 
