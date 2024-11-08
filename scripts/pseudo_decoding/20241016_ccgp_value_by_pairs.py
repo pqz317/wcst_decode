@@ -85,7 +85,7 @@ def load_session_data(row, cond, region_units, args):
     if args.prev_response is not None: 
         sub_beh["PrevResponse"] = sub_beh.Response if args.use_next_trial_value else sub_beh.Response.shift()
         sub_beh = sub_beh[~sub_beh.PrevResponse.isna()]
-        sub_beh = behavioral_utils.balance_trials_by_condition(sub_beh, ["PrevResponse"])
+        sub_beh = behavioral_utils.balance_trials_by_condition(sub_beh, ["PrevResponse", "BeliefStateValueBin"])
         sub_beh = sub_beh[sub_beh.PrevResponse == args.prev_response]
 
     # balance the conditions out: 
@@ -132,7 +132,8 @@ def get_name(args):
     pair_str = "_".join(args.row.pair)
     region_str = "" if args.region is None else f"_{args.region}"
     next_trial_str = "_next_trial_value" if args.use_next_trial_value else ""
-    name = f"{args.subject}_less_sess_ccgp_belief_state_value_{args.trial_interval.event}_pair_{pair_str}{region_str}{next_trial_str}"
+    prev_response_str = "" if args.prev_response is None else f"_prev_res_{args.prev_response}"
+    name = f"{args.subject}_ccgp_belief_state_value_{args.trial_interval.event}_pair_{pair_str}{region_str}{next_trial_str}{prev_response_str}"
     return name
     
 def decode(args):
