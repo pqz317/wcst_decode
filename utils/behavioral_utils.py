@@ -733,6 +733,12 @@ def get_beliefs_per_session(beh, session_name, subject="SA", base_dir="/data/pat
     beliefs_df = pd.read_pickle(beliefs_path)
     return pd.merge(beh, beliefs_df, on="TrialNumber")
 
+def shift_beliefs(beh):
+    beh[[f"{feat}Prob" for feat in FEATURES]] = beh[[f"{feat}Prob" for feat in FEATURES]].shift(-1)
+    beh["BeliefStateValue"] = beh.BeliefStateValue.shift(-1)
+    beh = beh[~beh.BeliefStateValue.isna()]
+    return beh
+
 def get_belief_value_labels(beh):
     med = beh.BeliefStateValue.median()
     beh["BeliefStateValueBin"] = beh.apply(lambda x: 0 if x.BeliefStateValue < med else 1, axis=1)

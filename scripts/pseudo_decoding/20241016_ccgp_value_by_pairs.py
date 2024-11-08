@@ -58,12 +58,17 @@ def load_session_data(row, cond, region_units, args):
     feature_selections = behavioral_utils.get_selection_features(beh)
     beh = pd.merge(beh, feature_selections, on="TrialNumber", how="inner")
     beh = behavioral_utils.get_beliefs_per_session(beh, sess_name, args.subject)
-    beh = behavioral_utils.get_belief_value_labels(beh)
     if args.use_next_trial_value:
-        beh["BeliefStateValueLabel"] = beh["BeliefStateValueLabel"].shift(-1)
-        beh["BeliefStateValueBin"] = beh["BeliefStateValueBin"].shift(-1)
-        beh = beh[~(beh["BeliefStateValueLabel"].isna() | beh["BeliefStateValueBin"].isna())]
-        beh["BeliefStateValueBin"] = beh["BeliefStateValueBin"].astype(int)
+        beh = behavioral_utils.shift_beliefs(beh)
+
+    if args.prev_response is not None: 
+        sub_beh["PrevResponse"] = sub_beh.Response if args.use_next_trial_value else sub_beh.Response.shift()
+        sub_beh = sub_beh[~sub_beh.PrevResponse.isna()]
+        sub_beh = behavioral_utils.balance_trials_by_condition(sub_beh, ["PrevResponse", "BeliefStateValueBin"])
+        sub_beh = sub_beh[sub_beh.PrevResponse == args.prev_response]
+
+    beh = behavioral_utils.get_belief_value_labels(beh)
+
 
     # subselect for either low conf, or high conf preferring feat, where feat is also chosen
     if len(cond) == 1:
@@ -82,11 +87,7 @@ def load_session_data(row, cond, region_units, args):
     else: 
         raise ValueError("cond must be either 1 or 2 elements")
 
-    if args.prev_response is not None: 
-        sub_beh["PrevResponse"] = sub_beh.Response if args.use_next_trial_value else sub_beh.Response.shift()
-        sub_beh = sub_beh[~sub_beh.PrevResponse.isna()]
-        sub_beh = behavioral_utils.balance_trials_by_condition(sub_beh, ["PrevResponse", "BeliefStateValueBin"])
-        sub_beh = sub_beh[sub_beh.PrevResponse == args.prev_response]
+
 
     # balance the conditions out: 
     sub_beh = behavioral_utils.balance_trials_by_condition(sub_beh, ["BeliefStateValueBin"])
