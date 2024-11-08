@@ -5,12 +5,15 @@ import utils.pseudo_utils as pseudo_utils
 import utils.pseudo_classifier_utils as pseudo_classifier_utils
 import utils.behavioral_utils as behavioral_utils
 
+from constants.behavioral_constants import *
 from utils.session_data import SessionData
 
 from models.trainer import Trainer
 from models.model_wrapper import ModelWrapper, ModelWrapperLinearRegression
 from models.multinomial_logistic_regressor import NormedDropoutMultinomialLogisticRegressor
 from trial_splitters.condition_trial_splitter import ConditionTrialSplitter 
+import argparse
+
 
 EVENT = "FeedbackOnset"  # event in behavior to align on
 PRE_INTERVAL = 1300   # time in ms before event
@@ -19,13 +22,7 @@ INTERVAL_SIZE = 100  # size of interval in ms
 
 # all the possible feature dimensions 
 # NOTE: Capital 1st letter is the convention here
-FEATURE_DIMS = ["Color", "Shape", "Pattern"]
-# for each feature dimension, list the possible classes
-POSSIBLE_FEATURES = {
-    "Color": ['CYAN', 'GREEN', 'MAGENTA', 'YELLOW'],
-    "Shape": ['CIRCLE', 'SQUARE', 'STAR', 'TRIANGLE'],
-    "Pattern": ['ESCHER', 'POLKADOT', 'RIPPLE', 'SWIRL']
-}
+
 # the output directory to store the data
 OUTPUT_DIR = "/data/patrick_res/pseudo"
 # path to a dataframe of sessions to analyze
@@ -115,6 +112,12 @@ def main():
     Loads a dataframe specifying sessions to use
     For each feature dimension, runs decoding, stores results. 
     """
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--pair_idx', default=None, type=int)
+    parser.add_argument('--region_idx', default=None, type=int)
+    parser.add_argument('--subject', default="SA", type=str)
+    parser.add_argument('--trial_event', default="StimOnset", type=str)
+    parser.add_argument('--use_next_trial_value', action=argparse.BooleanOptionalAction, default=False)
     valid_sess = pd.read_pickle(SESSIONS_PATH)
     for feature_dim in FEATURE_DIMS: 
         decode_feature(feature_dim, valid_sess)

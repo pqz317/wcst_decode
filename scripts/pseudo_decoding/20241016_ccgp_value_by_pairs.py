@@ -44,22 +44,22 @@ DATA_MODE = "FiringRate"
 REGIONS = ["anterior", "temporal", None]
 UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/all_units.pickle"
 
-def load_session_data(row, cond, region_units, subject, trial_interval, use_next_trial_value):
+def load_session_data(row, cond, region_units, args):
     """
     cond: either a feature or a pair of features: 
     """
     sess_name = row.session_name
     behavior_path = SESS_BEHAVIOR_PATH.format(
         sess_name=sess_name, 
-        sub=subject,
+        sub=args.subject,
     )
     beh = pd.read_csv(behavior_path)
-    beh = behavioral_utils.get_valid_trials(beh, subject)
+    beh = behavioral_utils.get_valid_trials(beh, args.subject)
     feature_selections = behavioral_utils.get_selection_features(beh)
     beh = pd.merge(beh, feature_selections, on="TrialNumber", how="inner")
-    beh = behavioral_utils.get_beliefs_per_session(beh, sess_name, subject)
+    beh = behavioral_utils.get_beliefs_per_session(beh, sess_name, args.subject)
     beh = behavioral_utils.get_belief_value_labels(beh)
-    if use_next_trial_value:
+    if args.use_next_trial_value:
         beh["BeliefStateValueLabel"] = beh["BeliefStateValueLabel"].shift(-1)
         beh["BeliefStateValueBin"] = beh["BeliefStateValueBin"].shift(-1)
         beh = beh[~(beh["BeliefStateValueLabel"].isna() | beh["BeliefStateValueBin"].isna())]
@@ -82,10 +82,17 @@ def load_session_data(row, cond, region_units, subject, trial_interval, use_next
     else: 
         raise ValueError("cond must be either 1 or 2 elements")
 
+    if args.prev_response is not None: 
+        sub_beh["PrevResponse"] = sub_beh.Response if args.use_next_trial_value else sub_beh.Response.shift()
+        sub_beh = sub_beh[~sub_beh.PrevResponse.isna()]
+        sub_beh = behavioral_utils.balance_trials_by_condition(sub_beh, ["PrevResponse"])
+        sub_beh = sub_beh[sub_beh.PrevResponse == args.prev_response]
+
     # balance the conditions out: 
     sub_beh = behavioral_utils.balance_trials_by_condition(sub_beh, ["BeliefStateValueBin"])
+    trial_interval = args.trial_interval
     spikes_path = SESS_SPIKES_PATH.format(
-        sub=subject,
+        sub=args.subject,
         sess_name=sess_name, 
         pre_interval=trial_interval.pre_interval, 
         event=trial_interval.event, 
@@ -120,22 +127,27 @@ def train_decoder(sess_datas, time_bins):
         model, sess_datas, time_bins, NUM_SPLITS, NUM_TRAIN_PER_COND, NUM_TEST_PER_COND
     ) 
     return train_accs, test_accs, shuffled_accs, models
+
+def get_name(args):
+    pair_str = "_".join(args.row.pair)
+    region_str = "" if args.region is None else f"_{args.region}"
+    next_trial_str = "_next_trial_value" if args.use_next_trial_value else ""
+    name = f"{args.subject}_less_sess_ccgp_belief_state_value_{args.trial_interval.event}_pair_{pair_str}{region_str}{next_trial_str}"
+    return name
     
-def decode(sessions, row, region, subject, trial_interval, use_next_trial_value):
-    pair = row.pair
-    pair_str = "_".join(pair)
+def decode(args):
+    region_units = spike_utils.get_region_units(args.region, UNITS_PATH.format(sub=args.subject))
+    trial_interval = args.trial_interval
+    sessions = args.sessions
+    name = get_name(args)
+
+    pair = args.row.pair
     within_cond_accs = []
     across_cond_accs = []
-    region_str = "" if region is None else f"_{region}"
-    next_trial_str = "_next_trial_value" if use_next_trial_value else ""
-    name = f"{subject}_less_sess_ccgp_belief_state_value_{trial_interval.event}_pair_{pair_str}{region_str}{next_trial_str}"
-    # name = f"{subject}_ccgp_belief_state_value_{trial_interval.event}_pair_{pair_str}{region_str}{next_trial_str}"
-
-    region_units = spike_utils.get_region_units(region, UNITS_PATH.format(sub=subject))
     for feat in pair: 
         print(f"Training decoder for low vs.  high {feat}")
         # load up session data to train network
-        train_feat_sess_datas = sessions.apply(lambda row: load_session_data(row, [feat], region_units, subject, trial_interval, use_next_trial_value), axis=1)
+        train_feat_sess_datas = args.sessions.apply(lambda row: load_session_data(row, [feat], region_units, args), axis=1)
 
         time_bins = np.arange(0, (trial_interval.post_interval + trial_interval.pre_interval) / 1000, trial_interval.interval_size / 1000)
         train_accs, test_accs, shuffled_accs, models = train_decoder(train_feat_sess_datas, time_bins)
@@ -143,14 +155,14 @@ def decode(sessions, row, region, subject, trial_interval, use_next_trial_value)
 
         # next, evaluate network on other dimensions
         test_feat = [f for f in pair if f != feat][0]
-        test_feat_sess_datas = sessions.apply(lambda row: load_session_data(row, [test_feat], region_units, subject, trial_interval, use_next_trial_value), axis=1)
+        test_feat_sess_datas = sessions.apply(lambda row: load_session_data(row, [test_feat], region_units, args), axis=1)
         accs_across_time = pseudo_classifier_utils.evaluate_model_with_data(models, test_feat_sess_datas, time_bins, num_test_per_cond=NUM_TEST_PER_COND)
         across_cond_accs.append(accs_across_time)
         np.save(os.path.join(OUTPUT_DIR, f"{name}_feat_{feat}_models.npy"), models)
     within_cond_accs = np.hstack(within_cond_accs)
     across_cond_accs = np.hstack(across_cond_accs)
 
-    overall_sess_datas = sessions.apply(lambda row: load_session_data(row, pair, region_units, subject, trial_interval, use_next_trial_value), axis=1)
+    overall_sess_datas = sessions.apply(lambda row: load_session_data(row, pair, region_units, args), axis=1)
     train_accs, test_accs, shuffled_accs, models = train_decoder(overall_sess_datas, time_bins)
     np.save(os.path.join(OUTPUT_DIR, f"{name}_overall_accs.npy"), test_accs)
     np.save(os.path.join(OUTPUT_DIR, f"{name}_overall_models.npy"), models)
@@ -164,27 +176,29 @@ def main():
     For each feature dimension, runs decoding, stores results. 
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('--pair_idx', default=None, type=int)
+    parser.add_argument('--pair_idx', type=int)
     parser.add_argument('--region_idx', default=None, type=int)
     parser.add_argument('--subject', default="SA", type=str)
     parser.add_argument('--trial_event', default="StimOnset", type=str)
     parser.add_argument('--use_next_trial_value', action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument('--prev_response', default=None, type=str)
     args = parser.parse_args()
     subject = args.subject
     if subject == "SA": 
         pairs = pd.read_pickle(SA_PAIRS_PATH)
     else: 
         pairs = pd.read_pickle(BL_PAIRS_PATH)
-    row = pairs.iloc[args.pair_idx]
+    args.row = pairs.iloc[args.pair_idx]
     valid_sess = pd.read_pickle(SESSIONS_PATH.format(sub=subject))
-    valid_sess = valid_sess[valid_sess.session_name.isin(row.sessions)]
+    args.sessions = valid_sess[valid_sess.session_name.isin(args.row.sessions)]
+    args.region =  None if args.region_idx is None else REGIONS[args.region_idx]
+    args.trial_interval = get_trial_interval(args.trial_event)
 
-    region =  None if args.region_idx is None else REGIONS[args.region_idx]
-    trial_interval = get_trial_interval(args.trial_event)
     print(f"Computing CCGP for {subject} of belief state value in interval {args.trial_event}", flush=True)
-    print(f"Loking at region {region}, using use_next_trial_value {args.use_next_trial_value}", flush=True)
-    print(f"examining conditions between {row.pair} using between {row.num_sessions} sessions", flush=True)
-    decode(valid_sess, row, region, subject, trial_interval, args.use_next_trial_value)
+    print(f"Loking at region {args.region}, using use_next_trial_value {args.use_next_trial_value}", flush=True)
+    print(f"examining conditions between {args.row.pair} using between {args.row.num_sessions} sessions", flush=True)
+    print(f"Conditioning on prev response being {args.prev_response}")
+    decode(args)
 
 if __name__ == "__main__":
     main()

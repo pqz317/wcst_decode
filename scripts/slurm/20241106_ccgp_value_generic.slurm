@@ -16,7 +16,8 @@ singularity exec --writable-tmpfs --nv \
     /src/wcst_decode/scripts/pseudo_decoding/20241016_ccgp_value_by_pairs.py \
     --pair_idx $(($SLURM_ARRAY_TASK_ID % 18)) \
     --region_idx $(($SLURM_ARRAY_TASK_ID / 18)) \
-    --trial_event FeedbackOnset \
-    $next_trial_flag
+    $trial_event_flag\
+    $next_trial_flag\
+    $prev_response_flag
 
     
