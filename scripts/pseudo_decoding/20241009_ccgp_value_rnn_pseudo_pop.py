@@ -25,10 +25,12 @@ OUTPUT_DIR = "/data/patrick_res/rl/pseudo_pop/res/"
 # PAIRS_PATH = "/data/patrick_res/sessions/pairs_at_least_3blocks_10sess.pickle"
 
 # path for each session, specifying behavior
-SESS_BEHAVIOR_PATH = "/data/patrick_res/rl/pseudo_pop/shared_belief_rnn_prob_matches_sam_0_sess_{sess_name}_beh.csv"
-# path for each session, for spikes that have been pre-aligned to event time and binned. 
-SESS_SPIKES_PATH = "/data/patrick_res/rl/pseudo_pop/shared_belief_rnn_prob_matches_sam_0_sess_{sess_name}_frs.pickle"
+# SESS_BEHAVIOR_PATH = "/data/patrick_res/rl/pseudo_pop/shared_belief_rnn_prob_matches_sam_0_sess_{sess_name}_beh.csv"
+# SESS_SPIKES_PATH = "/data/patrick_res/rl/pseudo_pop/shared_belief_rnn_prob_matches_sam_0_sess_{sess_name}_frs.pickle"
 
+
+SESS_BEHAVIOR_PATH = "/data/patrick_res/rl/pseudo_pop/separate_belief_rnn_prob_matches_sam_noise_idx_6_sess_{sess_name}_beh.csv"
+SESS_SPIKES_PATH = "/data/patrick_res/rl/pseudo_pop/separate_belief_rnn_prob_matches_sam_noise_idx_6_sess_{sess_name}_frs.pickle"
 DATA_MODE = "FiringRate"
 
 def load_session_data(sess_name, feat):
@@ -91,8 +93,8 @@ def decode():
     within_cond_accs = np.hstack(within_cond_accs)
     across_cond_accs = np.hstack(across_cond_accs)
     print(across_cond_accs.shape)
-    np.save(os.path.join(OUTPUT_DIR, f"shared_belief_rnn_prob_matches_sam_0_within_cond_accs.npy"), within_cond_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"shared_belief_rnn_prob_matches_sam_0_across_cond_accs.npy"), across_cond_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"separate_belief_rnn_prob_matches_sam_noise_idx_6_within_cond_accs.npy"), within_cond_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"separate_belief_rnn_prob_matches_sam_noise_idx_6_across_cond_accs.npy"), across_cond_accs)
 
 
 def main():

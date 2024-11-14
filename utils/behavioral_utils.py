@@ -693,12 +693,14 @@ def get_chosen_preferred_trials(pair, beh):
     """
     Find trials where either features in the pair are preferred, (high conf for that feature)
     and chosen. 
+    NOTE: requries belief state value labels to be included in beh
     """
     feat1, feat2 = pair
     chosen_preferred = beh[
-        ((beh[FEATURE_TO_DIM[feat1]] == feat1) & (beh.ConfidenceLabel == f"High {feat1}")) |
-        ((beh[FEATURE_TO_DIM[feat2]] == feat2) & (beh.ConfidenceLabel == f"High {feat2}"))
+        ((beh[FEATURE_TO_DIM[feat1]] == feat1) & (beh.BeliefStateValueLabel == f"High {feat1}")) |
+        ((beh[FEATURE_TO_DIM[feat2]] == feat2) & (beh.BeliefStateValueLabel == f"High {feat2}"))
     ]
+    chosen_preferred["Choice"] = chosen_preferred.BeliefStateValueLabel.apply(lambda x: x.split(" ")[1])
     return chosen_preferred
 
 def get_chosen_not_preferred_trials(pair, beh):
@@ -711,8 +713,8 @@ def get_chosen_not_preferred_trials(pair, beh):
     feat1, feat2 = pair
     # find trials when high confidence and neither features are preferred
     not_pref_beh = beh[
-        (~beh.ConfidenceLabel.isin([f"High {feat1}", f"High {feat2}"])) & 
-        (beh.ConfidenceLabel != "Low")
+        (~beh.BeliefStateValueLabel.isin([f"High {feat1}", f"High {feat2}"])) & 
+        (beh.BeliefStateValueLabel != "Low")
     ]
     # chose feature 1 and not 2
     chose_feat_1_not_pref = not_pref_beh[
