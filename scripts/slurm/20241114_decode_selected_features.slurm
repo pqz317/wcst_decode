@@ -13,7 +13,7 @@ module load singularity
 singularity exec --writable-tmpfs --nv \
     --bind /gscratch/walkerlab/patrick:/data,/mmfs1/home/pqz317/wcst_decode:/src/wcst_decode \
     /gscratch/walkerlab/patrick/singularity/wcst_decode_image.sif /usr/bin/python3 \
-    /src/wcst_decode/scripts/pseudo_decoding/20241113_decode_preferred_beliefs.py \
+    /src/wcst_decode/scripts/pseudo_decoding/20241114_decode_selected_features.py \
     --feature_dim_idx $SLURM_ARRAY_TASK_ID \
     $sub_flag\
     $region_flag\
