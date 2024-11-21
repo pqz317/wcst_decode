@@ -36,7 +36,7 @@ REGIONS = ["anterior", "temporal", None]
 UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/all_units.pickle"
 
 
-def load_session_data(sess_name, feature_dim, subject, region_units): 
+def load_session_data(sess_name, feature_dim, subject, region_units, shuffle_idx): 
     """
     Loads the data (behavioral and firing rates) for a given session, 
     generates a TrialSplitter based on a condition (feature dimension) 
@@ -54,6 +54,11 @@ def load_session_data(sess_name, feature_dim, subject, region_units):
     # grab the features of the selected card
     feature_selections = behavioral_utils.get_selection_features(beh)
     beh = pd.merge(beh, feature_selections, on="TrialNumber", how="inner")
+
+    if shuffle_idx is not None: 
+        beh = behavioral_utils.shuffle_beh_by_shift(beh, buffer=50, seed=shuffle_idx)
+    beh = behavioral_utils.balance_trials_by_condition(beh, feature_dim)
+
 
     # load firing rates
     spikes_path = SESS_SPIKES_PATH.format(
@@ -75,7 +80,7 @@ def load_session_data(sess_name, feature_dim, subject, region_units):
     session_data.pre_generate_splits(NUM_SPLITS)
     return session_data
 
-def decode_feature(sessions, feature_dim, subject, region):
+def decode_feature(sessions, feature_dim, subject, region, shuffle_idx):
     """
     For a feature dimension and list of sessions, sets up and runs decoding, stores results
     Args: 
@@ -84,10 +89,11 @@ def decode_feature(sessions, feature_dim, subject, region):
     """
     print(f"Decoding {feature_dim} for subject {subject}")
     region_str = "" if region is None else f"_{region}"
-    name = f"{subject}_selected_features_{feature_dim}{region_str}"
+    shuffle_str = "" if shuffle_idx is None else f"_shuffle_{shuffle_idx}"
+    name = f"{subject}_selected_features_{feature_dim}{region_str}{shuffle_str}"
     region_units = spike_utils.get_region_units(region, UNITS_PATH.format(sub=subject))
     # load all session datas
-    sess_datas = sessions.apply(lambda x: load_session_data(x.session_name, feature_dim, subject, region_units), axis=1)
+    sess_datas = sessions.apply(lambda x: load_session_data(x.session_name, feature_dim, subject, region_units, shuffle_idx), axis=1)
 
     # setup decoder, specify all possible label classes, number of neurons, parameters
     classes = POSSIBLE_FEATURES[feature_dim]
@@ -120,13 +126,14 @@ def main():
     parser.add_argument('--feature_dim_idx', type=int)
     parser.add_argument('--region_idx', default=None, type=int)
     parser.add_argument('--subject', default="SA", type=str)
+    parser.add_argument('--shuffle_idx', default=None, type=int)
     args = parser.parse_args()
 
     sessions = pd.read_pickle(SESSIONS_PATH.format(sub=args.subject))
     # args.region =  None if args.region_idx is None else REGIONS[args.region_idx]
     feature_dim = FEATURE_DIMS[args.feature_dim_idx]
     region = None if args.region_idx is None else REGIONS[args.region_idx]
-    decode_feature(sessions, feature_dim, args.subject, region)
+    decode_feature(sessions, feature_dim, args.subject, region, args.shuffle_idx)
 
 if __name__ == "__main__":
     main()
