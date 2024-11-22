@@ -24,7 +24,7 @@ import argparse
 # the output directory to store the data
 OUTPUT_DIR = "/data/res/pseudo"
 # path to a dataframe of sessions to analyze
-SESSIONS_PATH = "/data/patrick_res/sessions/SA/valid_sessions_rpe.pickle"
+SESSIONS_PATH = "/data/patrick_res/sessions/SA/valid_sessions.pickle"
 # PAIRS_PATH = "/data/patrick_res/sessions/SA/pairs_at_least_3blocks_7sess.pickle"
 # MIN_TRIALS_FOR_PAIRS_PATH = "/data/patrick_res/sessions/SA/pairs_at_least_3blocks_7sess_min_trials.pickle"
 

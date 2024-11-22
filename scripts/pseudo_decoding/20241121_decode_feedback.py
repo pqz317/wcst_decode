@@ -12,7 +12,7 @@ from models.trainer import Trainer
 from models.model_wrapper import ModelWrapper, ModelWrapperLinearRegression
 from models.multinomial_logistic_regressor import NormedDropoutMultinomialLogisticRegressor
 from trial_splitters.condition_trial_splitter import ConditionTrialSplitter 
-
+from constants.decoding_constants import *
 import argparse
 
 EVENT = "FeedbackOnset"  # event in behavior to align on
@@ -34,7 +34,7 @@ DATA_MODE = "FiringRate"
 UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/all_units.pickle"
 
 
-def load_session_data(sess_name): 
+def load_session_data(sess_name, subject, region_units, shuffle_idx): 
     """
     Loads the data (behavioral and firing rates) for a given session, 
     generates a TrialSplitter based on a condition (feature dimension) 
@@ -44,15 +44,19 @@ def load_session_data(sess_name):
         condition: condition used to group trials in pseudo population (in this case a feature dimension)
     Returns: a SessionData object
     """
-    behavior_path = SESS_BEHAVIOR_PATH.format(sess_name=sess_name)
+    behavior_path = SESS_BEHAVIOR_PATH.format(sess_name=sess_name, sub=subject)
     beh = pd.read_csv(behavior_path)
 
     # filter trials 
-    valid_beh = behavioral_utils.get_valid_trials(beh)   
+    beh = behavioral_utils.get_valid_trials(beh)   
 
     # grab the features of the selected card
-    feature_selections = behavioral_utils.get_selection_features(valid_beh)
-    valid_beh_merged = pd.merge(valid_beh, feature_selections, on="TrialNumber", how="inner")
+    feature_selections = behavioral_utils.get_selection_features(beh)
+    beh = pd.merge(beh, feature_selections, on="TrialNumber", how="inner")
+
+    if shuffle_idx is not None: 
+        beh = behavioral_utils.shuffle_beh_by_shift(beh, buffer=50, seed=shuffle_idx)
+    beh = behavioral_utils.balance_trials_by_condition(beh, "Response")
 
     # load firing rates
     spikes_path = SESS_SPIKES_PATH.format(
@@ -64,10 +68,15 @@ def load_session_data(sess_name):
     )
     frs = pd.read_pickle(spikes_path)
     frs = frs.rename(columns={DATA_MODE: "Value"})
-
+    if region_units is not None: 
+        frs["PseudoUnitID"] = int(sess_name) * 100 + frs.UnitID.astype(int)
+        frs = frs[frs.PseudoUnitID.isin(region_units)]
     # create a trial splitter 
-    splitter = ConditionTrialSplitter(valid_beh_merged, "Response", 0.2)
-    return SessionData(sess_name, valid_beh_merged, frs, splitter)
+    splitter = ConditionTrialSplitter(beh, "Response", TEST_RATIO, seed=DECODER_SEED)
+    session_data = SessionData(sess_name, beh, frs, splitter)
+    session_data.pre_generate_splits(NUM_SPLITS)
+
+    return session_data
 
 def decode_feedback(sessions, subject, region, shuffle_idx):
     """
@@ -83,21 +92,22 @@ def decode_feedback(sessions, subject, region, shuffle_idx):
     region_units = spike_utils.get_region_units(region, UNITS_PATH.format(sub=subject))
 
     # load all session datas
-    sess_datas = sessions.apply(lambda x: load_session_data(x.session_name, region_units, shuffle_idx), axis=1)
+    sess_datas = sessions.apply(lambda x: load_session_data(x.session_name, subject, region_units, shuffle_idx), axis=1)
 
     # setup decoder, specify all possible label classes, number of neurons, parameters
     classes = ["Correct", "Incorrect"]
     num_neurons = sess_datas.apply(lambda x: x.get_num_neurons()).sum()
-
     init_params = {"n_inputs": num_neurons, "p_dropout": 0.5, "n_classes": len(classes)}
-    # create a trainer object
-    trainer = Trainer(learning_rate=0.05, max_iter=1000, batch_size=1000)
+
+    trainer = Trainer(learning_rate=0.05, max_iter=500, batch_size=1000)
     # create a wrapper for the decoder
     model = ModelWrapper(NormedDropoutMultinomialLogisticRegressor, init_params, trainer, classes)
     # calculate time bins (in seconds)
-    time_bins = np.arange(0, (POST_INTERVAL + PRE_INTERVAL) / 1000, INTERVAL_SIZE / 1000)
-    # train and evaluate the decoder per timein 
-    train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, 5, 1000, 200, 42, proj)
+    trial_interval = get_trial_interval(EVENT)
+    time_bins = np.arange(0, (trial_interval.post_interval + trial_interval.pre_interval) / 1000, trial_interval.interval_size / 1000)
+    train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(
+        model, sess_datas, time_bins, NUM_SPLITS, NUM_TRAIN_PER_COND, NUM_TEST_PER_COND
+    ) 
 
     # store the results
     np.save(os.path.join(OUTPUT_DIR, f"{name}_train_accs.npy"), train_accs)
@@ -117,7 +127,6 @@ def main():
     parser.add_argument('--subject', default="SA", type=str)
     parser.add_argument('--shuffle_idx', default=None, type=int)
     args = parser.parse_args()
-
 
     sessions = pd.read_pickle(SESSIONS_PATH.format(sub=args.subject))
     # args.region =  None if args.region_idx is None else REGIONS[args.region_idx]
