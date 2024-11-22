@@ -25,8 +25,11 @@ import argparse
 OUTPUT_DIR = "/data/res/pseudo"
 # path to a dataframe of sessions to analyze
 SESSIONS_PATH = "/data/patrick_res/sessions/SA/valid_sessions_rpe.pickle"
-PAIRS_PATH = "/data/patrick_res/sessions/SA/pairs_at_least_3blocks_7sess.pickle"
-MIN_TRIALS_FOR_PAIRS_PATH = "/data/patrick_res/sessions/SA/pairs_at_least_3blocks_7sess_min_trials.pickle"
+# PAIRS_PATH = "/data/patrick_res/sessions/SA/pairs_at_least_3blocks_7sess.pickle"
+# MIN_TRIALS_FOR_PAIRS_PATH = "/data/patrick_res/sessions/SA/pairs_at_least_3blocks_7sess_min_trials.pickle"
+
+PAIRS_PATH = "/data/patrick_res/sessions/SA/pairs_at_least_3blocks_10sess_more_sess.pickle"
+MIN_TRIALS_FOR_PAIRS_PATH = "/data/patrick_res/sessions/SA/pairs_at_least_3blocks_10sess_more_sess_min_trials.pickle"
 
 # SESSIONS_PATH = "/data/patrick_res/sessions/valid_sessions_rpe.pickle"
 # PAIRS_PATH = "/data/patrick_res/sessions/pairs_at_least_3blocks_10sess.pickle"
@@ -95,7 +98,8 @@ def decode(sessions, row, shuffle_idx=None, chosen_not_preferred=False):
     pair_str = "_".join(pair)
     shuffle_str = f"_shuffle_{shuffle_idx}" if shuffle_idx is not None else ""
     not_pref_str = "_chosen_not_pref" if chosen_not_preferred else ""
-    run_name = f"preferred_beliefs_{EVENT}_pair_{pair_str}{not_pref_str}{shuffle_str}"
+    # run_name = f"preferred_beliefs_{EVENT}_pair_{pair_str}{not_pref_str}{shuffle_str}"
+    run_name = f"preferred_beliefs_more_sess_{EVENT}_pair_{pair_str}{not_pref_str}{shuffle_str}"
 
     # load up session data to train network
     sess_datas = sessions.apply(lambda row: load_session_data(

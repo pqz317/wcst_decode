@@ -4,6 +4,7 @@ import pandas as pd
 import utils.pseudo_utils as pseudo_utils
 import utils.pseudo_classifier_utils as pseudo_classifier_utils
 import utils.behavioral_utils as behavioral_utils
+import utils.spike_utils as spike_utils
 
 from utils.session_data import SessionData
 
@@ -19,29 +20,19 @@ PRE_INTERVAL = 1300   # time in ms before event
 POST_INTERVAL = 1500  # time in ms after event
 INTERVAL_SIZE = 100  # size of interval in ms
 
-# # the output directory to store the data
-# OUTPUT_DIR = "/data/patrick_scratch/pseudo"
-# # path to a dataframe of sessions to analyze
-# SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions.pickle"
-# # path for each session, specifying behavior
-# SESS_BEHAVIOR_PATH = "/data/rawdata/sub-SA/sess-{sess_name}/behavior/sub-SA_sess-{sess_name}_object_features.csv"
-# # path for each session, for spikes that have been pre-aligned to event time and binned. 
-# SESS_SPIKES_PATH = "/data/patrick_scratch/multi_sess/{sess_name}/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins.pickle"
-
 # the output directory to store the data
 OUTPUT_DIR = "/data/res/pseudo"
 # path to a dataframe of sessions to analyze
-# SESSIONS_PATH = "/data/patrick_scratch/multi_sess/valid_sessions.pickle"
-SESSIONS_PATH = "/data/valid_sessions_rpe.pickle"
+SESSIONS_PATH = "/data/patrick_res/sessions/{sub}/valid_sessions_rpe.pickle"
 
-# path for each session, specifying behavior
-SESS_BEHAVIOR_PATH = "/data/sub-SA_sess-{sess_name}_object_features.csv"
+SESS_BEHAVIOR_PATH = "/data/patrick_res/behavior/{sub}/{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
-SESS_SPIKES_PATH = "/data/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
+SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sub}/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 
-DATA_MODE = "SpikeCounts"
+REGIONS = ["anterior", "temporal", None]
+DATA_MODE = "FiringRate"
+UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/all_units.pickle"
 
-SEED = 42
 
 def load_session_data(sess_name): 
     """
@@ -78,22 +69,26 @@ def load_session_data(sess_name):
     splitter = ConditionTrialSplitter(valid_beh_merged, "Response", 0.2)
     return SessionData(sess_name, valid_beh_merged, frs, splitter)
 
-def decode_feedback(valid_sess, proj=None, proj_name="no_proj"):
+def decode_feedback(sessions, subject, region, shuffle_idx):
     """
     For a feature dimension and list of sessions, sets up and runs decoding, stores results
     Args: 
         feature_dim: feature dimension to decode
         valid_sess: a dataframe of valid sessions to be used
     """
+    print(f"Decoding feedback for subject {subject}")
+    region_str = "" if region is None else f"_{region}"
+    shuffle_str = "" if shuffle_idx is None else f"_shuffle_{shuffle_idx}"
+    name = f"{subject}_feedback_{region_str}{shuffle_str}"
+    region_units = spike_utils.get_region_units(region, UNITS_PATH.format(sub=subject))
+
     # load all session datas
-    sess_datas = valid_sess.apply(lambda x: load_session_data(x.session_name), axis=1)
+    sess_datas = sessions.apply(lambda x: load_session_data(x.session_name, region_units, shuffle_idx), axis=1)
 
     # setup decoder, specify all possible label classes, number of neurons, parameters
     classes = ["Correct", "Incorrect"]
-    if proj is None:
-        num_neurons = sess_datas.apply(lambda x: x.get_num_neurons()).sum()
-    else: 
-        num_neurons = proj.shape[1]
+    num_neurons = sess_datas.apply(lambda x: x.get_num_neurons()).sum()
+
     init_params = {"n_inputs": num_neurons, "p_dropout": 0.5, "n_classes": len(classes)}
     # create a trainer object
     trainer = Trainer(learning_rate=0.05, max_iter=1000, batch_size=1000)
@@ -105,10 +100,10 @@ def decode_feedback(valid_sess, proj=None, proj_name="no_proj"):
     train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, 5, 1000, 200, 42, proj)
 
     # store the results
-    np.save(os.path.join(OUTPUT_DIR, f"feedback_{proj_name}_train_accs.npy"), train_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"feedback_{proj_name}_test_accs.npy"), test_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"feedback_{proj_name}_shuffled_accs.npy"), shuffled_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"feedback_{proj_name}_models.npy"), models)
+    np.save(os.path.join(OUTPUT_DIR, f"{name}_train_accs.npy"), train_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{name}_test_accs.npy"), test_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{name}_shuffled_accs.npy"), shuffled_accs)
+    np.save(os.path.join(OUTPUT_DIR, f"{name}_models.npy"), models)
 
 
 def main():
@@ -117,19 +112,17 @@ def main():
     For each feature dimension, runs decoding, stores results. 
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('--proj_path', type=str, help="a path to projection file", default="")
-    parser.add_argument('--proj_name', type=str, help="a path to projection file", default="no_proj")
-
-    args = parser.parse_args()
-    proj_name = args.proj_name
-    if args.proj_path:
-        proj = np.load(args.proj_path)
-    else: 
-        proj = None
-
-    valid_sess = pd.read_pickle(SESSIONS_PATH)
-    decode_feedback(valid_sess, proj, proj_name)
     
+    parser.add_argument('--region_idx', default=None, type=int)
+    parser.add_argument('--subject', default="SA", type=str)
+    parser.add_argument('--shuffle_idx', default=None, type=int)
+    args = parser.parse_args()
+
+
+    sessions = pd.read_pickle(SESSIONS_PATH.format(sub=args.subject))
+    # args.region =  None if args.region_idx is None else REGIONS[args.region_idx]
+    region = None if args.region_idx is None else REGIONS[args.region_idx]
+    decode_feedback(sessions, args.subject, region, args.shuffle_idx)    
 
 if __name__ == "__main__":
     main()
