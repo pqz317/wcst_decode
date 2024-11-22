@@ -14,8 +14,8 @@ singularity exec --writable-tmpfs --nv \
     --bind /gscratch/walkerlab/patrick:/data,/mmfs1/home/pqz317/wcst_decode:/src/wcst_decode \
     /gscratch/walkerlab/patrick/singularity/wcst_decode_image.sif /usr/bin/python3 \
     /src/wcst_decode/scripts/pseudo_decoding/20241113_decode_preferred_beliefs.py \
-    --pair_idx $(($SLURM_ARRAY_TASK_ID % 18)) \
-    --shuffle_idx $(($SLURM_ARRAY_TASK_ID / 18)) \
+    --pair_idx $(($SLURM_ARRAY_TASK_ID % 17)) \
+    --shuffle_idx $(($SLURM_ARRAY_TASK_ID / 17)) \
     $not_pref_flag
 
     
