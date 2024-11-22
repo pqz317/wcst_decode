@@ -17,13 +17,13 @@ UnitID, TrialNumber, TimeBins, and some data columns, like SpikeCounts or Firing
 """
 
 SPECIES = 'nhp'
-SUBJECT = 'BL'
+SUBJECT = 'SA'
 
-PRE_INTERVAL = 500
-POST_INTERVAL = 500
-INTERVAL_SIZE = 50
-NUM_BINS_SMOOTH = 1
-EVENT = "FixationOnCross"
+# PRE_INTERVAL = 500
+# POST_INTERVAL = 500
+# INTERVAL_SIZE = 50
+# NUM_BINS_SMOOTH = 1
+# EVENT = "FixationOnCross"
 
 # PRE_INTERVAL = 1000
 # POST_INTERVAL = 1000
@@ -31,11 +31,11 @@ EVENT = "FixationOnCross"
 # NUM_BINS_SMOOTH = 1
 # EVENT = "StimOnset"
 
-# PRE_INTERVAL = 1300
-# POST_INTERVAL = 1500
-# INTERVAL_SIZE = 100
-# NUM_BINS_SMOOTH = 1
-# EVENT = "FeedbackOnset"
+PRE_INTERVAL = 1300
+POST_INTERVAL = 1500
+INTERVAL_SIZE = 100
+NUM_BINS_SMOOTH = 1
+EVENT = "FeedbackOnset"
 
 
 def calc_firing_rate_for_interval(row):
