@@ -38,7 +38,7 @@ def calc_for_session(row):
 
     res = startup_local.get_sac_dataframe(SPECIES, SUBJECT, TASK, sess_name, False)
     res = res[res.trial.isin(valid_beh.TrialNumber)]
-    # saccade was onto something different
+    # saccade was onto something other than the chosen card (not h0 or s0, but still on a card)
     other_cards = ["h1", "h2", "h3", "s1", "s2", "s3"]
     res = res[res.obj_end.isin(other_cards)]
     # saccade was onto something different

@@ -37,9 +37,14 @@ UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/all_units.pickle"
 
 
 DATA_MODE = "FiringRate"
-EVENT = "StimOnset"  # event in behavior to align on
-PRE_INTERVAL = 1000   # time in ms before event
-POST_INTERVAL = 1000  # time in ms after event
+# EVENT = "StimOnset"  # event in behavior to align on
+# PRE_INTERVAL = 1000   # time in ms before event
+# POST_INTERVAL = 1000  # time in ms after event
+# INTERVAL_SIZE = 100  # size of interval in ms
+
+EVENT = "FeedbackOnset"  # event in behavior to align on
+PRE_INTERVAL = 1300   # time in ms before event
+POST_INTERVAL = 1500  # time in ms after event
 INTERVAL_SIZE = 100  # size of interval in ms
 
 REGIONS = ["anterior", "temporal"]
@@ -100,13 +105,13 @@ def decode(sessions, pair_row, region, subject="SA"):
     region_str = "" if region is None else f"_{region}"
     region_units = spike_utils.get_region_units(region, UNITS_PATH.format(sub=subject))
 
-    name = f"ccgp_belief_state_value_{EVENT}_pair_{pair_str}{region_str}"
-    for feat in pair: 
-        sess_datas = sessions.apply(lambda row: load_session_data(row, [feat], region_units, subject), axis=1)
-        time_bins = np.arange(0, (POST_INTERVAL + PRE_INTERVAL) / 1000, INTERVAL_SIZE / 1000)
-        models = np.load(os.path.join(OUTPUT_DIR, f"{name}_feat_{feat}_models.npy"), allow_pickle=True)
-        cross_decode_accs = pseudo_classifier_utils.cross_evaluate_by_time_bins(models, sess_datas, time_bins, avg=False)
-        np.save(os.path.join(OUTPUT_DIR, f"{name}_feat_{feat}_cross_accs.npy"), cross_decode_accs)
+    name = f"{subject}_ccgp_belief_state_value_{EVENT}_pair_{pair_str}{region_str}"
+    # for feat in pair: 
+    #     sess_datas = sessions.apply(lambda row: load_session_data(row, [feat], region_units, subject), axis=1)
+    #     time_bins = np.arange(0, (POST_INTERVAL + PRE_INTERVAL) / 1000, INTERVAL_SIZE / 1000)
+    #     models = np.load(os.path.join(OUTPUT_DIR, f"{name}_feat_{feat}_models.npy"), allow_pickle=True)
+    #     cross_decode_accs = pseudo_classifier_utils.cross_evaluate_by_time_bins(models, sess_datas, time_bins, avg=False)
+    #     np.save(os.path.join(OUTPUT_DIR, f"{name}_feat_{feat}_cross_accs.npy"), cross_decode_accs)
     
     sess_datas = sessions.apply(lambda row: load_session_data(row, pair, region_units, subject), axis=1)
     time_bins = np.arange(0, (POST_INTERVAL + PRE_INTERVAL) / 1000, INTERVAL_SIZE / 1000)
