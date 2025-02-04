@@ -41,14 +41,19 @@ SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/SA/{sess_name}_firing_rates_{
 
 
 DATA_MODE = "FiringRate"
-EVENT = "StimOnset"  # event in behavior to align on
-PRE_INTERVAL = 1000   # time in ms before event
-POST_INTERVAL = 1000  # time in ms after event
-INTERVAL_SIZE = 100  # size of interval in ms
+# EVENT = "StimOnset"  # event in behavior to align on
+# PRE_INTERVAL = 1000   # time in ms before event
+# POST_INTERVAL = 1000  # time in ms after event
+# INTERVAL_SIZE = 100  # size of interval in ms
 # EVENT = "FeedbackOnset"  # event in behavior to align on
 # PRE_INTERVAL = 1300   # time in ms before event
 # POST_INTERVAL = 1500  # time in ms after event
 # INTERVAL_SIZE = 100  # size of interval in ms
+PRE_INTERVAL = 0
+POST_INTERVAL = 600
+INTERVAL_SIZE = 50
+NUM_BINS_SMOOTH = 1
+EVENT = "decision_warped"
 
 def load_session_data(row, pair, shuffle_idx=None, seed_idx=None, chosen_not_preferred=False):
     sess_name = row.session_name
@@ -98,8 +103,8 @@ def decode(sessions, row, shuffle_idx=None, chosen_not_preferred=False):
     pair_str = "_".join(pair)
     shuffle_str = f"_shuffle_{shuffle_idx}" if shuffle_idx is not None else ""
     not_pref_str = "_chosen_not_pref" if chosen_not_preferred else ""
-    # run_name = f"preferred_beliefs_{EVENT}_pair_{pair_str}{not_pref_str}{shuffle_str}"
-    run_name = f"preferred_beliefs_more_sess_{EVENT}_pair_{pair_str}{not_pref_str}{shuffle_str}"
+    run_name = f"preferred_beliefs_{EVENT}_pair_{pair_str}{not_pref_str}{shuffle_str}"
+    # run_name = f"preferred_beliefs_more_sess_{EVENT}_pair_{pair_str}{not_pref_str}{shuffle_str}"
 
     # load up session data to train network
     sess_datas = sessions.apply(lambda row: load_session_data(

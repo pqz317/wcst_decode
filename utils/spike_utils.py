@@ -164,7 +164,7 @@ def get_unit_fr_array(frs, column_name):
     return np.stack(grouped.squeeze(), axis=0)
 
 
-DEFAULT_FR_PATH = "/data/patrick_res/firing_rates/{session}_firing_rates_1300_FeedbackOnset_1500_100_bins_1_smooth.pickle"
+DEFAULT_FR_PATH = "/data/patrick_res/firing_rates/SA/{session}_firing_rates_1300_FeedbackOnset_1500_100_bins_1_smooth.pickle"
 
 def get_unit_positions_per_sess(session, fr_path=None):
     if fr_path is None: 
