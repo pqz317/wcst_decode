@@ -26,12 +26,9 @@ OUTPUT_DIR = "/data/res/pseudo"
 # path to a dataframe of sessions to analyze
 SESSIONS_PATH = "/data/patrick_res/sessions/{sub}/valid_sessions.pickle"
 SA_PAIRS_PATH = "/data/patrick_res/sessions/SA/pairs_at_least_3blocks_7sess.pickle"
+SA_MORE_SESS_PAIRS_PATH = "/data/patrick_res/sessions/pairs_at_least_3blocks_10sess.pickle"
 # BL_PAIRS_PATH = "/data/patrick_res/sessions/BL/pairs_at_least_1blocks_3sess.pickle"
 BL_PAIRS_PATH = "/data/patrick_res/sessions/BL/pairs_at_least_2blocks_1sess.pickle"
-
-
-# SESSIONS_PATH = "/data/patrick_res/sessions/valid_sessions_rpe.pickle"
-# PAIRS_PATH = "/data/patrick_res/sessions/pairs_at_least_3blocks_10sess.pickle"
 
 # path for each session, specifying behavior
 SESS_BEHAVIOR_PATH = "/data/patrick_res/behavior/{sub}/{sess_name}_object_features.csv"
@@ -68,6 +65,9 @@ def load_session_data(row, cond, region_units, args):
         beh = beh[beh.PrevResponse == args.prev_response]
 
     beh = behavioral_utils.get_belief_value_labels(beh)
+
+    if args.shuffle_idx is not None: 
+        beh = behavioral_utils.shuffle_beh_by_shift(beh, buffer=50, seed=args.shuffle_idx)
 
 
     # subselect for either low conf, or high conf preferring feat, where feat is also chosen
@@ -134,7 +134,9 @@ def get_name(args):
     region_str = "" if args.region is None else f"_{args.region}"
     next_trial_str = "_next_trial_value" if args.use_next_trial_value else ""
     prev_response_str = "" if args.prev_response is None else f"_prev_res_{args.prev_response}"
-    name = f"{args.subject}_ccgp_belief_state_value_{args.trial_interval.event}_pair_{pair_str}{region_str}{next_trial_str}{prev_response_str}"
+    shuffle_str = "" if args.shuffle_idx is None else f"_shuffle_{args.shuffle_idx}"
+    more_sess_str = "_more_sess" if args.more_sess else ""
+    name = f"{args.subject}_ccgp_belief_state_value_{args.trial_interval.event}_pair_{pair_str}{region_str}{next_trial_str}{prev_response_str}{more_sess_str}{shuffle_str}"
     return name
     
 def decode(args):
@@ -184,10 +186,16 @@ def main():
     parser.add_argument('--trial_event', default="StimOnset", type=str)
     parser.add_argument('--use_next_trial_value', action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument('--prev_response', default=None, type=str)
+    parser.add_argument('--shuffle_idx', default=None, type=int)
+    parser.add_argument('--more_sess', action=argparse.BooleanOptionalAction, default=False)
+
     args = parser.parse_args()
     subject = args.subject
     if subject == "SA": 
-        pairs = pd.read_pickle(SA_PAIRS_PATH)
+        if args.more_sess:
+            pairs = pd.read_pickle(SA_MORE_SESS_PAIRS_PATH)
+        else: 
+            pairs = pd.read_pickle(SA_PAIRS_PATH)
     else: 
         pairs = pd.read_pickle(BL_PAIRS_PATH)
     args.row = pairs.iloc[args.pair_idx]
@@ -197,9 +205,12 @@ def main():
     args.trial_interval = get_trial_interval(args.trial_event)
 
     print(f"Computing CCGP for {subject} of belief state value in interval {args.trial_event}", flush=True)
-    print(f"Loking at region {args.region}, using use_next_trial_value {args.use_next_trial_value}", flush=True)
+    if args.more_sess:
+        print(f"Using more sessions", flush=True)
+    print(f"shuffle idx is {args.shuffle_idx}", flush=True)
+    print(f"Looking at region {args.region}, using use_next_trial_value {args.use_next_trial_value}", flush=True)
     print(f"examining conditions between {args.row.pair} using between {args.row.num_sessions} sessions", flush=True)
-    print(f"Conditioning on prev response being {args.prev_response}")
+    print(f"Conditioning on prev response being {args.prev_response}", flush=True)
     decode(args)
 
 if __name__ == "__main__":
