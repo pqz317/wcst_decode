@@ -1,8 +1,8 @@
 #!/bin/bash
-sbatch --array=0-16 <<EOT
+sbatch <<EOT
 #!/bin/bash
 #SBATCH --job-name=ccgp_val
-
+#SBACTH --array=0-16
 #SBATCH -p ckpt-all
 #SBATCH -A walkerlab
 #SBATCH --ntasks=1
