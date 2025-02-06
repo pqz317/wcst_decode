@@ -1,8 +1,7 @@
 #!/bin/bash
-sbatch <<EOT
+sbatch --array=0-16 <<EOT
 #!/bin/bash
 #SBATCH --job-name=ccgp_val
-#SBACTH --array=0-16
 #SBATCH -p ckpt-all
 #SBATCH -A walkerlab
 #SBATCH --ntasks=1
@@ -16,5 +15,5 @@ singularity exec --writable-tmpfs --nv \
     --bind /gscratch/walkerlab/patrick:/data,/mmfs1/home/pqz317/wcst_decode:/src/wcst_decode \
     /gscratch/walkerlab/patrick/singularity/wcst_decode_image.sif /usr/bin/python3 \
     /src/wcst_decode/scripts/pseudo_decoding/20241016_ccgp_value_by_pairs.py \
-    --pair_idx $SLURM_ARRAY_TASK_ID $1 $2 $3 $4 $5
+    --pair_idx \$SLURM_ARRAY_TASK_ID $1 $2 $3 $4 $5
 EOT
