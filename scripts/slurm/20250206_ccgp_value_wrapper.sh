@@ -1,5 +1,5 @@
 #!/bin/bash
-sbatch --array=0-16<<EOT
+sbatch --array=0-16 <<EOT
 #!/bin/bash
 #SBATCH --job-name=ccgp_val
 
