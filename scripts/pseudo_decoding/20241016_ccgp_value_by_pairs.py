@@ -138,12 +138,19 @@ def get_name(args):
     more_sess_str = "_more_sess" if args.more_sess else ""
     name = f"{args.subject}_ccgp_belief_state_value_{args.trial_interval.event}_pair_{pair_str}{region_str}{next_trial_str}{prev_response_str}{more_sess_str}{shuffle_str}"
     return name
+
+def create_shuffle_dir(name):
+    shuffle_dir = os.path.join(OUTPUT_DIR, f"{name}_shuffles")
+    os.makedirs(shuffle_dir, exist_ok=True)
+    return shuffle_dir
+
     
 def decode(args):
     region_units = spike_utils.get_region_units(args.region, UNITS_PATH.format(sub=args.subject))
     trial_interval = args.trial_interval
     sessions = args.sessions
     name = get_name(args)
+    output_dir = OUTPUT_DIR if args.shuffle_idx is None else create_shuffle_dir(name)
 
     pair = args.row.pair
     within_cond_accs = []
@@ -162,17 +169,17 @@ def decode(args):
         test_feat_sess_datas = sessions.apply(lambda row: load_session_data(row, [test_feat], region_units, args), axis=1)
         accs_across_time = pseudo_classifier_utils.evaluate_model_with_data(models, test_feat_sess_datas, time_bins, num_test_per_cond=NUM_TEST_PER_COND)
         across_cond_accs.append(accs_across_time)
-        np.save(os.path.join(OUTPUT_DIR, f"{name}_feat_{feat}_models.npy"), models)
+        np.save(os.path.join(output_dir, f"{name}_feat_{feat}_models.npy"), models)
     within_cond_accs = np.hstack(within_cond_accs)
     across_cond_accs = np.hstack(across_cond_accs)
 
     overall_sess_datas = sessions.apply(lambda row: load_session_data(row, pair, region_units, args), axis=1)
     train_accs, test_accs, shuffled_accs, models = train_decoder(overall_sess_datas, time_bins)
-    np.save(os.path.join(OUTPUT_DIR, f"{name}_overall_accs.npy"), test_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{name}_overall_models.npy"), models)
+    np.save(os.path.join(output_dir, f"{name}_overall_accs.npy"), test_accs)
+    np.save(os.path.join(output_dir, f"{name}_overall_models.npy"), models)
 
-    np.save(os.path.join(OUTPUT_DIR, f"{name}_within_cond_accs.npy"), within_cond_accs)
-    np.save(os.path.join(OUTPUT_DIR, f"{name}_across_cond_accs.npy"), across_cond_accs)
+    np.save(os.path.join(output_dir, f"{name}_within_cond_accs.npy"), within_cond_accs)
+    np.save(os.path.join(output_dir, f"{name}_across_cond_accs.npy"), across_cond_accs)
 
 def main():
     """

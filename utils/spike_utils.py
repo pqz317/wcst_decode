@@ -166,21 +166,8 @@ def get_unit_fr_array(frs, column_name):
 
 DEFAULT_FR_PATH = "/data/patrick_res/firing_rates/SA/{session}_firing_rates_1300_FeedbackOnset_1500_100_bins_1_smooth.pickle"
 
-def get_unit_positions_per_sess(session, fr_path=None):
-    if fr_path is None: 
-        fr_path = DEFAULT_FR_PATH
-    session_fr_path = fr_path.format(
-        session=session,
-    )
-    frs = pd.read_pickle(session_fr_path)
-
-    # session names are usually stored as 20180802 style dates,
-    # but there are names like 201807250001 which denotes an additional
-    # session recorded for that day, but the date's sessioninfo json is the same
-    # so account for that
-    # sess_day = session[:8]
-    sess_day = session
-    info_path = f"/data/rawdata/sub-SA/sess-{sess_day}/session_info/sub-SA_sess-{sess_day}_sessioninfomodified.json"
+def get_unit_positions_per_sess(session, fr_path=DEFAULT_FR_PATH):
+    info_path = f"/data/rawdata/sub-SA/sess-{session}/session_info/sub-SA_sess-{session}_sessioninfomodified.json"
 
     with open(info_path, 'r') as f:
         data = json.load(f)
@@ -204,7 +191,12 @@ def get_unit_positions_per_sess(session, fr_path=None):
     unit_pos = pd.merge(units, electrode_pos_not_nan, left_on="Channel", right_on="electrode_id", how="left")
     unit_pos = unit_pos.astype({"UnitID": int})
     unit_pos["session"] = session
-    unit_pos = unit_pos[unit_pos.UnitID.isin(frs.UnitID.unique())]
+    if fr_path is not None: 
+        session_fr_path = fr_path.format(
+            session=session,
+        )
+        frs = pd.read_pickle(session_fr_path)
+        unit_pos = unit_pos[unit_pos.UnitID.isin(frs.UnitID.unique())]
     unit_pos["PseudoUnitID"] = int(session) * 100 + unit_pos["UnitID"]
     return unit_pos
 
@@ -248,7 +240,7 @@ def get_manual_structure(positions):
     positions["manual_structure"] = positions.apply(lambda x: LEVEL_2_TO_MANUALS[x.structure_level2], axis=1)
     return positions
 
-def get_unit_positions(sessions, fr_path=None):
+def get_unit_positions(sessions, fr_path=DEFAULT_FR_PATH):
     """
     For each session, finds unit positions, concatenates
     """
