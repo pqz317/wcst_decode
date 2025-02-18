@@ -7,6 +7,10 @@ from spike_tools import (
 import utils.behavioral_utils as behavioral_utils
 import utils.spike_utils as spike_utils
 import os
+from distutils.util import strtobool
+
+import argparse
+
 
 """
 Creates firing rates dataframes for all sessions, saves them invdividually
@@ -17,7 +21,7 @@ UnitID, TrialNumber, TimeBins, and some data columns, like SpikeCounts or Firing
 """
 
 SPECIES = 'nhp'
-SUBJECT = 'SA'
+# SUBJECT = 'SA'
 
 # PRE_INTERVAL = 500
 # POST_INTERVAL = 500
@@ -31,14 +35,17 @@ SUBJECT = 'SA'
 # NUM_BINS_SMOOTH = 1
 # EVENT = "StimOnset"
 
-PRE_INTERVAL = 1300
-POST_INTERVAL = 1500
-INTERVAL_SIZE = 100
-NUM_BINS_SMOOTH = 1
-EVENT = "FeedbackOnset"
+# PRE_INTERVAL = 1300
+# POST_INTERVAL = 1500
+# INTERVAL_SIZE = 100
+# NUM_BINS_SMOOTH = 1
+# EVENT = "FeedbackOnset"
+
+BL_SESSIONS_PATH = "/data/patrick_res/sessions/BL/valid_sessions_61.pickle"
+SA_SESSIONS_PATH = "/data/patrick_res/sessions/SA/valid_sessions.pickle"
 
 
-def calc_firing_rate_for_interval(row):
+def calc_firing_rate_for_interval(row, args):
     """
     For a session, per trial, aligns spike data to a specific behavioral event, 
     Bins spikes to specified bin sizes 
@@ -53,39 +60,62 @@ def calc_firing_rate_for_interval(row):
     sess_name = row.session_name
     print(f"Processing session {sess_name}")
     print("Loading files")
-    behavior_path = f"/data/patrick_res/behavior/{SUBJECT}/{sess_name}_object_features.csv"
+    behavior_path = f"/data/patrick_res/behavior/{args.subject}/{sess_name}_object_features.csv"
     beh = pd.read_csv(behavior_path)
     valid_beh = beh[beh.Response.isin(["Correct", "Incorrect"])]
-    spike_times = spike_general.get_spike_times(None, SUBJECT, sess_name, species_dir="/data")
+    spike_times = spike_general.get_spike_times(None, args.subject, sess_name, species_dir="/data")
+    if spike_times is None: 
+        print(f"No spikes for session {sess_name} detected, skipping")
+        return
 
     print("Calculating spikes by trial interval")
-    interval_size_secs = INTERVAL_SIZE / 1000
-    intervals = behavioral_utils.get_trial_intervals(valid_beh, EVENT, PRE_INTERVAL, POST_INTERVAL)
+    interval_size_secs = args.interval_size / 1000
+    intervals = behavioral_utils.get_trial_intervals(valid_beh, args.event, args.pre_interval, args.post_interval)
     
     spike_by_trial_interval = spike_utils.get_spikes_by_trial_interval(spike_times, intervals)
-    end_bin = (PRE_INTERVAL + POST_INTERVAL) / 1000 + interval_size_secs
+    end_bin = (args.pre_interval + args.post_interval) / 1000 + interval_size_secs
 
-    all_units = spike_general.list_session_units(None, SUBJECT, sess_name, species_dir="/data")
+    all_units = spike_general.list_session_units(None, args.subject, sess_name, species_dir="/data")
     print(len(all_units))
     print("Calculating Firing Rates")
     firing_rates = spike_analysis.firing_rate(
         spike_by_trial_interval, 
         all_units, 
         bins=np.arange(0, end_bin, interval_size_secs), 
-        smoothing=NUM_BINS_SMOOTH,
+        smoothing=args.num_bins_smooth,
         trials=valid_beh.TrialNumber.unique()
     )
     if not len(firing_rates.UnitID.unique()) == len(all_units.UnitID.unique()):
         raise ValueError(f"Session {sess_name}: {len(firing_rates.UnitID.unique())} units in firing rates when {len(all_units.UnitID.unique())} total")
     print("Saving")
-    dir_path = f"/data/patrick_res/firing_rates/{SUBJECT}"
+    dir_path = os.path.join(args.base_output_path, args.subject)
     if not os.path.isdir(dir_path):
         os.mkdir(dir_path)
-    firing_rates.to_pickle(os.path.join(dir_path, f"{sess_name}_firing_rates_{PRE_INTERVAL}_{EVENT}_{POST_INTERVAL}_{INTERVAL_SIZE}_bins_{NUM_BINS_SMOOTH}_smooth.pickle"))
+    
+    full_file_name = os.path.join(dir_path, f"{sess_name}_firing_rates_{args.pre_interval}_{args.event}_{args.post_interval}_{args.interval_size}_bins_{args.num_bins_smooth}_smooth.pickle")
+    print(f"For sub {args.subject}, session {sess_name}, storing FR of {firing_rates.UnitID.nunique()} units to {full_file_name}")
+    if not args.dry_run: 
+        firing_rates.to_pickle(full_file_name)
 
 def main():
-    valid_sess = pd.read_pickle(f"/data/patrick_res/sessions/{SUBJECT}/valid_sessions.pickle")
-    valid_sess.apply(calc_firing_rate_for_interval, axis=1)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--subject', default="SA", type=str)
+    parser.add_argument('--event', default="FeedbackOnset", type=str)
+    parser.add_argument('--pre_interval', default=1300, type=int)
+    parser.add_argument('--post_interval', default=1500, type=int)
+    parser.add_argument('--interval_size', default=100, type=int)
+    parser.add_argument('--num_bins_smooth', default=1, type=int)
+
+    parser.add_argument('--base_output_path', default="/data/patrick_res/firing_rates/", type=str)
+    parser.add_argument('--dry_run', default=True, type=lambda x: bool(strtobool(x)))
+    args = parser.parse_args()
+
+    print(f"Running in dry run: {args.dry_run}")
+    if args.subject == "SA":
+        valid_sess = pd.read_pickle(SA_SESSIONS_PATH)
+    else: 
+        valid_sess = pd.read_pickle(BL_SESSIONS_PATH)
+    valid_sess.apply(lambda row: calc_firing_rate_for_interval(row, args), axis=1)
 
 if __name__ == "__main__":
     main()
