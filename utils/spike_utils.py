@@ -298,9 +298,10 @@ def get_region_units(region_level, regions, units_path):
     if region_level is None: 
         return None
     all_units = pd.read_pickle(units_path)
+    regions_arr = regions.split(",")
 
     if region_level == "drive":
-        region = regions[0]
+        region = regions_arr[0]
         if region == "anterior": 
             return all_units[all_units.Channel.str.contains('a')].PseudoUnitID.unique()
         elif region == "temporal":
@@ -308,5 +309,4 @@ def get_region_units(region_level, regions, units_path):
         else: 
             raise ValueError(f"unrecognized region {regions}")
     else: 
-        regions_arr = regions.split(",")
         return all_units[all_units[region_level].isin(regions_arr)]
