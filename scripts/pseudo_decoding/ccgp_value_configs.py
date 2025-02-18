@@ -6,10 +6,11 @@ from distutils.util import strtobool
 class CCGPValueConfigs(NamedTuple):
     # general configs
     subject: str = "SA"
-    pair_idx: str = None
+    pair_idx: int = None
     trial_event: str = "StimOnset"
     use_next_trial_value: bool = False
-    shuffle_seed: int = None
+    prev_response: str = None
+    shuffle_idx: int = None
     region_level: str = None
     regions: str = None
 
@@ -32,8 +33,9 @@ def add_defaults_to_parser(parser):
     # Automatically add arguments based on the namedtuple fields
     default_configs = CCGPValueConfigs()
     for field, value in default_configs._asdict().items():
-        if type(value) is bool: 
+        var_type = default_configs. __annotations__[field]
+        if var_type is bool: 
             parser.add_argument(f'--{field}', default=value, type=lambda x: bool(strtobool(x)))
         else: 
-            parser.add_argument(f'--{field}', default=value, type=type(value))
+            parser.add_argument(f'--{field}', default=value, type=var_type)
     return parser

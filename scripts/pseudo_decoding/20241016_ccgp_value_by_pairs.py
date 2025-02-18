@@ -216,8 +216,6 @@ def main(args):
 
 
     print(f"Computing CCGP for {subject} of belief state value in interval {args.trial_event}", flush=True)
-    if args.more_sess:
-        print(f"Using more sessions", flush=True)
     print(f"shuffle idx is {args.shuffle_idx}", flush=True)
     print(f"Looking at regions {args.region_level}: {args.regions}, using use_next_trial_value {args.use_next_trial_value}", flush=True)
     print(f"examining conditions between {args.row.pair} using between {args.row.num_sessions} sessions", flush=True)
