@@ -29,7 +29,7 @@ SESSIONS_PATH = "/data/patrick_res/sessions/{sub}/valid_sessions.pickle"
 SA_PAIRS_PATH = "/data/patrick_res/sessions/SA/pairs_at_least_3blocks_7sess.pickle"
 SA_MORE_SESS_PAIRS_PATH = "/data/patrick_res/sessions/SA/pairs_at_least_3blocks_10sess.pickle"
 # BL_PAIRS_PATH = "/data/patrick_res/sessions/BL/pairs_at_least_1blocks_3sess.pickle"
-BL_PAIRS_PATH = "/data/patrick_res/sessions/BL/pairs_at_least_2blocks_1sess.pickle"
+BL_PAIRS_PATH = "/data/patrick_res/sessions/BL/pairs_at_least_2blocks_6sess.pickle"
 
 # path for each session, specifying behavior
 SESS_BEHAVIOR_PATH = "/data/patrick_res/behavior/{sub}/{sess_name}_object_features.csv"
