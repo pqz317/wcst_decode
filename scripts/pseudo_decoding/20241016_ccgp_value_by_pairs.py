@@ -106,10 +106,18 @@ def load_session_data(row, cond, region_units, args):
     if region_units is not None: 
         frs["PseudoUnitID"] = int(sess_name) * 100 + frs.UnitID.astype(int)
         frs = frs[frs.PseudoUnitID.isin(region_units)]
+    if len(frs) == 0 or len(sub_beh) == 0:
+        return None
     splitter = ConditionTrialSplitter(sub_beh, "BeliefStateValueBin", args.test_ratio)
     session_data = SessionData(sess_name, sub_beh, frs, splitter)
     session_data.pre_generate_splits(args.num_splits)
     return session_data
+
+def load_sess_datas(args, cond, region_units):
+    sess_datas = args.sessions.apply(lambda row: load_session_data(row, cond, region_units, args), axis=1)
+    sess_datas = sess_datas.dropna()
+    return sess_datas
+
 
 
 def train_decoder(sess_datas, time_bins):
@@ -147,7 +155,7 @@ def decode(args):
     for feat in pair: 
         print(f"Training decoder for low vs.  high {feat}")
         # load up session data to train network
-        train_feat_sess_datas = args.sessions.apply(lambda row: load_session_data(row, [feat], region_units, args), axis=1)
+        train_feat_sess_datas = load_sess_datas(args, [feat], region_units)
 
         time_bins = np.arange(0, (trial_interval.post_interval + trial_interval.pre_interval) / 1000, trial_interval.interval_size / 1000)
         train_accs, test_accs, shuffled_accs, models = train_decoder(train_feat_sess_datas, time_bins)
@@ -155,14 +163,14 @@ def decode(args):
 
         # next, evaluate network on other dimensions
         test_feat = [f for f in pair if f != feat][0]
-        test_feat_sess_datas = sessions.apply(lambda row: load_session_data(row, [test_feat], region_units, args), axis=1)
+        test_feat_sess_datas = load_sess_datas(args, [test_feat], region_units)
         accs_across_time = pseudo_classifier_utils.evaluate_model_with_data(models, test_feat_sess_datas, time_bins, num_test_per_cond=NUM_TEST_PER_COND)
         across_cond_accs.append(accs_across_time)
         np.save(os.path.join(output_dir, f"{file_name}_feat_{feat}_models.npy"), models)
     within_cond_accs = np.hstack(within_cond_accs)
     across_cond_accs = np.hstack(across_cond_accs)
 
-    overall_sess_datas = sessions.apply(lambda row: load_session_data(row, pair, region_units, args), axis=1)
+    overall_sess_datas = load_sess_datas(args, pair, region_units)
     train_accs, test_accs, shuffled_accs, models = train_decoder(overall_sess_datas, time_bins)
     np.save(os.path.join(output_dir, f"{file_name}_overall_accs.npy"), test_accs)
     np.save(os.path.join(output_dir, f"{file_name}_overall_models.npy"), models)

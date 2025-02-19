@@ -301,4 +301,4 @@ def get_region_units(region_level, regions, units_path):
         return None
     all_units = pd.read_pickle(units_path)
     regions_arr = regions.split(",")
-    return all_units[all_units[region_level].isin(regions_arr)]
+    return all_units[all_units[region_level].isin(regions_arr)].PseudoUnitID.unique()
