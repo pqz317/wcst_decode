@@ -125,6 +125,7 @@ def train_decoder(sess_datas, time_bins):
     # setup decoder, specify all possible label classes, number of neurons, parameters
     classes = [0, 1]
     num_neurons = sess_datas.apply(lambda x: x.get_num_neurons()).sum()
+    print(f"Training with {len(sess_datas)} sessions, {num_neurons} units")
     init_params = {"n_inputs": num_neurons, "p_dropout": args.p_dropout, "n_classes": len(classes)}
     # create a trainer object
     trainer = Trainer(
@@ -183,18 +184,6 @@ def main(args):
     Loads a dataframe specifying sessions to use
     For each feature dimension, runs decoding, stores results. 
     """
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('--pair_idx', type=int)
-    # parser.add_argument('--region_idx', default=None, type=int)
-    # parser.add_argument('--subject', default="SA", type=str)
-    # parser.add_argument('--trial_event', default="StimOnset", type=str)
-    # parser.add_argument('--use_next_trial_value', action=argparse.BooleanOptionalAction, default=False)
-    # parser.add_argument('--prev_response', default=None, type=str)
-    # parser.add_argument('--shuffle_idx', default=None, type=int)
-    # parser.add_argument('--more_sess', action=argparse.BooleanOptionalAction, default=False)
-
-    # args = parser.parse_args()
-
     subject = args.subject
     if subject == "SA": 
         pairs = pd.read_pickle(SA_MORE_SESS_PAIRS_PATH)
