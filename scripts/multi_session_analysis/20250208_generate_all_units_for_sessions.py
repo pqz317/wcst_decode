@@ -38,8 +38,8 @@ def generate_all_units(args):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--subject', default="SA", type=str)
-    parser.add_argument('--sessions_path', default=SESSIONS_PATH, type=str)
-    parser.add_argument('--output_path', default=OUTPUT_PATH, type=str )
+    parser.add_argument('--sessions_path', type=str)
+    parser.add_argument('--output_path', type=str )
     parser.add_argument('--dry_run', default=True, type=lambda x: bool(strtobool(x)))
 
     args = parser.parse_args()

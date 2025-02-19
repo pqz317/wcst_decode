@@ -8,6 +8,7 @@ import utils.pseudo_utils as pseudo_utils
 import utils.pseudo_classifier_utils as pseudo_classifier_utils
 import utils.behavioral_utils as behavioral_utils
 import utils.spike_utils as spike_utils
+from utils.io_utils import get_ccgp_val_file_name, get_ccgp_val_output_dir
 
 from constants.behavioral_constants import *
 from constants.decoding_constants import *
@@ -132,31 +133,13 @@ def train_decoder(sess_datas, time_bins):
     ) 
     return train_accs, test_accs, shuffled_accs, models
 
-def get_file_name(args):
-    # should consist of subject, event, region, next trial value, prev response, 
-    pair_str = pair_str = "_".join(args.row.pair)
-    shuffle_str = "" if args.shuffle_idx is None else f"_shuffle_{args.shuffle_idx}"
-    return f"{pair_str}{shuffle_str}"
-
-def get_output_dir(args):
-    region_str = "" if args.regions is None else f"_{args.regions.replace(',', '_').replace(' ', '_')}"
-    next_trial_str = "_next_trial_value" if args.use_next_trial_value else ""
-    prev_response_str = "" if args.prev_response is None else f"_prev_res_{args.prev_response}"
-    run_name = f"{args.subject}_{args.trial_interval.event}{region_str}{next_trial_str}{prev_response_str}"
-    if args.shuffle_idx is None: 
-        dir = os.path.join(args.base_output_path, f"{run_name}")
-    else: 
-        dir = os.path.join(args.base_output_path, f"{run_name}/shuffles")
-    os.makedirs(dir, exist_ok=True)
-    return dir
-
     
 def decode(args):
     region_units = spike_utils.get_region_units(args.region_level, args.regions, UNITS_PATH.format(sub=args.subject))
     trial_interval = args.trial_interval
     sessions = args.sessions
-    file_name = get_file_name(args)
-    output_dir = get_output_dir(args)
+    file_name = get_ccgp_val_file_name(args)
+    output_dir = get_ccgp_val_output_dir(args)
 
     pair = args.row.pair
     within_cond_accs = []

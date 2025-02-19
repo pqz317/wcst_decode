@@ -251,6 +251,8 @@ def get_unit_positions(sessions, fr_path=DEFAULT_FR_PATH):
     # still want to plot the None units
     positions = positions.fillna("unknown")
     positions = get_manual_structure(positions)
+    positions["drive"] = positions.Channel.apply(lambda x: "Anterior" if "a" in x else "Temporal")
+    positions["manual_structure_cleaned"] = positions.manual_structure.apply(lambda x: x.replace(" ", "_").replace("/", "_"))
     return positions
 
 def get_subpop_ratios_by_region(subpop, valid_sess):
@@ -299,14 +301,4 @@ def get_region_units(region_level, regions, units_path):
         return None
     all_units = pd.read_pickle(units_path)
     regions_arr = regions.split(",")
-
-    if region_level == "drive":
-        region = regions_arr[0]
-        if region == "anterior": 
-            return all_units[all_units.Channel.str.contains('a')].PseudoUnitID.unique()
-        elif region == "temporal":
-            return all_units[~all_units.Channel.str.contains('a')].PseudoUnitID.unique()
-        else: 
-            raise ValueError(f"unrecognized region {regions}")
-    else: 
-        return all_units[all_units[region_level].isin(regions_arr)]
+    return all_units[all_units[region_level].isin(regions_arr)]

@@ -392,3 +392,15 @@ def plot_accs_seaborn(datas, labels, pre_interval, interval_size, ax):
         dfs.append(df)
     res = pd.concat(dfs)
     sns.lineplot(res, x="Time", y="Accuracy", hue="label", linewidth=3, ax=ax)
+
+
+def visualize_ccpg_value(args, df, ax):
+    sns.lineplot(df, x="Time", y="Accuracy", hue="condition", linewidth=3, ax=ax)
+    # # add estimated chance
+    ax.axhline(1/2, color='black', linestyle='dotted', label="Estimated Chance")
+    if args.trial_event == "FeedbackOnset":
+        ax.axvspan(-0.8, 0, alpha=0.3, color='gray')
+    ax.legend()
+    ax.set_ylabel("Decoder Accuracy")
+    ax.set_xlabel(f"Time Relative to {args.trial_event}")
+    ax.set_title(f"Subject {args.subject} CCGP of value, {args.regions} regions")

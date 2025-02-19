@@ -8,8 +8,9 @@ import torch
 import itertools
 from . import behavioral_utils
 from constants.glm_constants import *
-
+import copy
 from constants.behavioral_constants import *
+from constants.decoding_constants import *
 
 HUMAN_LFP_DIR = 'human-lfp'
 NHP_DIR = 'nhp-lfp'
@@ -118,3 +119,69 @@ def load_rpe_sess_beh_and_frs(sess_name, beh_path=SESS_BEHAVIOR_PATH, fr_path=SE
     if set_indices:
         frs = frs.set_index(["TrialNumber"])
     return valid_beh_rpes, frs
+
+def get_ccgp_val_file_name(args):
+    # should consist of subject, event, region, next trial value, prev response, 
+    pair_str = pair_str = "_".join(args.row.pair)
+    shuffle_str = "" if args.shuffle_idx is None else f"_shuffle_{args.shuffle_idx}"
+    return f"{pair_str}{shuffle_str}"
+
+def get_ccgp_val_output_dir(args, make_dir=True):
+    region_str = "" if args.regions is None else f"_{args.regions.replace(',', '_').replace(' ', '_')}"
+    next_trial_str = "_next_trial_value" if args.use_next_trial_value else ""
+    prev_response_str = "" if args.prev_response is None else f"_prev_res_{args.prev_response}"
+    run_name = f"{args.subject}_{args.trial_interval.event}{region_str}{next_trial_str}{prev_response_str}"
+    if args.shuffle_idx is None: 
+        dir = os.path.join(args.base_output_path, f"{run_name}")
+    else: 
+        dir = os.path.join(args.base_output_path, f"{run_name}/shuffles")
+    if make_dir: 
+        os.makedirs(dir, exist_ok=True)
+    return dir
+
+def load_df_from_pairs(args, pairs, dir, shuffle=False):
+    res = []
+    for i, row in pairs.iterrows():
+        # NOTE: hack, need to run 18 runs instead of 17.
+        if i < 17:
+            args.row = row
+            file_name = get_ccgp_val_file_name(args)
+            for cond in ["within_cond", "across_cond", "overall"]: 
+                acc = np.load(os.path.join(dir, f"{file_name}_{cond}_accs.npy"))
+                df = pd.DataFrame(acc).reset_index(names=["Time"])
+                ti = args.trial_interval
+                df["Time"] = (df["Time"] * ti.interval_size + ti.interval_size - ti.pre_interval) / 1000
+                df = df.melt(id_vars="Time", value_vars=list(range(acc.shape[1])), var_name="run", value_name="Accuracy")
+                # df["pair"] = feat1, feat2
+                df["condition"] = cond if not shuffle else f"{cond}_shuffle"
+                res.append(df)
+    return pd.concat(res)
+
+def read_ccgp_value(args, pairs, num_shuffles=10):
+    """
+    Returns two dataframes, one for ccgp one for shuffles
+    """
+    args.trial_interval = get_trial_interval(args.trial_event)
+    dir = get_ccgp_val_output_dir(args, make_dir=False)
+    res = load_df_from_pairs(args, pairs, dir)
+    for shuffle_idx in range(num_shuffles):
+        args.shuffle_idx = shuffle_idx
+        dir = get_ccgp_val_output_dir(args, make_dir=False)
+        shuffle_res = load_df_from_pairs(args, pairs, dir, shuffle=True)
+    res = pd.concat((res, shuffle_res))
+    return res
+
+def read_ccgp_value_combine_fb(args, pairs, num_shuffles=10):
+    assert args.trial_event == "FeedbackOnset"
+    args.trial_interval = get_trial_interval(args.trial_event)
+
+    args.use_next_trial_value = False
+    cur_trial_val_res = read_ccgp_value(copy.copy(args), pairs, num_shuffles)
+
+    args.use_next_trial_value = True
+    next_trial_val_res = read_ccgp_value(copy.copy(args), pairs, num_shuffles)
+
+    return pd.concat((
+        cur_trial_val_res[cur_trial_val_res.Time <=0], 
+        next_trial_val_res[next_trial_val_res.Time > 0]
+    ))
