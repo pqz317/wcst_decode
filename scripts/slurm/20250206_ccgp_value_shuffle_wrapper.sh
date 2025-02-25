@@ -17,5 +17,5 @@ singularity exec --writable-tmpfs --nv \
     /src/wcst_decode/scripts/pseudo_decoding/20241016_ccgp_value_by_pairs.py \
     --pair_idx \$((\$SLURM_ARRAY_TASK_ID % 17)) \
     --shuffle_idx \$((\$SLURM_ARRAY_TASK_ID / 17)) \
-    $1 $2 $3 $4 $5
+    $1 $2 $3 $4 $5 $6 $7 $8 $9
 EOT
