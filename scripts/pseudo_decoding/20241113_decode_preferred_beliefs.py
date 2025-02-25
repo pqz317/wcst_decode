@@ -33,7 +33,7 @@ SESSIONS_PATH = "/data/patrick_res/sessions/SA/valid_sessions.pickle"
 # PAIRS_PATH = "/data/patrick_res/sessions/SA/pairs_at_least_3blocks_7sess.pickle"
 # MIN_TRIALS_FOR_PAIRS_PATH = "/data/patrick_res/sessions/SA/pairs_at_least_3blocks_7sess_min_trials.pickle"
 
-PAIRS_PATH = "/data/patrick_res/sessions/SA/pairs_at_least_3blocks_10sess.pickle"
+PAIRS_PATH = "/data/patrick_res/sessions/SA/pairs_at_least_3blocks_10sess_more_sess.pickle"
 MIN_TRIALS_FOR_PAIRS_PATH = "/data/patrick_res/sessions/SA/pairs_at_least_3blocks_10sess_more_sess_min_trials.pickle"
 
 # SESSIONS_PATH = "/data/patrick_res/sessions/valid_sessions_rpe.pickle"
