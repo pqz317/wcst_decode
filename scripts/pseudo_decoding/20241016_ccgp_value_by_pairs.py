@@ -22,9 +22,6 @@ from tqdm import tqdm
 import argparse
 from ccgp_value_configs import add_defaults_to_parser
 
-
-# the output directory to store the data
-OUTPUT_DIR = "/data/res/pseudo"
 # path to a dataframe of sessions to analyze
 SESSIONS_PATH = "/data/patrick_res/sessions/{sub}/valid_sessions.pickle"
 SA_PAIRS_PATH = "/data/patrick_res/sessions/SA/pairs_at_least_3blocks_7sess.pickle"

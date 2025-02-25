@@ -124,7 +124,7 @@ def get_ccgp_val_file_name(args):
     # should consist of subject, event, region, next trial value, prev response, 
     pair_str = pair_str = "_".join(args.row.pair)
     shuffle_str = "" if args.shuffle_idx is None else f"_shuffle_{args.shuffle_idx}"
-    return f"{pair_str}{shuffle_str}"
+    return f"{pair_str}{shuffle_str}"    
 
 def get_ccgp_val_output_dir(args, make_dir=True):
     region_str = "" if args.regions is None else f"_{args.regions.replace(',', '_').replace(' ', '_')}"
@@ -138,6 +138,32 @@ def get_ccgp_val_output_dir(args, make_dir=True):
     if make_dir: 
         os.makedirs(dir, exist_ok=True)
     return dir
+
+
+def get_preferred_beliefs_file_name(args):
+    """
+    Naming convention for preferred beliefs decoding files
+    """
+    pair = args.row.pair
+    not_pref_str = "chosen_not_pref_" if args.chosen_not_preferred else ""
+    pair_str = "_".join(pair)
+    shuffle_str = "" if args.shuffle_idx is None else f"_shuffle_{args.shuffle_idx}"
+    return f"{not_pref_str}{pair_str}{shuffle_str}"
+
+def get_preferred_beliefs_output_dir(args, make_dir=True):
+    """
+    Directory convention for preferred beliefs decoding
+    """
+    region_str = "" if args.regions is None else f"_{args.regions.replace(',', '_').replace(' ', '_')}"
+    run_name = f"{args.subject}_{args.trial_interval.event}{region_str}"
+    if args.shuffle_idx is None: 
+        dir = os.path.join(args.base_output_path, f"{run_name}")
+    else: 
+        dir = os.path.join(args.base_output_path, f"{run_name}/shuffles")
+    if make_dir: 
+        os.makedirs(dir, exist_ok=True)
+    return dir
+
 
 def load_df_from_pairs(args, pairs, dir, shuffle=False):
     res = []
@@ -164,11 +190,12 @@ def read_ccgp_value(args, pairs, num_shuffles=10):
     args.trial_interval = get_trial_interval(args.trial_event)
     dir = get_ccgp_val_output_dir(args, make_dir=False)
     res = load_df_from_pairs(args, pairs, dir)
+    shuffle_res = []
     for shuffle_idx in range(num_shuffles):
         args.shuffle_idx = shuffle_idx
         dir = get_ccgp_val_output_dir(args, make_dir=False)
-        shuffle_res = load_df_from_pairs(args, pairs, dir, shuffle=True)
-    res = pd.concat((res, shuffle_res))
+        shuffle_res.append(load_df_from_pairs(args, pairs, dir, shuffle=True))
+    res = pd.concat(([res] + shuffle_res))
     return res
 
 def read_ccgp_value_combine_fb(args, pairs, num_shuffles=10):
