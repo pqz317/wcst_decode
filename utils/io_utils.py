@@ -130,7 +130,7 @@ def get_ccgp_val_output_dir(args, make_dir=True):
     region_str = "" if args.regions is None else f"_{args.regions.replace(',', '_').replace(' ', '_')}"
     next_trial_str = "_next_trial_value" if args.use_next_trial_value else ""
     prev_response_str = "" if args.prev_response is None else f"_prev_res_{args.prev_response}"
-    run_name = f"{args.subject}_{args.trial_interval.event}{region_str}{next_trial_str}{prev_response_str}"
+    run_name = f"{args.subject}_{args.trial_event}{region_str}{next_trial_str}{prev_response_str}"
     if args.shuffle_idx is None: 
         dir = os.path.join(args.base_output_path, f"{run_name}")
     else: 
@@ -155,7 +155,7 @@ def get_preferred_beliefs_output_dir(args, make_dir=True):
     Directory convention for preferred beliefs decoding
     """
     region_str = "" if args.regions is None else f"_{args.regions.replace(',', '_').replace(' ', '_')}"
-    run_name = f"{args.subject}_{args.trial_interval.event}{region_str}"
+    run_name = f"{args.subject}_{args.trial_event}{region_str}"
     if args.shuffle_idx is None: 
         dir = os.path.join(args.base_output_path, f"{run_name}")
     else: 
@@ -165,7 +165,7 @@ def get_preferred_beliefs_output_dir(args, make_dir=True):
     return dir
 
 
-def load_df_from_pairs(args, pairs, dir, shuffle=False):
+def load_ccgp_value_df_from_pairs(args, pairs, dir, shuffle=False):
     res = []
     for i, row in pairs.iterrows():
         # NOTE: hack, need to run 18 runs instead of 17.
@@ -189,12 +189,12 @@ def read_ccgp_value(args, pairs, num_shuffles=10):
     """
     args.trial_interval = get_trial_interval(args.trial_event)
     dir = get_ccgp_val_output_dir(args, make_dir=False)
-    res = load_df_from_pairs(args, pairs, dir)
+    res = load_ccgp_value_df_from_pairs(args, pairs, dir)
     shuffle_res = []
     for shuffle_idx in range(num_shuffles):
         args.shuffle_idx = shuffle_idx
         dir = get_ccgp_val_output_dir(args, make_dir=False)
-        shuffle_res.append(load_df_from_pairs(args, pairs, dir, shuffle=True))
+        shuffle_res.append(load_ccgp_value_df_from_pairs(args, pairs, dir, shuffle=True))
     res = pd.concat(([res] + shuffle_res))
     return res
 
@@ -212,3 +212,36 @@ def read_ccgp_value_combine_fb(args, pairs, num_shuffles=10):
         cur_trial_val_res[cur_trial_val_res.Time <=0], 
         next_trial_val_res[next_trial_val_res.Time > 0]
     ))
+
+def load_preferred_belief_df_from_pairs(args, pairs, dir, shuffle=False):
+    res = []
+    for i, row in pairs.iterrows():
+        for chosen_not_pref in [True, False]: 
+            args.row = row
+            args.chosen_not_preferred = chosen_not_pref
+            file_name = get_preferred_beliefs_file_name(args)
+            acc = np.load(os.path.join(dir, f"{file_name}_test_accs.npy"))
+            df = pd.DataFrame(acc).reset_index(names=["Time"])
+            ti = args.trial_interval
+            df["Time"] = (df["Time"] * ti.interval_size + ti.interval_size - ti.pre_interval) / 1000
+            df = df.melt(id_vars="Time", value_vars=list(range(acc.shape[1])), var_name="run", value_name="Accuracy")
+            pref_str = "not_pref" if chosen_not_pref else "pref"
+            shuffle_str = "_shuffle" if shuffle else ""
+            df["condition"] = f"{pref_str}{shuffle_str}"
+            res.append(df)
+    return pd.concat(res)
+
+def read_preferred_beliefs(args, pairs, num_shuffles=10):
+    """
+    Returns two dataframes, one for ccgp one for shuffles
+    """
+    args.trial_interval = get_trial_interval(args.trial_event)
+    dir = get_preferred_beliefs_output_dir(args, make_dir=False)
+    res = load_preferred_belief_df_from_pairs(args, pairs, dir)
+    shuffle_res = []
+    for shuffle_idx in range(num_shuffles):
+        args.shuffle_idx = shuffle_idx
+        dir = get_preferred_beliefs_output_dir(args, make_dir=False)
+        shuffle_res.append(load_preferred_belief_df_from_pairs(args, pairs, dir, shuffle=True))
+    res = pd.concat(([res] + shuffle_res))
+    return res

@@ -14,6 +14,8 @@ NUM_SPLITS = 8
 FB_ONSET_PRE_INTERVAL = 1300
 FB_ONSET_POST_INTERVAL = 1500
 
+FB_ONSET_LONG_PRE_INTERVAL = 1800
+
 STIM_ONSET_PRE_INTERVAL = 1000
 STIM_ONSET_POST_INTERVAL = 1000
 
@@ -34,6 +36,18 @@ def get_trial_interval(trial_event):
             FB_ONSET_PRE_INTERVAL, 
             FB_ONSET_POST_INTERVAL, 
             INTERVAL_SIZE
+        )
+    elif trial_event == "FeedbackOnsetLong":
+        return TrialInterval(
+            "FeedbackOnset", 
+            FB_ONSET_LONG_PRE_INTERVAL, 
+            FB_ONSET_POST_INTERVAL, 
+            INTERVAL_SIZE
+        )  
+    elif trial_event == "decision_warped":
+        return TrialInterval(
+            "decision_warped",
+            0, 600, 50, 1
         )
     else: 
         raise ValueError("unknown trial event")
