@@ -324,3 +324,32 @@ def convert_model_weights_to_df(weights, pre_interval, interval_size):
         "Weight": reshaped,
     })
 
+def assess_significance_bootstrap(acc, shuffled_acc, alpha=0.05 / 12, n=1000):
+    rng = np.random.default_rng()
+    num_t, num_accs = acc.shape
+    mean_diffs = np.mean(acc, axis=1) - np.mean(shuffled_acc, axis=1)
+
+    shuff_mean_diffs = np.empty((num_t, n))
+    combined = np.hstack((acc, shuffled_acc))
+    for i in np.arange(n):
+        rng.shuffle(combined, axis=1)
+        shuff_mean_diffs[:, i] = np.mean(combined[:, num_accs:], axis=1) - np.mean(combined[:, :num_accs], axis=1)
+    quantiles = np.quantile(shuff_mean_diffs, axis=1, q=(1 - alpha))
+    return mean_diffs > quantiles
+
+def get_significant_time_bins(res, condition, alpha=None):
+    shuffle_str = f"{condition}_shuffle"
+
+    num_time = res.Time.nunique()
+    cond_res = res[res.condition == condition]
+    accs = cond_res.sort_values(by="Time").Accuracy.values.reshape(num_time, -1)
+
+    shuf_res = res[res.condition == shuffle_str]
+    shuff_accs = shuf_res.sort_values(by="Time").Accuracy.values.reshape(num_time, -1)
+
+    if alpha is None: 
+        alpha = 0.05 / num_time
+    sig_bins = assess_significance_bootstrap(accs, shuff_accs, alpha)
+    time_bins = res.Time.sort_values().unique()
+    sig_times = time_bins[sig_bins]
+    return sig_times

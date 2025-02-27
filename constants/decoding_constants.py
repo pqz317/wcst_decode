@@ -47,7 +47,7 @@ def get_trial_interval(trial_event):
     elif trial_event == "decision_warped":
         return TrialInterval(
             "decision_warped",
-            0, 600, 50, 1
+            0, 600, INTERVAL_SIZE
         )
     else: 
         raise ValueError("unknown trial event")

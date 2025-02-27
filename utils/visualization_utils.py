@@ -409,7 +409,7 @@ def visualize_preferred_beliefs(args, df, ax):
     sns.lineplot(df, x="Time", y="Accuracy", hue="condition", linewidth=3, ax=ax)
     # # add estimated chance
     ax.axhline(1/2, color='black', linestyle='dotted', label="Estimated Chance")
-    if args.trial_event == "FeedbackOnset":
+    if args.trial_event == "FeedbackOnset" or args.trial_event == "FeedbackOnsetLong":
         ax.axvspan(-0.8, 0, alpha=0.3, color='gray')
     ax.legend()
     ax.set_ylabel("Decoder Accuracy")
