@@ -8,7 +8,7 @@ import utils.pseudo_utils as pseudo_utils
 import utils.pseudo_classifier_utils as pseudo_classifier_utils
 import utils.behavioral_utils as behavioral_utils
 import utils.spike_utils as spike_utils
-from utils.io_utils import get_ccgp_val_file_name, get_ccgp_val_output_dir
+import utils.io_utils as io_utils
 
 from constants.behavioral_constants import *
 from constants.decoding_constants import *
@@ -31,7 +31,6 @@ BL_PAIRS_PATH = "/data/patrick_res/sessions/BL/pairs_at_least_2blocks_6sess.pick
 # path for each session, specifying behavior
 SESS_BEHAVIOR_PATH = "/data/patrick_res/behavior/{sub}/{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
-SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sub}/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 SIMULATED_SPIKES_PATH = "/data/patrick_res/firing_rates/{sess_name}_firing_rates_simulated_noise_{noise}.pickle"
 
 DATA_MODE = "FiringRate"
@@ -88,16 +87,8 @@ def load_session_data(row, cond, region_units, args):
 
     # balance the conditions out: 
     sub_beh = behavioral_utils.balance_trials_by_condition(sub_beh, ["BeliefStateValueBin"])
-    trial_interval = args.trial_interval
-    spikes_path = SESS_SPIKES_PATH.format(
-        sub=args.subject,
-        sess_name=sess_name, 
-        pre_interval=trial_interval.pre_interval, 
-        event=trial_interval.event, 
-        post_interval=trial_interval.post_interval, 
-        interval_size=trial_interval.interval_size
-    )
-    frs = pd.read_pickle(spikes_path)
+
+    frs = io_utils.get_frs_from_args(args, sess_name)
     frs = frs.rename(columns={DATA_MODE: "Value"})
     if region_units is not None: 
         frs["PseudoUnitID"] = int(sess_name) * 100 + frs.UnitID.astype(int)
@@ -143,8 +134,8 @@ def decode(args):
     region_units = spike_utils.get_region_units(args.region_level, args.regions, UNITS_PATH.format(sub=args.subject))
     trial_interval = args.trial_interval
     sessions = args.sessions
-    file_name = get_ccgp_val_file_name(args)
-    output_dir = get_ccgp_val_output_dir(args)
+    file_name = io_utils.get_ccgp_val_file_name(args)
+    output_dir = io_utils.get_ccgp_val_output_dir(args)
 
     pair = args.row.pair
     within_cond_accs = []

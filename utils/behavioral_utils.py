@@ -4,6 +4,7 @@ from lfp_tools import startup
 from constants.behavioral_constants import *
 import os
 
+
 # sorted features by shape, color, pattern
 
 def get_trial_intervals(behavioral_data, event="FeedbackOnset", pre_interval=0, post_interval=0):

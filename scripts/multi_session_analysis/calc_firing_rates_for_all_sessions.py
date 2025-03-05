@@ -91,7 +91,7 @@ def calc_firing_rate_for_interval(row, args):
     dir_path = os.path.join(args.base_output_path, args.subject)
     if not os.path.isdir(dir_path):
         os.mkdir(dir_path)
-    
+
     full_file_name = os.path.join(dir_path, f"{sess_name}_firing_rates_{args.pre_interval}_{args.event}_{args.post_interval}_{args.interval_size}_bins_{args.num_bins_smooth}_smooth.pickle")
     print(f"For sub {args.subject}, session {sess_name}, storing FR of {firing_rates.UnitID.nunique()} units to {full_file_name}")
     if not args.dry_run: 
@@ -105,7 +105,6 @@ def main():
     parser.add_argument('--post_interval', default=1500, type=int)
     parser.add_argument('--interval_size', default=100, type=int)
     parser.add_argument('--num_bins_smooth', default=1, type=int)
-
     parser.add_argument('--base_output_path', default="/data/patrick_res/firing_rates/", type=str)
     parser.add_argument('--dry_run', default=True, type=lambda x: bool(strtobool(x)))
     args = parser.parse_args()

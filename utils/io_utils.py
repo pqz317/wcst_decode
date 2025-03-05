@@ -19,7 +19,7 @@ NHP_WCST_DIR = 'nhp-lfp/wcst-preprocessed/'
 # path for each session, specifying behavior
 SESS_BEHAVIOR_PATH = "/data/rawdata/sub-SA/sess-{sess_name}/behavior/sub-SA_sess-{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
-SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_{num_bins_smooth}_smooth.pickle"
+SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sub}/{sess_name}_{trial_residual}firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 
 
 def get_fixation_times_path(subject, session):
@@ -130,7 +130,8 @@ def get_ccgp_val_output_dir(args, make_dir=True):
     region_str = "" if args.regions is None else f"_{args.regions.replace(',', '_').replace(' ', '_')}"
     next_trial_str = "_next_trial_value" if args.use_next_trial_value else ""
     prev_response_str = "" if args.prev_response is None else f"_prev_res_{args.prev_response}"
-    run_name = f"{args.subject}_{args.trial_event}{region_str}{next_trial_str}{prev_response_str}"
+    trial_residuals_str = "_trial_residual_frs" if args.use_trial_residual_frs else ""
+    run_name = f"{args.subject}_{args.trial_event}{trial_residuals_str}{region_str}{next_trial_str}{prev_response_str}"
     if args.shuffle_idx is None: 
         dir = os.path.join(args.base_output_path, f"{run_name}")
     else: 
@@ -155,7 +156,8 @@ def get_preferred_beliefs_output_dir(args, make_dir=True):
     Directory convention for preferred beliefs decoding
     """
     region_str = "" if args.regions is None else f"_{args.regions.replace(',', '_').replace(' ', '_')}"
-    run_name = f"{args.subject}_{args.trial_event}{region_str}"
+    trial_residuals_str = "_trial_residual_frs" if args.use_trial_residual_frs else ""
+    run_name = f"{args.subject}_{args.trial_event}{trial_residuals_str}{region_str}"
     if args.shuffle_idx is None: 
         dir = os.path.join(args.base_output_path, f"{run_name}")
     else: 
@@ -245,3 +247,17 @@ def read_preferred_beliefs(args, pairs, num_shuffles=10):
         shuffle_res.append(load_preferred_belief_df_from_pairs(args, pairs, dir, shuffle=True))
     res = pd.concat(([res] + shuffle_res))
     return res
+
+def get_frs_from_args(args, sess_name):
+    trial_interval = args.trial_interval
+    spikes_path = SESS_SPIKES_PATH.format(
+        sub=args.subject,
+        sess_name=sess_name, 
+        trial_residual="trial_residual_" if args.use_trial_residual_frs else "",
+        pre_interval=trial_interval.pre_interval, 
+        event=trial_interval.event, 
+        post_interval=trial_interval.post_interval, 
+        interval_size=trial_interval.interval_size
+    )
+    frs = pd.read_pickle(spikes_path)
+    return frs

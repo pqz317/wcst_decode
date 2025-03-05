@@ -5,6 +5,8 @@ from spike_tools import (
 )
 from scipy.ndimage import gaussian_filter1d
 import json
+from sklearn.linear_model import LinearRegression
+
 
 def get_spikes_by_trial_interval_DEPRECATED(spike_times, intervals):
     """Finds all the spikes within a series of time intervals
@@ -302,3 +304,14 @@ def get_region_units(region_level, regions, units_path):
     all_units = pd.read_pickle(units_path)
     regions_arr = regions.split(",")
     return all_units[all_units[region_level].isin(regions_arr)].PseudoUnitID.unique()
+
+
+def regress_out_trial_number(frs):
+    def regress_per_unit_timebin(group):
+        y = group.FiringRate
+        x = group.TrialNumber.values.reshape(-1, 1)
+        reg = LinearRegression().fit(x, y)
+        y_pred = reg.predict(x)
+        group["FiringRate"] = group["FiringRate"] - y_pred
+        return group
+    return frs.groupby(["TimeBins", "UnitID"], group_keys=False).apply(regress_per_unit_timebin)

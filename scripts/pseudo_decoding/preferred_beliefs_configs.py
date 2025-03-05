@@ -9,6 +9,7 @@ class PreferredBeliefsConfigs(NamedTuple):
     pair_idx: int = None
     trial_event: str = "StimOnset"
     chosen_not_preferred: bool = False
+    use_trial_residual_frs: bool = False
     shuffle_idx: int = None
     region_level: str = None
     regions: str = None

@@ -23,8 +23,7 @@ from trial_splitters.condition_trial_splitter import ConditionTrialSplitter
 
 import argparse
 from preferred_beliefs_configs import add_defaults_to_parser
-from utils.io_utils import get_preferred_beliefs_file_name, get_preferred_beliefs_output_dir
-
+import utils.io_utils as io_utils
 
 # the output directory to store the data
 OUTPUT_DIR = "/data/res/pseudo"
@@ -42,7 +41,6 @@ MIN_TRIALS_FOR_PAIRS_PATH = "/data/patrick_res/sessions/SA/pairs_at_least_3block
 # path for each session, specifying behavior
 SESS_BEHAVIOR_PATH = "/data/patrick_res/behavior/SA/{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
-SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sub}/{sess_name}_firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 
 UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/all_units.pickle"
 
@@ -80,16 +78,7 @@ def load_session_data(row, region_units, args):
     ].iloc[0].min_all
     sub_beh = behavioral_utils.balance_trials_by_condition(sub_beh, ["Choice"], min=min_num_trials)
 
-    trial_interval = args.trial_interval
-    spikes_path = SESS_SPIKES_PATH.format(
-        sub=args.subject,
-        sess_name=sess_name, 
-        pre_interval=trial_interval.pre_interval, 
-        event=trial_interval.event, 
-        post_interval=trial_interval.post_interval, 
-        interval_size=trial_interval.interval_size
-    )
-    frs = pd.read_pickle(spikes_path)
+    frs = frs = io_utils.get_frs_from_args(args, sess_name)
     frs = frs.rename(columns={DATA_MODE: "Value"})
     if region_units is not None: 
         frs["PseudoUnitID"] = int(sess_name) * 100 + frs.UnitID.astype(int)
@@ -106,8 +95,8 @@ def decode(args):
     trial_interval = args.trial_interval
     sessions = args.sessions
 
-    file_name = get_preferred_beliefs_file_name(args)
-    output_dir = get_preferred_beliefs_output_dir(args)
+    file_name = io_utils.get_preferred_beliefs_file_name(args)
+    output_dir = io_utils.get_preferred_beliefs_output_dir(args)
 
     pair = args.row.pair
     # load up session data to train network
@@ -157,7 +146,9 @@ def main():
     args.sessions = valid_sess[valid_sess.session_name.isin(args.row.sessions)]
     args.trial_interval = get_trial_interval(args.trial_event)
 
-    print(f"Decoding between {args.row.pair} using between {args.row.num_sessions} sessions, chosen not preferred {args.chosen_not_preferred}")
+    print(f"Decoding between {args.row.pair} using between {args.row.num_sessions} sessions, chosen not preferred {args.chosen_not_preferred}", flush=True)
+    if args.use_trial_residual_frs: 
+        print("Using trial residual frs", flush=True)
     decode(args)
 
 

@@ -9,6 +9,7 @@ class CCGPValueConfigs(NamedTuple):
     pair_idx: int = None
     trial_event: str = "StimOnset"
     use_next_trial_value: bool = False
+    use_trial_residual_frs: bool = False
     prev_response: str = None
     shuffle_idx: int = None
     region_level: str = None
