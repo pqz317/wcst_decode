@@ -130,8 +130,8 @@ def get_ccgp_val_output_dir(args, make_dir=True):
     region_str = "" if args.regions is None else f"_{args.regions.replace(',', '_').replace(' ', '_')}"
     next_trial_str = "_next_trial_value" if args.use_next_trial_value else ""
     prev_response_str = "" if args.prev_response is None else f"_prev_res_{args.prev_response}"
-    trial_residuals_str = "_trial_residual_frs" if args.use_trial_residual_frs else ""
-    run_name = f"{args.subject}_{args.trial_event}{trial_residuals_str}{region_str}{next_trial_str}{prev_response_str}"
+    fr_type_str = args.fr_type if args.fr_type != "firing_rates" else ""
+    run_name = f"{args.subject}_{args.trial_event}{fr_type_str}{region_str}{next_trial_str}{prev_response_str}"
     if args.shuffle_idx is None: 
         dir = os.path.join(args.base_output_path, f"{run_name}")
     else: 
@@ -156,8 +156,8 @@ def get_preferred_beliefs_output_dir(args, make_dir=True):
     Directory convention for preferred beliefs decoding
     """
     region_str = "" if args.regions is None else f"_{args.regions.replace(',', '_').replace(' ', '_')}"
-    trial_residuals_str = "_trial_residual_frs" if args.use_trial_residual_frs else ""
-    run_name = f"{args.subject}_{args.trial_event}{trial_residuals_str}{region_str}"
+    fr_type_str = args.fr_type if args.fr_type != "firing_rates" else ""
+    run_name = f"{args.subject}_{args.trial_event}{fr_type_str}{region_str}"
     if args.shuffle_idx is None: 
         dir = os.path.join(args.base_output_path, f"{run_name}")
     else: 
