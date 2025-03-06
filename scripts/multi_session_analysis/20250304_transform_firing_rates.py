@@ -58,9 +58,15 @@ def regress_trial_number(row, args):
         frs = pd.read_pickle(input_file_name)
     except: 
         raise ValueError(f"file {input_file_name} not found, was the firing rate generated?")
-    frs = spike_utils.regress_out_trial_number(frs)
-    output_file_name = os.path.join(dir_path, f"{sess_name}_trial_residual_firing_rates_{args.pre_interval}_{args.event}_{args.post_interval}_{args.interval_size}_bins_{args.num_bins_smooth}_smooth.pickle")
-    print(f"For sub {args.subject}, session {sess_name}, storing trial residual FR of {frs.UnitID.nunique()} units to {output_file_name}")
+    if args.fr_type == "trial_residual_firing_rates":
+        frs = spike_utils.regress_out_trial_number(frs)
+    elif args.fr_type == "white_noise_firing_rates":
+        frs = spike_utils.white_noise_frs(frs)
+    else:
+        raise ValueError(f"invalid transform {args.fr_type}")
+
+    output_file_name = os.path.join(dir_path, f"{sess_name}_{args.fr_type}_{args.pre_interval}_{args.event}_{args.post_interval}_{args.interval_size}_bins_{args.num_bins_smooth}_smooth.pickle")
+    print(f"For sub {args.subject}, session {sess_name}, storing trial residual FR of {frs.UnitID.nunique()} units to {output_file_name}", flush=True)
     if not args.dry_run: 
         frs.to_pickle(output_file_name)
 
@@ -69,6 +75,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--subject', default="SA", type=str)
     parser.add_argument('--event', default="FeedbackOnset", type=str)
+    parser.add_argument('--fr_type', default="trial_residual_firing_rates")
     parser.add_argument('--pre_interval', default=1300, type=int)
     parser.add_argument('--post_interval', default=1500, type=int)
     parser.add_argument('--interval_size', default=100, type=int)

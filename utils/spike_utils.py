@@ -315,3 +315,8 @@ def regress_out_trial_number(frs):
         group["FiringRate"] = group["FiringRate"] - y_pred
         return group
     return frs.groupby(["TimeBins", "UnitID"], group_keys=False).apply(regress_per_unit_timebin)
+
+def white_noise_frs(frs):
+    rng = np.random.default_rng()
+    frs["FiringRate"] = rng.normal(size=len(frs))
+    return frs

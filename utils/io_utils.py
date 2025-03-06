@@ -19,7 +19,7 @@ NHP_WCST_DIR = 'nhp-lfp/wcst-preprocessed/'
 # path for each session, specifying behavior
 SESS_BEHAVIOR_PATH = "/data/rawdata/sub-SA/sess-{sess_name}/behavior/sub-SA_sess-{sess_name}_object_features.csv"
 # path for each session, for spikes that have been pre-aligned to event time and binned. 
-SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sub}/{sess_name}_{trial_residual}firing_rates_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
+SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sub}/{sess_name}_{fr_type}_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 
 
 def get_fixation_times_path(subject, session):
@@ -253,7 +253,7 @@ def get_frs_from_args(args, sess_name):
     spikes_path = SESS_SPIKES_PATH.format(
         sub=args.subject,
         sess_name=sess_name, 
-        trial_residual="trial_residual_" if args.use_trial_residual_frs else "",
+        fr_type=args.fr_type,
         pre_interval=trial_interval.pre_interval, 
         event=trial_interval.event, 
         post_interval=trial_interval.post_interval, 

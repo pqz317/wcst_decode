@@ -147,8 +147,7 @@ def main():
     args.trial_interval = get_trial_interval(args.trial_event)
 
     print(f"Decoding between {args.row.pair} using between {args.row.num_sessions} sessions, chosen not preferred {args.chosen_not_preferred}", flush=True)
-    if args.use_trial_residual_frs: 
-        print("Using trial residual frs", flush=True)
+    print(f"Using {args.fr_type} as inputs", flush=True)
     decode(args)
 
 
