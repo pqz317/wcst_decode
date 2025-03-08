@@ -24,6 +24,7 @@ from trial_splitters.condition_trial_splitter import ConditionTrialSplitter
 import argparse
 from preferred_beliefs_configs import add_defaults_to_parser
 import utils.io_utils as io_utils
+import json
 
 # the output directory to store the data
 OUTPUT_DIR = "/data/res/pseudo"
@@ -33,7 +34,6 @@ SESSIONS_PATH = "/data/patrick_res/sessions/SA/valid_sessions.pickle"
 # MIN_TRIALS_FOR_PAIRS_PATH = "/data/patrick_res/sessions/SA/pairs_at_least_3blocks_7sess_min_trials.pickle"
 
 PAIRS_PATH = "/data/patrick_res/sessions/SA/pairs_at_least_3blocks_10sess_more_sess.pickle"
-MIN_TRIALS_FOR_PAIRS_PATH = "/data/patrick_res/sessions/SA/pairs_at_least_3blocks_10sess_more_sess_min_trials.pickle"
 
 # SESSIONS_PATH = "/data/patrick_res/sessions/valid_sessions_rpe.pickle"
 # PAIRS_PATH = "/data/patrick_res/sessions/pairs_at_least_3blocks_10sess.pickle"
@@ -64,24 +64,22 @@ def load_session_data(row, region_units, args):
     if args.shuffle_idx is not None: 
         beh = behavioral_utils.shuffle_beh_by_shift(beh, buffer=50, seed=args.shuffle_idx)
 
-    if args.chosen_not_preferred:
-        sub_beh = behavioral_utils.get_chosen_not_preferred_trials(pair, beh)
-    else: 
-        # high conf, preferring feat1 or feat2, and also chose feat1 or feat2
-        sub_beh = behavioral_utils.get_chosen_preferred_trials(pair, beh)
-    # balance the conditions out:
-    # use minimum number of trials stored for the session/pair
-    min_trials = pd.read_pickle(MIN_TRIALS_FOR_PAIRS_PATH) 
-    min_num_trials = min_trials[
-        (min_trials.pair.isin([pair])) & 
-        (min_trials.session == sess_name)
-    ].iloc[0].min_all
-    sub_beh = behavioral_utils.balance_trials_by_condition(sub_beh, ["Choice"], min=min_num_trials)
+    not_pref = behavioral_utils.get_chosen_not_preferred_trials(pair, beh, args.high_val_only)
+    pref = behavioral_utils.get_chosen_preferred_trials(pair, beh, args.high_val_only)
 
-    frs = frs = io_utils.get_frs_from_args(args, sess_name)
+    # balance the conditions out:
+    # use minimum number of trials between the chosen preferred, chosen not preferred conditions
+    min_trials = np.min((
+        np.min(pref.groupby("Choice").count().TrialNumber),
+        np.min(not_pref.groupby("Choice").count().TrialNumber)
+    ))
+    sub_beh = not_pref if args.chosen_not_preferred else pref
+    sub_beh = behavioral_utils.balance_trials_by_condition(sub_beh, ["Choice"], min=min_trials)
+
+    frs = io_utils.get_frs_from_args(args, sess_name)
     frs = frs.rename(columns={DATA_MODE: "Value"})
+    frs["PseudoUnitID"] = int(sess_name) * 100 + frs.UnitID.astype(int)
     if region_units is not None: 
-        frs["PseudoUnitID"] = int(sess_name) * 100 + frs.UnitID.astype(int)
         frs = frs[frs.PseudoUnitID.isin(region_units)]
     if len(frs) == 0 or len(sub_beh) == 0:
         return None
@@ -95,15 +93,21 @@ def decode(args):
     trial_interval = args.trial_interval
     sessions = args.sessions
 
+    # naming for files, directory
     file_name = io_utils.get_preferred_beliefs_file_name(args)
     output_dir = io_utils.get_preferred_beliefs_output_dir(args)
 
-    pair = args.row.pair
     # load up session data to train network
+    pair = args.row.pair
     sess_datas = sessions.apply(lambda row: load_session_data(
         row, region_units, args
     ), axis=1)
     sess_datas = sess_datas.dropna()
+
+    # save pseudo unit IDs
+    unit_ids = pd.DataFrame({"PseudoUnitIDs": np.concatenate(sess_datas.apply(lambda x: x.get_pseudo_unit_ids()).values)})
+    # unit_ids.to_pickle(os.path.join(output_dir, f"{file_name}_unit_ids.pickle"))
+    unit_ids.to_csv(os.path.join(output_dir, f"{file_name}_unit_ids.csv"))
 
 
     # train the network

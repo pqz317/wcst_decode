@@ -690,7 +690,7 @@ def get_perseveration_trials(beh):
         prev_rule = beh.CurrentRule.iloc[0]
     return beh
             
-def get_chosen_preferred_trials(pair, beh):
+def get_chosen_preferred_trials(pair, beh, high_val_only=True):
     """
     Find trials where either features in the pair are preferred, (high conf for that feature)
     and chosen. 
@@ -698,13 +698,15 @@ def get_chosen_preferred_trials(pair, beh):
     """
     feat1, feat2 = pair
     chosen_preferred = beh[
-        ((beh[FEATURE_TO_DIM[feat1]] == feat1) & (beh.BeliefStateValueLabel == f"High {feat1}")) |
-        ((beh[FEATURE_TO_DIM[feat2]] == feat2) & (beh.BeliefStateValueLabel == f"High {feat2}"))
+        ((beh[FEATURE_TO_DIM[feat1]] == feat1) & (beh.PreferredBelief == feat1)) |
+        ((beh[FEATURE_TO_DIM[feat2]] == feat2) & (beh.PreferredBelief == feat2))
     ]
-    chosen_preferred["Choice"] = chosen_preferred.BeliefStateValueLabel.apply(lambda x: x.split(" ")[1])
+    if high_val_only:
+        chosen_preferred = chosen_preferred[chosen_preferred.BeliefStateValueBin == 1]
+    chosen_preferred["Choice"] = chosen_preferred.PreferredBelief
     return chosen_preferred
 
-def get_chosen_not_preferred_trials(pair, beh):
+def get_chosen_not_preferred_trials(pair, beh, high_val_only=True):
     """
     Find trials where either features in the pair are chosen, but are not preferred. 
     Additionally, require that they are high confidence, 
@@ -712,11 +714,17 @@ def get_chosen_not_preferred_trials(pair, beh):
     Add additional Choice column
     """
     feat1, feat2 = pair
-    # find trials when high confidence and neither features are preferred
-    not_pref_beh = beh[
-        (~beh.BeliefStateValueLabel.isin([f"High {feat1}", f"High {feat2}"])) & 
-        (beh.BeliefStateValueLabel != "Low")
-    ]
+    # not_pref_beh = beh[
+    #     (~beh.BeliefStateValueLabel.isin([f"High {feat1}", f"High {feat2}"])) & 
+    #     (beh.BeliefStateValueLabel != "Low")
+    # ]
+
+    # find trials where neither features are preferred
+    not_pref_beh = beh[~beh.PreferredBelief.isin([feat1, feat2])]
+    # whether to filter by high valued trials
+    if high_val_only:
+        not_pref_beh = not_pref_beh[not_pref_beh.BeliefStateValueBin == 1]
+
     # chose feature 1 and not 2
     chose_feat_1_not_pref = not_pref_beh[
         (not_pref_beh[FEATURE_TO_DIM[feat1]] == feat1) & 
@@ -730,6 +738,51 @@ def get_chosen_not_preferred_trials(pair, beh):
     ]
     chose_feat_2_not_pref["Choice"] = feat2
     return pd.concat((chose_feat_1_not_pref, chose_feat_2_not_pref))
+
+def get_chosen_preferred_single(feat, beh, high_val_only=True):
+    """
+    Find trials where either the feature is chosen and preferred, 
+    or somet other feature was preferred, and chosen
+    """
+    # chose feature, high belief in feature
+    chose_feat_pref = beh[
+        (beh[FEATURE_TO_DIM[feat]] == feat) & 
+        (beh.PreferredBelief == feat)
+    ]
+    chose_feat_pref["Choice"] = feat
+    # chose feature, high belief in something else
+    chose_other = beh[
+        (beh[FEATURE_TO_DIM[feat]] != feat) & 
+        (beh.PreferredBelief != feat)
+    ]
+    chose_other["Choice"] = "other"
+    res = pd.concat((chose_feat_pref, chose_other))
+    if high_val_only:
+        res = res[res.BeliefStateValueBin == 1]
+    return res
+
+def get_chosen_not_preferred_single(feat, beh, high_val_only=True):
+    """
+    Find trials where either the feature is chosen but not preferred, 
+    or trials where some other feature was preferred, and chosen
+    """
+    # trials still have high value, and feature is chosen but not preferred
+    chose_feat_not_pref = beh[
+        (beh[FEATURE_TO_DIM[feat]] == feat) & 
+        (beh.PreferedBelief != feat)
+    ]
+    chose_feat_not_pref["Choice"] = feat
+
+    # trials have high value, feature is not chosen, also not preferred
+    chose_other = beh[
+        (beh[FEATURE_TO_DIM[feat]] != feat) & 
+        (beh.PreferedBelief != feat)
+    ]
+    chose_other["Choice"] = "other"
+    res = pd.concat((chose_feat_not_pref, chose_other))
+    if high_val_only:
+        res = res[res.BeliefStateValueBin == 1]
+    return res
 
 def get_beliefs_per_session(beh, session_name, subject="SA", base_dir="/data/patrick_res"):
     beliefs_path = os.path.join(base_dir, f"behavior/models/belief_state_agent/sub-{subject}/{session_name}_beliefs.pickle")
@@ -776,6 +829,14 @@ def get_good_pairs_across_sessions(all_beh, block_thresh):
             pairs.append({"pair": [feat1, feat2], "sessions": joints, "num_sessions": len(joints), "dim_type": dim_type})
     pairs = pd.DataFrame(pairs)
     return pairs
+
+def get_good_sessions_per_rule(all_beh, block_thresh):
+    good_sess = []
+    num_blocks = all_beh.groupby(["session", "CurrentRule"]).apply(lambda x: len(x.BlockNumber.unique())).reset_index()
+    for feat in FEATURES:
+        sessions = num_blocks[(num_blocks.CurrentRule == feat) & (num_blocks[0] >= block_thresh)].session.values
+        good_sess.append({"feat": feat, "sessions": sessions, "num_essions": len(sessions)})
+    return pd.DataFrame(good_sess)
     
             
 

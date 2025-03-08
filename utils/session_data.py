@@ -78,3 +78,6 @@ class SessionData:
 
     def get_num_neurons(self):
         return len(self.frs.UnitID.unique())
+    
+    def get_pseudo_unit_ids(self):
+        return self.frs["PseudoUnitID"].unique()

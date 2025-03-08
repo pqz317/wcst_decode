@@ -157,7 +157,8 @@ def get_preferred_beliefs_output_dir(args, make_dir=True):
     """
     region_str = "" if args.regions is None else f"_{args.regions.replace(',', '_').replace(' ', '_')}"
     fr_type_str = f"_{args.fr_type}" if args.fr_type != "firing_rates" else ""
-    run_name = f"{args.subject}_{args.trial_event}{fr_type_str}{region_str}"
+    val_str = "" if args.high_val_only else "_all_vals"
+    run_name = f"{args.subject}_{args.trial_event}{fr_type_str}{region_str}{val_str}"
     if args.shuffle_idx is None: 
         dir = os.path.join(args.base_output_path, f"{run_name}")
     else: 
