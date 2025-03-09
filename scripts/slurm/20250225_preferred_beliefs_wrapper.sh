@@ -19,7 +19,7 @@ EOT
 
 sbatch --array=0-16 <<EOT
 #!/bin/bash
-#SBATCH --job-name=not_pref
+#SBATCH --job-name=npref
 #SBATCH -p ckpt-all
 #SBATCH -A walkerlab
 #SBATCH --ntasks=1
@@ -38,7 +38,7 @@ EOT
 
 sbatch --array=0-169<<EOT
 #!/bin/bash
-#SBATCH --job-name=pref_shuf
+#SBATCH --job-name=prefshuf
 
 #SBATCH -p ckpt-all
 #SBATCH -A walkerlab
@@ -59,7 +59,7 @@ EOT
 
 sbatch --array=0-169<<EOT
 #!/bin/bash
-#SBATCH --job-name=not_pref_shuf
+#SBATCH --job-name=nprefshuf
 
 #SBATCH -p ckpt-all
 #SBATCH -A walkerlab
