@@ -271,6 +271,39 @@ def read_preferred_beliefs(args, pairs, num_shuffles=10):
     res = pd.concat(([res] + shuffle_res))
     return res
 
+def load_selected_features_df(args, feats, dir, shuffle=False):
+    res = []
+    for feat in feats:
+        # for condition in ["chosen", "pref", "not_pref"]: 
+        for condition in ["chosen", "pref"]: 
+            args.feat = feat
+            args.condition = condition
+            file_name = get_selected_features_file_name(args)
+            acc = np.load(os.path.join(dir, f"{file_name}_test_accs.npy"))
+            df = pd.DataFrame(acc).reset_index(names=["Time"])
+            ti = args.trial_interval
+            df["Time"] = (df["Time"] * ti.interval_size + ti.interval_size - ti.pre_interval) / 1000
+            df = df.melt(id_vars="Time", value_vars=list(range(acc.shape[1])), var_name="run", value_name="Accuracy")
+            shuffle_str = "_shuffle" if shuffle else ""
+            df["condition"] = f"{condition}{shuffle_str}"
+            res.append(df)
+    return pd.concat(res)
+
+def read_selected_features(args, feats, num_shuffles=10):
+    """
+    Returns two dataframes, one for ccgp one for shuffles
+    """
+    args.trial_interval = get_trial_interval(args.trial_event)
+    dir = get_selected_features_output_dir(args, make_dir=False)
+    res = load_selected_features_df(args, feats, dir)
+    shuffle_res = []
+    for shuffle_idx in range(num_shuffles):
+        args.shuffle_idx = shuffle_idx
+        dir = get_selected_features_output_dir(args, make_dir=False)
+        shuffle_res.append(load_selected_features_df(args, feats, dir, shuffle=True))
+    res = pd.concat(([res] + shuffle_res))
+    return res  
+
 def get_frs_from_args(args, sess_name):
     trial_interval = args.trial_interval
     spikes_path = SESS_SPIKES_PATH.format(
