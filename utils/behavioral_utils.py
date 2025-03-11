@@ -739,7 +739,11 @@ def get_chosen_not_preferred_trials(pair, beh, high_val_only=True):
     chose_feat_2_not_pref["Choice"] = feat2
     return pd.concat((chose_feat_1_not_pref, chose_feat_2_not_pref))
 
-def get_chosen_preferred_single(feat, beh, high_val_only=True):
+def get_chosen_single(feat, beh):
+    beh["Choice"] = beh.apply(lambda x: feat if x[FEATURE_TO_DIM[feat]] == feat else "other", axis=1)
+    return beh
+
+def get_chosen_preferred_single(feat, beh, high_val_only=False):
     """
     Find trials where either the feature is chosen and preferred, 
     or somet other feature was preferred, and chosen
@@ -761,7 +765,7 @@ def get_chosen_preferred_single(feat, beh, high_val_only=True):
         res = res[res.BeliefStateValueBin == 1]
     return res
 
-def get_chosen_not_preferred_single(feat, beh, high_val_only=True):
+def get_chosen_not_preferred_single(feat, beh, high_val_only=False):
     """
     Find trials where either the feature is chosen but not preferred, 
     or trials where some other feature was preferred, and chosen
@@ -769,14 +773,14 @@ def get_chosen_not_preferred_single(feat, beh, high_val_only=True):
     # trials still have high value, and feature is chosen but not preferred
     chose_feat_not_pref = beh[
         (beh[FEATURE_TO_DIM[feat]] == feat) & 
-        (beh.PreferedBelief != feat)
+        (beh.PreferredBelief != feat)
     ]
     chose_feat_not_pref["Choice"] = feat
 
     # trials have high value, feature is not chosen, also not preferred
     chose_other = beh[
         (beh[FEATURE_TO_DIM[feat]] != feat) & 
-        (beh.PreferedBelief != feat)
+        (beh.PreferredBelief != feat)
     ]
     chose_other["Choice"] = "other"
     res = pd.concat((chose_feat_not_pref, chose_other))

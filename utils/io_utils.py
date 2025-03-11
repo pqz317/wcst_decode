@@ -167,6 +167,28 @@ def get_preferred_beliefs_output_dir(args, make_dir=True):
         os.makedirs(dir, exist_ok=True)
     return dir
 
+def get_selected_features_file_name(args):
+    """
+    Naming convention for preferred beliefs decoding files
+    """
+    shuffle_str = "" if args.shuffle_idx is None else f"_shuffle_{args.shuffle_idx}"
+    return f"{args.feat}_{args.condition}{shuffle_str}"
+
+def get_selected_features_output_dir(args, make_dir=True):
+    """
+    Directory convention for preferred beliefs decoding
+    """
+    region_str = "" if args.regions is None else f"_{args.regions.replace(',', '_').replace(' ', '_')}"
+    fr_type_str = f"_{args.fr_type}" if args.fr_type != "firing_rates" else ""
+    run_name = f"{args.subject}_{args.trial_event}{fr_type_str}{region_str}"
+    if args.shuffle_idx is None: 
+        dir = os.path.join(args.base_output_path, f"{run_name}")
+    else: 
+        dir = os.path.join(args.base_output_path, f"{run_name}/shuffles")
+    if make_dir: 
+        os.makedirs(dir, exist_ok=True)
+    return dir
+
 
 def load_ccgp_value_df_from_pairs(args, pairs, dir, shuffle=False):
     res = []

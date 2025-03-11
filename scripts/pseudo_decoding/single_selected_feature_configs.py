@@ -3,13 +3,13 @@ import argparse
 from distutils.util import strtobool
 
 
-class PreferredBeliefsConfigs(NamedTuple):
+class SingleSelectedFeatureConfigs(NamedTuple):
     # general configs
     subject: str = "SA"
-    pair_idx: int = None
+    feat_idx: int = None
     trial_event: str = "StimOnset"
-    chosen_not_preferred: bool = False
-    high_val_only: bool = False
+    condition: str = "chosen"  # either chosen, pref, or not_pref
+    beh_filters: dict = {}  # specified in the format: "column1:val1,column2:val2"
     fr_type: str = "firing_rates"
     shuffle_idx: int = None
     region_level: str = None
@@ -26,16 +26,21 @@ class PreferredBeliefsConfigs(NamedTuple):
 
     # file storage, naming
     run_name: str = None
-    base_output_path: str = "/data/patrick_res/preferred_beliefs"
+    base_output_path: str = "/data/patrick_res/single_selected_feature"
+
+def get_filt_dict(filt_str):
+    return {filt.split(":")[0]: filt.split(":")[1] for filt in filt_str.split(",")}
 
 
 def add_defaults_to_parser(parser):
     # Automatically add arguments based on the namedtuple fields
-    default_configs = PreferredBeliefsConfigs()
+    default_configs = SingleSelectedFeatureConfigs()
     for field, value in default_configs._asdict().items():
         var_type = default_configs. __annotations__[field]
         if var_type is bool: 
             parser.add_argument(f'--{field}', default=value, type=lambda x: bool(strtobool(x)))
+        elif field == "beh_filters": 
+            parser.add_argument(f'--{field}', default=value, type=lambda x: get_filt_dict(x))
         else: 
             parser.add_argument(f'--{field}', default=value, type=var_type)
     return parser

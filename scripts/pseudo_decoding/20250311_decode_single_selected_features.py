@@ -1,9 +1,15 @@
 """
-Mainly a copy of 20240725_high_conf_max_feat_by_pairs.py and 20240725_high_conf_max_feat_by_pairs.py
-with some changes to make it beliefs. 
-Also add a flag to combine the two scripts
+Script to decode selected features, but in a binary fashion
+chosen vs. not chosen, under different conditions: 
+- chosen preferred vs. not chosen, not preferred
+- chosen not preferred vs. not chosen not preferred
+- chosen vs. not chosen, including preferred not preferred
+Additionally, include filters for response (correct/inc), values (low/high). 
+When a filter is included, balance across other conditions in the filter as well. 
+Going to see if this analysis can replace 20241113_decode_preferred_beliefs.py
+Motivations here: 
+https://www.notion.so/walkerlab/Potential-Decoder-weights-analyses-1b22dc9f99928041aad6d0e0e79be875
 """
-
 import os
 import numpy as np
 import pandas as pd
@@ -22,33 +28,20 @@ from models.multinomial_logistic_regressor import NormedDropoutMultinomialLogist
 from trial_splitters.condition_trial_splitter import ConditionTrialSplitter 
 
 import argparse
-from preferred_beliefs_configs import add_defaults_to_parser
+from single_selected_feature_configs import add_defaults_to_parser
 import utils.io_utils as io_utils
 import json
 
-# the output directory to store the data
-OUTPUT_DIR = "/data/res/pseudo"
-# path to a dataframe of sessions to analyze
+FEATS_PATH = "/data/patrick_res/sessions/SA/feats_at_least_3blocks.pickle"
 SESSIONS_PATH = "/data/patrick_res/sessions/SA/valid_sessions.pickle"
-# PAIRS_PATH = "/data/patrick_res/sessions/SA/pairs_at_least_3blocks_7sess.pickle"
-# MIN_TRIALS_FOR_PAIRS_PATH = "/data/patrick_res/sessions/SA/pairs_at_least_3blocks_7sess_min_trials.pickle"
-
-PAIRS_PATH = "/data/patrick_res/sessions/SA/pairs_at_least_3blocks_10sess_more_sess.pickle"
-
-# SESSIONS_PATH = "/data/patrick_res/sessions/valid_sessions_rpe.pickle"
-# PAIRS_PATH = "/data/patrick_res/sessions/pairs_at_least_3blocks_10sess.pickle"
-
-# path for each session, specifying behavior
-SESS_BEHAVIOR_PATH = "/data/patrick_res/behavior/SA/{sess_name}_object_features.csv"
-# path for each session, for spikes that have been pre-aligned to event time and binned. 
-
 UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/all_units.pickle"
+SESS_BEHAVIOR_PATH = "/data/patrick_res/behavior/SA/{sess_name}_object_features.csv"
 
 DATA_MODE = "FiringRate"
 
-
 def load_session_data(row, region_units, args):
     sess_name = row.session_name
+    feat = args.feat
 
     behavior_path = SESS_BEHAVIOR_PATH.format(sess_name=sess_name)
     beh = pd.read_csv(behavior_path)
@@ -58,22 +51,31 @@ def load_session_data(row, region_units, args):
     beh = behavioral_utils.get_beliefs_per_session(beh, sess_name)
     beh = behavioral_utils.get_belief_value_labels(beh)
 
-    pair = args.row.pair
 
     # shift TrialNumbers by some random amount
     if args.shuffle_idx is not None: 
         beh = behavioral_utils.shuffle_beh_by_shift(beh, buffer=50, seed=args.shuffle_idx)
 
-    not_pref = behavioral_utils.get_chosen_not_preferred_trials(pair, beh, args.high_val_only)
-    pref = behavioral_utils.get_chosen_preferred_trials(pair, beh, args.high_val_only)
+    choice = behavioral_utils.get_chosen_single(feat, beh)
+    pref = behavioral_utils.get_chosen_preferred_single(feat, beh)
+    not_pref = behavioral_utils.get_chosen_not_preferred_single(feat, beh)
 
     # balance the conditions out:
     # use minimum number of trials between the chosen preferred, chosen not preferred conditions
     min_trials = np.min((
+        np.min(choice.groupby("Choice").count().TrialNumber),
         np.min(pref.groupby("Choice").count().TrialNumber),
         np.min(not_pref.groupby("Choice").count().TrialNumber)
     ))
-    sub_beh = not_pref if args.chosen_not_preferred else pref
+    if args.condition == "chosen": 
+        sub_beh = choice
+    elif args.condition == "pref": 
+        sub_beh = pref
+    elif args.condition == "not_pref":
+        sub_beh = not_pref
+    else: 
+        raise ValueError(f"invalid condition flag {args.condition}")
+    
     sub_beh = behavioral_utils.balance_trials_by_condition(sub_beh, ["Choice"], min=min_trials)
 
     frs = io_utils.get_frs_from_args(args, sess_name)
@@ -88,17 +90,18 @@ def load_session_data(row, region_units, args):
     session_data.pre_generate_splits(args.num_splits)
     return session_data
 
+
+
 def decode(args):
     region_units = spike_utils.get_region_units(args.region_level, args.regions, UNITS_PATH.format(sub=args.subject))
     trial_interval = args.trial_interval
     sessions = args.sessions
 
     # naming for files, directory
-    file_name = io_utils.get_preferred_beliefs_file_name(args)
-    output_dir = io_utils.get_preferred_beliefs_output_dir(args)
+    file_name = io_utils.get_selected_features_file_name(args)
+    output_dir = io_utils.get_selected_features_output_dir(args)
 
     # load up session data to train network
-    pair = args.row.pair
     sess_datas = sessions.apply(lambda row: load_session_data(
         row, region_units, args
     ), axis=1)
@@ -112,7 +115,7 @@ def decode(args):
 
     # train the network
     # setup decoder, specify all possible label classes, number of neurons, parameters
-    classes = [pair[0], pair[1]]
+    classes = [args.feat, "other"]
     num_neurons = sess_datas.apply(lambda x: x.get_num_neurons()).sum()
     init_params = {"n_inputs": num_neurons, "p_dropout": 0.5, "n_classes": len(classes)}
     # create a trainer object
@@ -142,15 +145,17 @@ def main():
     args = parser.parse_args()
 
     if args.subject == "SA": 
-        pairs = pd.read_pickle(PAIRS_PATH)
+        feat_sessions = pd.read_pickle(FEATS_PATH)
         valid_sess = pd.read_pickle(SESSIONS_PATH)
+
     else: 
         raise ValueError("unsupported subject")
-    args.row = pairs.iloc[args.pair_idx]
-    args.sessions = valid_sess[valid_sess.session_name.isin(args.row.sessions)]
+    args.feat = FEATURES[args.feat_idx]
+    row = feat_sessions[feat_sessions.feat == args.feat].iloc[0]
+    args.sessions = valid_sess[valid_sess.session_name.isin(row.sessions)]
     args.trial_interval = get_trial_interval(args.trial_event)
 
-    print(f"Decoding between {args.row.pair} using between {args.row.num_sessions} sessions, chosen not preferred {args.chosen_not_preferred}", flush=True)
+    print(f"Decoding choosing {args.feat} vs not using {len(args.sessions)} sessions, condition {args.condition}", flush=True)
     print(f"Using {args.fr_type} as inputs", flush=True)
     decode(args)
 
