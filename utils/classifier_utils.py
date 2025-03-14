@@ -353,3 +353,38 @@ def get_significant_time_bins(res, condition, alpha=None):
     time_bins = res.Time.sort_values().unique()
     sig_times = time_bins[sig_bins]
     return sig_times
+
+def cosine_sim(vec_a, vec_b):
+    return vec_a.dot(vec_b) / (np.linalg.norm(vec_a) * np.linalg.norm(vec_b))    
+
+def get_cross_time_cosine_sim_of_weights(weights):
+    """
+    Gets averaged cross-time cosine similarity of weights for selected features results
+    For each feature, Time X, Time Y, computes across pairs of runs (train/test splits)
+    Then averages across features. 
+    
+    weights df has: feat, Time, weights
+    where weights are np array
+    Returns df with rows as Time X, columns as Time Y, with values averaged cosine sim
+    """
+    def cosine_sims_per_feat(feat_weights):
+        merged = pd.merge(feat_weights, feat_weights, how="cross")
+        merged["cosine_sim"] = merged.apply(lambda x: cosine_sim(x.weights_x, x.weights_y), axis=1)    
+        return merged
+
+    cosine_sims = weights.groupby("feat").apply(cosine_sims_per_feat).reset_index()
+    mean_cosines = cosine_sims.groupby(["Time_x", "Time_y"]).cosine_sim.mean().reset_index(name="cosine_sim")
+    pivoted = mean_cosines.pivot(index="Time_x", columns="Time_y", values="cosine_sim")
+    return pivoted
+
+def get_cross_cond_cosine_sim_of_weights(weights_a, weights_b, exclude_same_run=False):
+    """
+    weights df has: feat, Time, weights
+    where weights are np array
+    """
+    merged = pd.merge(weights_a, weights_b, on=["Time", "feat"])
+    if exclude_same_run:
+        merged = merged[merged.run_x != merged.run_y]
+    merged["cosine_sim"] = merged.apply(lambda x: cosine_sim(x.weights_x, x.weights_y), axis=1)
+    return merged
+

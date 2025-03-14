@@ -13,7 +13,7 @@ import os
 from distutils.util import strtobool
 
 import argparse
-
+from tqdm import tqdm
 
 """
 Creates firing rates dataframes for all sessions, saves them invdividually
@@ -48,7 +48,7 @@ BL_SESSIONS_PATH = "/data/patrick_res/sessions/BL/valid_sessions_61.pickle"
 SA_SESSIONS_PATH = "/data/patrick_res/sessions/SA/valid_sessions.pickle"
 
 
-def regress_trial_number(row, args):
+def transform_fr(row, args):
     sess_name = row.session_name
     print(f"Processing session {sess_name}")
     print("Loading firing rates")
@@ -62,11 +62,16 @@ def regress_trial_number(row, args):
         frs = spike_utils.regress_out_trial_number(frs)
     elif args.fr_type == "white_noise_firing_rates":
         frs = spike_utils.white_noise_frs(frs)
+    elif args.fr_type == "trial_num_frs":
+        frs = spike_utils.trial_num_as_frs(frs)
+    elif args.fr_type == "true_pref_belief_frs":
+        beh = behavioral_utils.get_valid_belief_beh_for_sub_sess(args.subject, sess_name)
+        frs = spike_utils.pref_belief_as_frs(frs, beh)
     else:
         raise ValueError(f"invalid transform {args.fr_type}")
 
     output_file_name = os.path.join(dir_path, f"{sess_name}_{args.fr_type}_{args.pre_interval}_{args.event}_{args.post_interval}_{args.interval_size}_bins_{args.num_bins_smooth}_smooth.pickle")
-    print(f"For sub {args.subject}, session {sess_name}, storing trial residual FR of {frs.UnitID.nunique()} units to {output_file_name}", flush=True)
+    print(f"For sub {args.subject}, session {sess_name}, storing {args.fr_type} of {frs.UnitID.nunique()} units to {output_file_name}", flush=True)
     if not args.dry_run: 
         frs.to_pickle(output_file_name)
 
@@ -89,7 +94,8 @@ def main():
         valid_sess = pd.read_pickle(SA_SESSIONS_PATH)
     else: 
         valid_sess = pd.read_pickle(BL_SESSIONS_PATH)
-    valid_sess.apply(lambda row: regress_trial_number(row, args), axis=1)
+    tqdm.pandas()
+    valid_sess.progress_apply(lambda row: transform_fr(row, args), axis=1)
 
 if __name__ == "__main__":
     main()

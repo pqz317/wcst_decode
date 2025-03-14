@@ -839,9 +839,22 @@ def get_good_sessions_per_rule(all_beh, block_thresh):
     num_blocks = all_beh.groupby(["session", "CurrentRule"]).apply(lambda x: len(x.BlockNumber.unique())).reset_index()
     for feat in FEATURES:
         sessions = num_blocks[(num_blocks.CurrentRule == feat) & (num_blocks[0] >= block_thresh)].session.values
-        good_sess.append({"feat": feat, "sessions": sessions, "num_essions": len(sessions)})
+        good_sess.append({"feat": feat, "sessions": sessions, "num_sessions": len(sessions)})
     return pd.DataFrame(good_sess)
     
+
+def get_valid_belief_beh_for_sub_sess(sub, session):
+    behavior_path = SESS_BEHAVIOR_PATH.format(
+        sess_name=session,
+        sub=sub
+    )
+    beh = pd.read_csv(behavior_path)
+    beh = get_valid_trials(beh, sub)
+    feature_selections = get_selection_features(beh)
+    beh = pd.merge(beh, feature_selections, on="TrialNumber", how="inner")
+    beh = get_beliefs_per_session(beh, session)
+    beh = get_belief_value_labels(beh)
+    return beh
             
 
 

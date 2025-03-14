@@ -6,6 +6,8 @@ from spike_tools import (
 from scipy.ndimage import gaussian_filter1d
 import json
 from sklearn.linear_model import LinearRegression
+from constants.behavioral_constants import *
+
 
 
 def get_spikes_by_trial_interval_DEPRECATED(spike_times, intervals):
@@ -320,3 +322,15 @@ def white_noise_frs(frs):
     rng = np.random.default_rng()
     frs["FiringRate"] = rng.normal(size=len(frs))
     return frs
+
+def trial_num_as_frs(frs):
+    frs["FiringRate"] = frs["TrialNumber"]
+    return frs
+
+def pref_belief_as_frs(frs, beh):
+    def pref_belief_per_row(row):
+        target_feat = FEATURES[row.UnitID % len(FEATURES)]
+        return 1 if row.PreferredBelief == target_feat else 0
+    merged = pd.merge(frs, beh[["TrialNumber", "PreferredBelief"]], on="TrialNumber")
+    merged["FiringRate"] = merged.apply(lambda x: pref_belief_per_row(x), axis=1)
+    return merged[["TrialNumber", "UnitID", "TimeBins", "FiringRate"]]

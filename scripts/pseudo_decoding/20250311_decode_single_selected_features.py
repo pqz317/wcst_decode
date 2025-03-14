@@ -73,6 +73,13 @@ def load_session_data(row, region_units, args):
         sub_beh = pref
     elif args.condition == "not_pref":
         sub_beh = not_pref
+    elif args.condition == "pref_vs_not_pref":
+        # NOTE: kinda hacky but this allows the script to be run for pref vs. not pref in the same way
+        sub_beh = pd.concat([
+            pref[pref.Choice == feat],
+            not_pref[not_pref.Choice == feat]
+        ])
+        sub_beh["Choice"] = sub_beh.PreferredBelief.apply(lambda x: "pref" if x == feat else "not_pref")
     else: 
         raise ValueError(f"invalid condition flag {args.condition}")
     
@@ -115,7 +122,8 @@ def decode(args):
 
     # train the network
     # setup decoder, specify all possible label classes, number of neurons, parameters
-    classes = [args.feat, "other"]
+    # NOTE: hacky as well, making pref vs not pref work here
+    classes = ["pref", "not_pref"] if args.condition == "pref_vs_not_pref" else [args.feat, "other"]
     num_neurons = sess_datas.apply(lambda x: x.get_num_neurons()).sum()
     init_params = {"n_inputs": num_neurons, "p_dropout": 0.5, "n_classes": len(classes)}
     # create a trainer object
