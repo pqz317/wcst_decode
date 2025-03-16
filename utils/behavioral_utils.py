@@ -855,7 +855,14 @@ def get_valid_belief_beh_for_sub_sess(sub, session):
     beh = get_beliefs_per_session(beh, session)
     beh = get_belief_value_labels(beh)
     return beh
-            
+
+def filter_behavior(beh, filters):
+    """
+    filters behavior based on dict of filters, keys of colums values of values
+    """
+    for col, val in filters.items():
+        beh = beh[beh[col] == val]
+    return beh
 
 
         

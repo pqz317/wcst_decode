@@ -29,6 +29,8 @@ class SingleSelectedFeatureConfigs(NamedTuple):
     base_output_path: str = "/data/patrick_res/single_selected_feature"
 
 def get_filt_dict(filt_str):
+    if not filt_str: 
+        return {}
     return {filt.split(":")[0]: filt.split(":")[1] for filt in filt_str.split(",")}
 
 

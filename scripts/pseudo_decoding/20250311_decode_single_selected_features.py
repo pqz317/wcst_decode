@@ -50,6 +50,7 @@ def load_session_data(row, region_units, args):
     beh = pd.merge(beh, feature_selections, on="TrialNumber", how="inner")
     beh = behavioral_utils.get_beliefs_per_session(beh, sess_name)
     beh = behavioral_utils.get_belief_value_labels(beh)
+    beh = behavioral_utils.filter_behavior(beh, args.beh_filters)
 
 
     # shift TrialNumbers by some random amount
@@ -163,8 +164,10 @@ def main():
     args.sessions = valid_sess[valid_sess.session_name.isin(row.sessions)]
     args.trial_interval = get_trial_interval(args.trial_event)
 
+    print(args.beh_filters)
     print(f"Decoding choosing {args.feat} vs not using {len(args.sessions)} sessions, condition {args.condition}", flush=True)
     print(f"Using {args.fr_type} as inputs", flush=True)
+    print(f"With filters {args.beh_filters}", flush=True)
     decode(args)
 
 
