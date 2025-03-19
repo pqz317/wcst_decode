@@ -181,7 +181,8 @@ def get_selected_features_output_dir(args, make_dir=True):
     region_str = "" if args.regions is None else f"_{args.regions.replace(',', '_').replace(' ', '_')}"
     fr_type_str = f"_{args.fr_type}" if args.fr_type != "firing_rates" else ""
     filt_str = "".join([f"_{k}_{v}"for k, v in args.beh_filters.items()])
-    run_name = f"{args.subject}_{args.trial_event}{fr_type_str}{region_str}{filt_str}"
+    v2_pseudo_str = "_v2_pseudo" if args.use_v2_pseudo else ""
+    run_name = f"{args.subject}_{args.trial_event}{fr_type_str}{region_str}{filt_str}{v2_pseudo_str}"
     if args.shuffle_idx is None: 
         dir = os.path.join(args.base_output_path, f"{run_name}")
     else: 

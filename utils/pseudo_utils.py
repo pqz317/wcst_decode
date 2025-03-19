@@ -79,6 +79,33 @@ def generate_pseudo_population(frs, split, num_train_samples=1000, num_test_samp
         raise ValueError("Did not get expected number of rows in pseudo population")
     return pseudo_pop
 
+
+def generate_pseudo_population_v2(frs, split, num_train_samples=1000, num_test_samples=100, rng=None):
+    """
+    Generates a psuedo population of spikes using a train/test split of conditions
+    Uses method detailed in Bernardi., 2020. 
+    Same as above, except does not sample per-unit activity independently, 
+    instead, preserves per-session activity correlations
+    """
+    res = []
+    if rng is None:
+        rng = np.random.default_rng()
+    for _, row in split.iterrows():
+        condition = row["Condition"]
+        train_trials = row["TrainTrials"]
+        train_samples = rng.choice(train_trials, num_train_samples)
+        res.append(pd.DataFrame({"TrialNumber": train_samples, "Type": "Train", "Condition": condition}))
+        test_trials = row["TestTrials"]
+        test_samples = rng.choice(test_trials, num_test_samples)
+        res.append(pd.DataFrame({"TrialNumber": test_samples, "Type": "Test", "Condition": condition}))
+    df = pd.concat(res)
+    df["PseudoTrialNumber"] = np.arange(len(df))
+    pop = pd.merge(df, frs, on="TrialNumber")
+    num_pseudo_trials =  (num_train_samples + num_test_samples) * len(split)
+    if not len(pop) == num_pseudo_trials * frs.UnitID.nunique() * frs.TimeBins.nunique(): 
+        raise ValueError("Did not get expected number of rows in pseudo population")
+    return pop
+
 def generate_multi_split_pseudo_population(frs, splitter, num_splits, num_train_samples=1000, num_test_samples=100, rng=None): 
     """
     Generates a psuedo population of spikes using for a number of train/test splits

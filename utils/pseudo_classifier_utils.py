@@ -23,7 +23,14 @@ def transform_label_data(pseudo_data):
 
 
 
-def evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, num_splits, num_train_per_cond=2000, num_test_per_cond=400, seed=42, proj_matrix=None):
+def evaluate_classifiers_by_time_bins(
+    model, sess_datas, time_bins, num_splits, 
+    num_train_per_cond=2000, 
+    num_test_per_cond=400, 
+    seed=42, 
+    proj_matrix=None,
+    use_v2=False
+):
     training_accs_by_bin = np.empty((len(time_bins), num_splits))
     test_accs_by_bin = np.empty((len(time_bins), num_splits))
     shuffled_accs_by_bin = np.empty((len(time_bins), num_splits))
@@ -33,7 +40,7 @@ def evaluate_classifiers_by_time_bins(model, sess_datas, time_bins, num_splits, 
         print(f"Working on bin {time_bin}")
         for split_idx in range(num_splits):
             pseudo_sess = pd.concat(sess_datas.apply(
-                lambda x: x.generate_pseudo_data(num_train_per_cond, num_test_per_cond, time_bin)
+                lambda x: x.generate_pseudo_data(num_train_per_cond, num_test_per_cond, time_bin, use_v2)
             ).values, ignore_index=True)
 
             train_data = pseudo_sess[pseudo_sess.Type == "Train"]

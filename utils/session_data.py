@@ -46,7 +46,7 @@ class SessionData:
         return splits
 
 
-    def generate_pseudo_data(self, num_train, num_test, time_bin):
+    def generate_pseudo_data(self, num_train, num_test, time_bin, use_v2=False):
         """
         For a specified timebin, generate num_train and num_test pseudotrials per condition
         With the existing trialsplitter
@@ -68,7 +68,12 @@ class SessionData:
         """
         frs_at_bin = self.frs[np.isclose(self.frs.TimeBins, time_bin)]
         split = next(self.splitter)
-        pseudo_pop = pseudo_utils.generate_pseudo_population(frs_at_bin, split, num_train, num_test)
+        # TODO: Change when testing
+        if use_v2: 
+            pseudo_pop = pseudo_utils.generate_pseudo_population_2(frs_at_bin, split, num_train, num_test)
+        else: 
+            pseudo_pop = pseudo_utils.generate_pseudo_population(frs_at_bin, split, num_train, num_test)
+
         pseudo_pop["Session"] = self.sess_name
         # NOTE: very hacky way of giving unique ID to units across sessions
         pseudo_pop["PseudoUnitID"] = int(self.sess_name) * 100 + pseudo_pop["UnitID"]
