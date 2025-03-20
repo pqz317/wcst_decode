@@ -40,7 +40,7 @@ def evaluate_classifiers_by_time_bins(
         print(f"Working on bin {time_bin}")
         for split_idx in range(num_splits):
             pseudo_sess = pd.concat(sess_datas.apply(
-                lambda x: x.generate_pseudo_data(num_train_per_cond, num_test_per_cond, time_bin, use_v2)
+                lambda x: x.generate_pseudo_data(num_train_per_cond, num_test_per_cond, time_bin, use_v2=use_v2)
             ).values, ignore_index=True)
 
             train_data = pseudo_sess[pseudo_sess.Type == "Train"]

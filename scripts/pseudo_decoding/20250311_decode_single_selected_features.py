@@ -135,7 +135,7 @@ def decode(args):
     # calculate time bins (in seconds)
     time_bins = np.arange(0, (trial_interval.post_interval + trial_interval.pre_interval) / 1000, trial_interval.interval_size / 1000)
     train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(
-        model, sess_datas, time_bins, NUM_SPLITS, NUM_TRAIN_PER_COND, NUM_TEST_PER_COND, args.use_v2_pseudo
+        model, sess_datas, time_bins, NUM_SPLITS, NUM_TRAIN_PER_COND, NUM_TEST_PER_COND, use_v2=args.use_v2_pseudo
     )
 
     np.save(os.path.join(output_dir, f"{file_name}_train_accs.npy"), train_accs)

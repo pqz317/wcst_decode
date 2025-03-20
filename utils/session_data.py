@@ -70,7 +70,7 @@ class SessionData:
         split = next(self.splitter)
         # TODO: Change when testing
         if use_v2: 
-            pseudo_pop = pseudo_utils.generate_pseudo_population_2(frs_at_bin, split, num_train, num_test)
+            pseudo_pop = pseudo_utils.generate_pseudo_population_v2(frs_at_bin, split, num_train, num_test)
         else: 
             pseudo_pop = pseudo_utils.generate_pseudo_population(frs_at_bin, split, num_train, num_test)
 
