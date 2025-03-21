@@ -54,7 +54,6 @@ def load_session_data(row, region_units, args):
         beh = behavioral_utils.balance_trials_by_condition(beh, list(args.beh_filters.keys()))
     beh = behavioral_utils.filter_behavior(beh, args.beh_filters)
 
-
     # shift TrialNumbers by some random amount
     if args.shuffle_idx is not None: 
         beh = behavioral_utils.shuffle_beh_by_shift(beh, buffer=50, seed=args.shuffle_idx)
@@ -65,11 +64,16 @@ def load_session_data(row, region_units, args):
 
     # balance the conditions out:
     # use minimum number of trials between the chosen preferred, chosen not preferred conditions
-    min_trials = np.min((
-        np.min(choice.groupby("Choice").count().TrialNumber),
-        np.min(pref.groupby("Choice").count().TrialNumber),
-        np.min(not_pref.groupby("Choice").count().TrialNumber)
-    ))
+    # HACK: don't use balance across conditions if already balancing by filters
+    if not args.balance_by_filters:
+        min_trials = np.min((
+            np.min(choice.groupby("Choice").count().TrialNumber),
+            np.min(pref.groupby("Choice").count().TrialNumber),
+            np.min(not_pref.groupby("Choice").count().TrialNumber)
+        ))
+    else: 
+        min_trials = None
+
     if args.condition == "chosen": 
         sub_beh = choice
     elif args.condition == "pref": 
@@ -87,6 +91,8 @@ def load_session_data(row, region_units, args):
         raise ValueError(f"invalid condition flag {args.condition}")
     
     sub_beh = behavioral_utils.balance_trials_by_condition(sub_beh, ["Choice"], min=min_trials)
+    # print(f"number of green trials left after balancing everything: {len(sub_beh[sub_beh[FEATURE_TO_DIM[feat]] == feat])}")
+
 
     frs = io_utils.get_frs_from_args(args, sess_name)
     frs = frs.rename(columns={DATA_MODE: "Value"})

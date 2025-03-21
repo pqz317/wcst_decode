@@ -26,7 +26,7 @@ class SingleSelectedFeatureConfigs(NamedTuple):
     p_dropout: float = 0.5
     test_ratio: float = 0.2
     num_splits: int = 8
-    use_v2_pseudo: bool = False
+    use_v2_pseudo: bool = True
 
     # file storage, naming
     run_name: str = None
