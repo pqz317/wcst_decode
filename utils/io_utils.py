@@ -174,6 +174,12 @@ def get_selected_features_file_name(args):
     shuffle_str = "" if args.shuffle_idx is None else f"_shuffle_{args.shuffle_idx}"
     return f"{args.feat}_{args.condition}{shuffle_str}"
 
+def get_selected_features_cross_cond_file_name(args):
+    """
+    Naming convention for preferred beliefs decoding files
+    """
+    return f"{args.feat}_cross_{args.model_cond}_model_on_{args.data_cond}_data"
+
 def get_selected_features_output_dir(args, make_dir=True):
     """
     Directory convention for preferred beliefs decoding
@@ -201,7 +207,14 @@ def load_ccgp_value_df_from_pairs(args, pairs, dir, shuffle=False):
             args.row = row
             file_name = get_ccgp_val_file_name(args)
             for cond in ["within_cond", "across_cond", "overall"]: 
-                acc = np.load(os.path.join(dir, f"{file_name}_{cond}_accs.npy"))
+                try: 
+                    acc = np.load(os.path.join(dir, f"{file_name}_{cond}_accs.npy"))
+                except Exception as e:
+                    if shuffle:
+                        print(f"Warning, shuffle not found: {file_name}_{cond}_accs.npy")
+                        continue
+                    else: 
+                        raise e
                 df = pd.DataFrame(acc).reset_index(names=["Time"])
                 ti = args.trial_interval
                 df["Time"] = (df["Time"] * ti.interval_size + ti.interval_size - ti.pre_interval) / 1000
@@ -281,7 +294,14 @@ def load_selected_features_df(args, feats, dir, conds, shuffle=False):
             args.feat = feat
             args.condition = condition
             file_name = get_selected_features_file_name(args)
-            acc = np.load(os.path.join(dir, f"{file_name}_test_accs.npy"))
+            try: 
+                acc = np.load(os.path.join(dir, f"{file_name}_test_accs.npy"))
+            except Exception as e:
+                if shuffle:
+                    print(f"Warning, shuffle not found: {file_name}")
+                    continue
+                else: 
+                    raise e
             df = pd.DataFrame(acc).reset_index(names=["Time"])
             ti = args.trial_interval
             df["Time"] = (df["Time"] * ti.interval_size + ti.interval_size - ti.pre_interval) / 1000
@@ -295,6 +315,7 @@ def read_selected_features(args, feats, conds=["chosen", "pref", "not_pref"], nu
     """
     Returns two dataframes, one for ccgp one for shuffles
     """
+    args.shuffle_idx = None
     args.trial_interval = get_trial_interval(args.trial_event)
     dir = get_selected_features_output_dir(args, make_dir=False)
     res = load_selected_features_df(args, feats, dir, conds)

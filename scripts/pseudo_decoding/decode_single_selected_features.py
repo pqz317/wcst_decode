@@ -28,7 +28,7 @@ from models.multinomial_logistic_regressor import NormedDropoutMultinomialLogist
 from trial_splitters.condition_trial_splitter import ConditionTrialSplitter 
 
 import argparse
-from single_selected_feature_configs import add_defaults_to_parser
+from single_selected_feature_configs import add_defaults_to_parser, SingleSelectedFeatureConfigs
 import utils.io_utils as io_utils
 import json
 
@@ -159,7 +159,7 @@ def main():
     For each feature dimension, runs decoding, stores results. 
     """
     parser = argparse.ArgumentParser()
-    parser = add_defaults_to_parser(parser)
+    parser = add_defaults_to_parser(SingleSelectedFeatureConfigs(), parser)
     args = parser.parse_args()
 
     if args.subject == "SA": 
