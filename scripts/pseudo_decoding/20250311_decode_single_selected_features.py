@@ -50,6 +50,8 @@ def load_session_data(row, region_units, args):
     beh = pd.merge(beh, feature_selections, on="TrialNumber", how="inner")
     beh = behavioral_utils.get_beliefs_per_session(beh, sess_name)
     beh = behavioral_utils.get_belief_value_labels(beh)
+    if args.balance_by_filters: 
+        beh = behavioral_utils.balance_trials_by_condition(beh, list(args.beh_filters.keys()))
     beh = behavioral_utils.filter_behavior(beh, args.beh_filters)
 
 
@@ -134,14 +136,15 @@ def decode(args):
 
     # calculate time bins (in seconds)
     time_bins = np.arange(0, (trial_interval.post_interval + trial_interval.pre_interval) / 1000, trial_interval.interval_size / 1000)
-    train_accs, test_accs, shuffled_accs, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(
+    _, test_accs, _, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(
         model, sess_datas, time_bins, NUM_SPLITS, NUM_TRAIN_PER_COND, NUM_TEST_PER_COND, use_v2=args.use_v2_pseudo
     )
 
-    np.save(os.path.join(output_dir, f"{file_name}_train_accs.npy"), train_accs)
+    # np.save(os.path.join(output_dir, f"{file_name}_train_accs.npy"), train_accs)
     np.save(os.path.join(output_dir, f"{file_name}_test_accs.npy"), test_accs)
-    np.save(os.path.join(output_dir, f"{file_name}_shuffled_accs.npy"), shuffled_accs)
-    np.save(os.path.join(output_dir, f"{file_name}_models.npy"), models)
+    # np.save(os.path.join(output_dir, f"{file_name}_shuffled_accs.npy"), shuffled_accs)
+    if args.shuffle_idx is None: 
+        np.save(os.path.join(output_dir, f"{file_name}_models.npy"), models)
 
 
 def main():

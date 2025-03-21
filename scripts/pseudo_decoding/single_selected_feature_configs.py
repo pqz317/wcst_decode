@@ -11,10 +11,12 @@ class SingleSelectedFeatureConfigs(NamedTuple):
     trial_event: str = "StimOnset"
     condition: str = "chosen"  # either chosen, pref, or not_pref, pref vs not pref
     beh_filters: dict = {}  # specified in the format: "column1:val1,column2:val2"
+    balance_by_filters: bool = False
     fr_type: str = "firing_rates"
     shuffle_idx: int = None
     region_level: str = None
     regions: str = None
+
 
     # decoder configs
     learning_rate: float = 0.05
