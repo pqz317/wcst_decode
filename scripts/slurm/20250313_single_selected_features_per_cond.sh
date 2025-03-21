@@ -14,7 +14,6 @@ singularity exec --writable-tmpfs --nv \
     --bind /gscratch/walkerlab/patrick:/data,/mmfs1/home/pqz317/wcst_decode:/src/wcst_decode \
     /gscratch/walkerlab/patrick/singularity/wcst_decode_image.sif /usr/bin/python3 \
     /src/wcst_decode/scripts/pseudo_decoding/20250311_decode_single_selected_features.py \
-    --condition pref_vs_not_pref \
     --feat_idx \$SLURM_ARRAY_TASK_ID $1 $2 $3 $4 $5 $6 $7 $8 $9
 EOT
 
@@ -34,7 +33,6 @@ singularity exec --writable-tmpfs --nv \
     --bind /gscratch/walkerlab/patrick:/data,/mmfs1/home/pqz317/wcst_decode:/src/wcst_decode \
     /gscratch/walkerlab/patrick/singularity/wcst_decode_image.sif /usr/bin/python3 \
     /src/wcst_decode/scripts/pseudo_decoding/20250311_decode_single_selected_features.py \
-    --condition pref_vs_not_pref \
     --feat_idx \$((\$SLURM_ARRAY_TASK_ID % 12)) \
     --shuffle_idx \$((\$SLURM_ARRAY_TASK_ID / 12)) \
     $1 $2 $3 $4 $5 $6 $7 $8 $9
