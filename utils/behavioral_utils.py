@@ -471,7 +471,7 @@ def get_prev_choice_fbs(beh):
     beh["PrevResponse"] = beh.Response.shift()
     for dim in FEATURE_DIMS:
         beh[f"Prev{dim}"] = beh[dim].shift()
-    return beh
+    return beh[~beh.PrevResponse.isna()]
 
 def get_max_feature_value(beh, num_bins=None, quantize_bins=False):
     """

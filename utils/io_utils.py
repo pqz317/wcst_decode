@@ -198,6 +198,17 @@ def get_selected_features_output_dir(args, make_dir=True):
         os.makedirs(dir, exist_ok=True)
     return dir
 
+def transform_np_acc_to_df(acc, args):
+    """
+    Takes accuracy np array of n_time x n_runs, 
+    Converts to dataframe of columns Time, run, Accuracy
+    """
+    df = pd.DataFrame(acc).reset_index(names=["Time"])
+    ti = args.trial_interval
+    df["Time"] = (df["Time"] * ti.interval_size + ti.interval_size - ti.pre_interval) / 1000
+    df = df.melt(id_vars="Time", value_vars=list(range(acc.shape[1])), var_name="run", value_name="Accuracy")
+    return df
+
 
 def load_ccgp_value_df_from_pairs(args, pairs, dir, shuffle=False):
     res = []
@@ -215,10 +226,7 @@ def load_ccgp_value_df_from_pairs(args, pairs, dir, shuffle=False):
                         continue
                     else: 
                         raise e
-                df = pd.DataFrame(acc).reset_index(names=["Time"])
-                ti = args.trial_interval
-                df["Time"] = (df["Time"] * ti.interval_size + ti.interval_size - ti.pre_interval) / 1000
-                df = df.melt(id_vars="Time", value_vars=list(range(acc.shape[1])), var_name="run", value_name="Accuracy")
+                df = transform_np_acc_to_df(acc, args)
                 # df["pair"] = feat1, feat2
                 df["condition"] = cond if not shuffle else f"{cond}_shuffle"
                 res.append(df)
@@ -262,10 +270,7 @@ def load_preferred_belief_df_from_pairs(args, pairs, dir, shuffle=False):
             args.chosen_not_preferred = chosen_not_pref
             file_name = get_preferred_beliefs_file_name(args)
             acc = np.load(os.path.join(dir, f"{file_name}_test_accs.npy"))
-            df = pd.DataFrame(acc).reset_index(names=["Time"])
-            ti = args.trial_interval
-            df["Time"] = (df["Time"] * ti.interval_size + ti.interval_size - ti.pre_interval) / 1000
-            df = df.melt(id_vars="Time", value_vars=list(range(acc.shape[1])), var_name="run", value_name="Accuracy")
+            df = transform_np_acc_to_df(acc, args)
             pref_str = "not_pref" if chosen_not_pref else "pref"
             shuffle_str = "_shuffle" if shuffle else ""
             df["condition"] = f"{pref_str}{shuffle_str}"
@@ -302,10 +307,7 @@ def load_selected_features_df(args, feats, dir, conds, shuffle=False):
                     continue
                 else: 
                     raise e
-            df = pd.DataFrame(acc).reset_index(names=["Time"])
-            ti = args.trial_interval
-            df["Time"] = (df["Time"] * ti.interval_size + ti.interval_size - ti.pre_interval) / 1000
-            df = df.melt(id_vars="Time", value_vars=list(range(acc.shape[1])), var_name="run", value_name="Accuracy")
+            df = transform_np_acc_to_df(acc, args)
             shuffle_str = "_shuffle" if shuffle else ""
             df["condition"] = f"{condition}{shuffle_str}"
             res.append(df)
@@ -346,6 +348,23 @@ def read_selected_features_models(args, feats, cond):
         df["feat"] = feat
         res.append(df)
     return pd.concat(res)
+
+def read_selected_features_cross_cond(args, feats, cond_pair): 
+    res = []
+    dir = get_selected_features_output_dir(args, make_dir=False)
+    args.trial_interval = get_trial_interval(args.trial_event)
+    for feat in feats: 
+        for i in range(2):
+            args.feat = feat
+            args.model_cond = cond_pair[i]
+            args.data_cond = cond_pair[(i + 1) % 2]
+            file_name = get_selected_features_cross_cond_file_name(args)
+            accs = np.load(os.path.join(dir, f"{file_name}_accs.npy"))
+            df = transform_np_acc_to_df(accs, args)
+            df["condition"] = f"{args.model_cond} model on {args.data_cond} data"
+            res.append(df)
+    return pd.concat(res)
+
 
 def get_selected_features_weights(models):
     models["weights"] = models.apply(lambda x: x.models.coef_[0, :], axis=1)

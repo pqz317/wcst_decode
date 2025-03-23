@@ -50,6 +50,7 @@ def load_session_data(row, region_units, args):
     beh = pd.merge(beh, feature_selections, on="TrialNumber", how="inner")
     beh = behavioral_utils.get_beliefs_per_session(beh, sess_name)
     beh = behavioral_utils.get_belief_value_labels(beh)
+    beh = behavioral_utils.get_prev_choice_fbs(beh)
     if args.balance_by_filters: 
         beh = behavioral_utils.balance_trials_by_condition(beh, list(args.beh_filters.keys()))
     beh = behavioral_utils.filter_behavior(beh, args.beh_filters)
