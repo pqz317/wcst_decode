@@ -70,7 +70,7 @@ def load_session_data(row, region_units, args):
     beh = pd.merge(beh, feature_selections, on="TrialNumber", how="inner")
     beh = behavioral_utils.get_beliefs_per_session(beh, sess_name)
     beh = behavioral_utils.get_belief_value_labels(beh)
-    beh = behavioral_utils.filter_behavior(beh, {"PreferredChosen": True})
+    beh = behavioral_utils.filter_behavior(beh, args.beh_filters)
 
     # shift TrialNumbers by some random amount
     if args.shuffle_idx is not None: 
@@ -136,17 +136,19 @@ def decode(args):
     not_pref_test_accs = pseudo_classifier_utils.evaluate_model_with_data(models, not_pref_sess_datas, time_bins)  
 
     # naming for files, directory
-    file_name = io_utils.get_selected_features_file_name(args)
     output_dir = io_utils.get_selected_features_output_dir(args)
 
-        # np.save(os.path.join(output_dir, f"{file_name}_train_accs.npy"), train_accs)
-    np.save(os.path.join(output_dir, f"{file_name}_chosen_test_accs.npy"), chosen_test_accs)
-    np.save(os.path.join(output_dir, f"{file_name}_pref_test_accs.npy"), pref_test_accs)
-    np.save(os.path.join(output_dir, f"{file_name}_not_pref_test_accs.npy"), not_pref_test_accs)
-
-    # np.save(os.path.join(output_dir, f"{file_name}_shuffled_accs.npy"), shuffled_accs)
+    chosen_file_name = io_utils.get_selected_features_file_name(args, "chosen")
+    np.save(os.path.join(output_dir, f"{chosen_file_name}_test_accs.npy"), chosen_test_accs)
     if args.shuffle_idx is None: 
-        np.save(os.path.join(output_dir, f"{file_name}_chosen_models.npy"), models)
+        np.save(os.path.join(output_dir, f"{chosen_file_name}_models.npy"), models)
+
+    pref_file_name = io_utils.get_selected_features_file_name(args, "pref")
+    np.save(os.path.join(output_dir, f"{pref_file_name}_test_accs.npy"), pref_test_accs)
+    not_pref_file_name = io_utils.get_selected_features_file_name(args, "not_pref")
+    np.save(os.path.join(output_dir, f"{not_pref_file_name}_test_accs.npy"), not_pref_test_accs)
+
+
 
 
 def main():

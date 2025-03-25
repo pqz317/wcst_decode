@@ -405,7 +405,9 @@ def visualize_ccpg_value(args, df, ax):
     ax.set_xlabel(f"Time Relative to {args.trial_event}")
     ax.set_title(f"Subject {args.subject} CCGP of value, {args.regions} regions")
 
-def visualize_preferred_beliefs(args, df, ax):
+def visualize_preferred_beliefs(args, df, ax, show_shuffles=True):
+    if not show_shuffles:
+        df = df[~df.condition.str.contains("shuffle")]
     sns.lineplot(df, x="Time", y="Accuracy", hue="condition", linewidth=3, ax=ax)
     # # add estimated chance
     ax.axhline(1/2, color='black', linestyle='dotted', label="Estimated Chance")

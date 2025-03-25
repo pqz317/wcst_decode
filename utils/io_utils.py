@@ -167,10 +167,12 @@ def get_preferred_beliefs_output_dir(args, make_dir=True):
         os.makedirs(dir, exist_ok=True)
     return dir
 
-def get_selected_features_file_name(args):
+def get_selected_features_file_name(args, cond=None):
     """
     Naming convention for preferred beliefs decoding files
     """
+    if cond: 
+        args.condition = cond
     shuffle_str = "" if args.shuffle_idx is None else f"_shuffle_{args.shuffle_idx}"
     return f"{args.feat}_{args.condition}{shuffle_str}"
 
@@ -300,6 +302,7 @@ def load_selected_features_df(args, feats, dir, conds, shuffle=False):
             args.condition = condition
             file_name = get_selected_features_file_name(args)
             try: 
+                # print(dir)
                 acc = np.load(os.path.join(dir, f"{file_name}_test_accs.npy"))
             except Exception as e:
                 if shuffle:
