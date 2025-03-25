@@ -15,6 +15,7 @@ class SingleSelectedFeatureConfigs(NamedTuple):
     shuffle_idx: int = None
     region_level: str = None
     regions: str = None
+    train_test_seed: int = None
 
     # decoder configs
     learning_rate: float = 0.05

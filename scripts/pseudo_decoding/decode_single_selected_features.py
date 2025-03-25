@@ -102,7 +102,7 @@ def load_session_data(row, region_units, args):
         frs = frs[frs.PseudoUnitID.isin(region_units)]
     if len(frs) == 0 or len(sub_beh) == 0:
         return None
-    splitter = ConditionTrialSplitter(sub_beh, "Choice", args.test_ratio)
+    splitter = ConditionTrialSplitter(sub_beh, "Choice", args.test_ratio, seed=args.train_test_seed)
     session_data = SessionData(sess_name, sub_beh, frs, splitter)
     session_data.pre_generate_splits(args.num_splits)
     return session_data
