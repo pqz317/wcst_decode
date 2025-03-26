@@ -135,7 +135,7 @@ def get_ccgp_val_output_dir(args, make_dir=True):
     if args.shuffle_idx is None: 
         dir = os.path.join(args.base_output_path, f"{run_name}")
     else: 
-        dir = os.path.join(args.base_output_path, f"{run_name}/shuffles")
+        dir = os.path.join(args.base_output_path, f"{run_name}/{args.shuffle_method}_shuffles")
     if make_dir: 
         os.makedirs(dir, exist_ok=True)
     return dir
@@ -201,7 +201,7 @@ def get_selected_features_output_dir(args, make_dir=True):
     if args.shuffle_idx is None: 
         dir = os.path.join(args.base_output_path, f"{run_name}")
     else: 
-        dir = os.path.join(args.base_output_path, f"{run_name}/shuffles")
+        dir = os.path.join(args.base_output_path, f"{run_name}/{args.shuffle_method}_shuffles")
     if make_dir: 
         os.makedirs(dir, exist_ok=True)
     return dir
@@ -373,6 +373,26 @@ def read_selected_features_cross_cond(args, feats, cond_pair):
             df["condition"] = f"{args.model_cond} model on {args.data_cond} data"
             res.append(df)
     return pd.concat(res)
+
+def read_selected_features_cross_time(args, feats, cond, avg=False):
+    df = []
+    dir = get_selected_features_output_dir(args, make_dir=False)
+    args.trial_interval = get_trial_interval(args.trial_event)
+    args.condition = cond
+    for feat in feats:
+        args.feat = feat
+        file_name = get_selected_features_cross_time_file_name(args)
+        accs = np.load(os.path.join(dir, f"{file_name}_accs.npy"))
+        ti = args.trial_interval
+        for (train_time_idx, test_time_idx, run_idx), acc in np.ndenumerate(accs):
+            train_time =  (train_time_idx * ti.interval_size + ti.interval_size - ti.pre_interval) / 1000
+            test_time =  (test_time_idx * ti.interval_size + ti.interval_size - ti.pre_interval) / 1000
+            df.append({"TrainTime": train_time, "TestTime": test_time, "RunIdx": run_idx, "Feat": feat, "Accuracy": acc})
+    df = pd.DataFrame(df)
+    if avg: 
+        return df.groupby(["TrainTime", "TestTime"]).Accuracy.mean().reset_index(name="Accuracy")
+    else: 
+        return df
 
 
 def get_selected_features_weights(models):

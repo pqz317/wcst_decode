@@ -855,6 +855,7 @@ def get_valid_belief_beh_for_sub_sess(sub, session):
     beh = pd.merge(beh, feature_selections, on="TrialNumber", how="inner")
     beh = get_beliefs_per_session(beh, session)
     beh = get_belief_value_labels(beh)
+    beh = get_prev_choice_fbs(beh)
     return beh
 
 def filter_behavior(beh, filters):
@@ -863,6 +864,33 @@ def filter_behavior(beh, filters):
     """
     for col, val in filters.items():
         beh = beh[beh[col] == val]
+    return beh
+
+def load_behavior_from_args(session, args):
+    """
+    Utility to load behavior, given some Namespace of arguments
+    If shuffle flags are set, also does the shuffling
+    NOTE: This function does not do filtering by conditions, other than
+    to get rid of invalid trials. 
+    args: 
+      - shuffle_method: either session_permute, circular_shift, random
+      - sessions: needs to be specified if session_permute shuffle method
+      - shuffle_idx: and int or None
+    session: session name to load
+    """
+    if args.shuffle_method == "session_permute" and args.shuffle_idx is not None:
+        other_sessions = [s for s in args.sessions if s != session]
+        seed = int(session) * 100 + args.shuffle_idx
+        rng = np.random.default_rng(seed)
+        session = rng.choice(other_sessions)
+    beh = get_valid_belief_beh_for_sub_sess(args.subject, session)
+    if args.shuffle_idx is not None:
+        if args.shuffle_method == "circular_shift":
+            beh = shuffle_beh_by_shift(beh, buffer=50, seed=args.shuffle_idx)
+        elif args.shuffle_method == "random":
+            beh = shuffle_beh_random(beh, seed=args.shuffle_idx)
+        elif args.shuffle_method != "session_permute":
+            raise ValueError(f"shuffle idx is set: {args.shuffle_idx} but invalid shuffle method: {args.shuffle_method}")
     return beh
 
 

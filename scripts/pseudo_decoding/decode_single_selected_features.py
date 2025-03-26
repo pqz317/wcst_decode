@@ -42,22 +42,12 @@ DATA_MODE = "FiringRate"
 def load_session_data(row, region_units, args):
     sess_name = row.session_name
     feat = args.feat
+    
+    beh = behavioral_utils.load_behavior_from_args(sess_name, args)
 
-    behavior_path = SESS_BEHAVIOR_PATH.format(sess_name=sess_name)
-    beh = pd.read_csv(behavior_path)
-    beh = behavioral_utils.get_valid_trials(beh)
-    feature_selections = behavioral_utils.get_selection_features(beh)
-    beh = pd.merge(beh, feature_selections, on="TrialNumber", how="inner")
-    beh = behavioral_utils.get_beliefs_per_session(beh, sess_name)
-    beh = behavioral_utils.get_belief_value_labels(beh)
-    beh = behavioral_utils.get_prev_choice_fbs(beh)
     if args.balance_by_filters: 
         beh = behavioral_utils.balance_trials_by_condition(beh, list(args.beh_filters.keys()))
     beh = behavioral_utils.filter_behavior(beh, args.beh_filters)
-
-    # shift TrialNumbers by some random amount
-    if args.shuffle_idx is not None: 
-        beh = behavioral_utils.shuffle_beh_by_shift(beh, buffer=50, seed=args.shuffle_idx)
 
     choice = behavioral_utils.get_chosen_single(feat, beh)
     pref = behavioral_utils.get_chosen_preferred_single(feat, beh)
