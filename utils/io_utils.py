@@ -182,6 +182,12 @@ def get_selected_features_cross_cond_file_name(args):
     """
     return f"{args.feat}_cross_{args.model_cond}_model_on_{args.data_cond}_data"
 
+def get_selected_features_cross_time_file_name(args):
+    """
+    Naming convention for preferred beliefs decoding files
+    """
+    return f"{args.feat}_{args.condition}_cross_time"
+
 def get_selected_features_output_dir(args, make_dir=True):
     """
     Directory convention for preferred beliefs decoding

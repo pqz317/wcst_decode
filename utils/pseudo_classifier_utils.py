@@ -4,7 +4,7 @@ from trial_splitters.trial_splitter import TrialSplitter
 from models.wcst_dataset import WcstDataset
 import pandas as pd
 import copy
-
+from tqdm import tqdm
 
 """
 Need to adapt classifier utils due to the pseudo population workflow being so different
@@ -36,7 +36,7 @@ def evaluate_classifiers_by_time_bins(
     shuffled_accs_by_bin = np.empty((len(time_bins), num_splits))
     models_by_bin = np.empty((len(time_bins), num_splits), dtype=object)
     rng = np.random.default_rng(seed)
-    for time_bin_idx, time_bin in enumerate(time_bins): 
+    for time_bin_idx, time_bin in tqdm(enumerate(time_bins)): 
         print(f"Working on bin {time_bin}")
         for split_idx in range(num_splits):
             pseudo_sess = pd.concat(sess_datas.apply(
@@ -78,7 +78,7 @@ def evaluate_classifiers_by_time_bins(
             models_by_bin[time_bin_idx, split_idx] = copy.deepcopy(model)
     return training_accs_by_bin, test_accs_by_bin, shuffled_accs_by_bin, models_by_bin
 
-def cross_evaluate_by_time_bins(models_by_bin, sess_datas, input_bins, num_train_per_cond=0, num_test_per_cond=400, avg=True):
+def cross_evaluate_by_time_bins(models_by_bin, sess_datas, input_bins, num_train_per_cond=0, num_test_per_cond=200, avg=True):
     """
     Cross evaluates different pseudo models on different time bins
     Assumes sess_datas was generated with the same seed, has splits pre_generated
@@ -88,7 +88,7 @@ def cross_evaluate_by_time_bins(models_by_bin, sess_datas, input_bins, num_train
         cross_accs = np.empty((num_model_time_bins, len(input_bins)))
     else: 
         cross_accs = np.empty((num_model_time_bins, len(input_bins), models_by_bin.shape[1]))
-    for model_bin_idx in range(num_model_time_bins):
+    for model_bin_idx in tqdm(range(num_model_time_bins)):
         print(f"evaluating models for bin idx {model_bin_idx}")
         models = models_by_bin[model_bin_idx, :]
         for test_bin_idx, time_bin in enumerate(input_bins):
@@ -112,7 +112,7 @@ def cross_evaluate_by_time_bins(models_by_bin, sess_datas, input_bins, num_train
                 cross_accs[model_bin_idx, test_bin_idx, :] = accs
     return cross_accs
 
-def evaluate_model_with_data(models_by_bin, sess_datas, time_bins, num_train_per_cond=0, num_test_per_cond=400):
+def evaluate_model_with_data(models_by_bin, sess_datas, time_bins, num_train_per_cond=0, num_test_per_cond=200):
     """
     Evaluates model with session datas passed in, ideally from a different condition as what the model was trained on
     """

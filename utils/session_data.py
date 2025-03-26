@@ -80,6 +80,36 @@ class SessionData:
         # print(pseudo_pop[:5])
         # print(pseudo_pop.PseudoUnitID.unique())
         return pseudo_pop
+    
+    def generate_pseudo_data_all_time(self, num_train, num_test, use_v2=False):
+        """
+        For a specified timebin, generate num_train and num_test pseudotrials per condition
+        With the existing trialsplitter
+        Args: 
+            num_train: number of train pseudo trials per condition to generate
+            num_test: number of test pseudo trials per condition to generate
+            time_bin: specific time_bin to generate for
+        Returns: 
+            A pseudo population dataframe specific to this session with columns:
+                - Session: session name
+                - PseudoUnitID: identifier for unit across sessions
+                - UnitID: ID of unit (neuron) selected
+                - TrialNumber: ID of original trial selected from
+                - PseudoTrialNumber: ID of the pseudo trial generated
+                - Type: Either Train or Test 
+                - Condition
+                - TimeBins
+                - some data column (eg. SpikeCounts or FiringRates)
+        """
+        split = next(self.splitter)
+        # TODO: Change when testing
+        if not use_v2:
+            raise ValueError("needs to be in V2")
+        pseudo_pop = pseudo_utils.generate_pseudo_population_v2(self.frs, split, num_train, num_test)
+        pseudo_pop["Session"] = self.sess_name
+        # NOTE: very hacky way of giving unique ID to units across sessions
+        pseudo_pop["PseudoUnitID"] = int(self.sess_name) * 100 + pseudo_pop["UnitID"]
+        return pseudo_pop
 
     def get_num_neurons(self):
         return len(self.frs.UnitID.unique())
