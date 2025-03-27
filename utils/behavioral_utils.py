@@ -866,6 +866,21 @@ def filter_behavior(beh, filters):
         beh = beh[beh[col] == val]
     return beh
 
+
+def shuffle_beh_by_session_permute(beh, session, args):
+    """
+    Shuffles behavior by permuting sessions
+    """
+    other_sessions = [s for s in args.sessions.session_name if s != session]
+    seed = int(session) * 100 + args.shuffle_idx
+    rng = np.random.default_rng(seed)
+    other_session = rng.choice(other_sessions)
+    other_beh = get_valid_belief_beh_for_sub_sess(args.subject, other_session)    
+    min_trials = np.min((len(beh), len(other_beh)))
+    other_beh = other_beh[:min_trials]
+    other_beh["TrialNumber"] = sorted(beh[:min_trials].TrialNumber.unique())
+    return other_beh
+
 def load_behavior_from_args(session, args):
     """
     Utility to load behavior, given some Namespace of arguments
@@ -878,18 +893,15 @@ def load_behavior_from_args(session, args):
       - shuffle_idx: and int or None
     session: session name to load
     """
-    if args.shuffle_method == "session_permute" and args.shuffle_idx is not None:
-        other_sessions = [s for s in args.sessions if s != session]
-        seed = int(session) * 100 + args.shuffle_idx
-        rng = np.random.default_rng(seed)
-        session = rng.choice(other_sessions)
     beh = get_valid_belief_beh_for_sub_sess(args.subject, session)
     if args.shuffle_idx is not None:
         if args.shuffle_method == "circular_shift":
             beh = shuffle_beh_by_shift(beh, buffer=50, seed=args.shuffle_idx)
         elif args.shuffle_method == "random":
             beh = shuffle_beh_random(beh, seed=args.shuffle_idx)
-        elif args.shuffle_method != "session_permute":
+        elif args.shuffle_method == "session_permute":
+            beh = shuffle_beh_by_session_permute(beh, session, args)
+        else:
             raise ValueError(f"shuffle idx is set: {args.shuffle_idx} but invalid shuffle method: {args.shuffle_method}")
     return beh
 

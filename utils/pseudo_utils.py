@@ -102,6 +102,10 @@ def generate_pseudo_population_v2(frs, split, num_train_samples=1000, num_test_s
     df["PseudoTrialNumber"] = np.arange(len(df))
     pop = pd.merge(df, frs, on="TrialNumber")
     num_pseudo_trials =  (num_train_samples + num_test_samples) * len(split)
+    # print(len(pop))
+    # print(num_pseudo_trials)
+    # print(frs.UnitID.nunique())
+    # print(frs.TimeBins.nunique())
     if not len(pop) == num_pseudo_trials * frs.UnitID.nunique() * frs.TimeBins.nunique(): 
         raise ValueError("Did not get expected number of rows in pseudo population")
     return pop
