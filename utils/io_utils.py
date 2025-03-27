@@ -204,6 +204,7 @@ def get_selected_features_output_dir(args, make_dir=True):
         dir = os.path.join(args.base_output_path, f"{run_name}/{args.shuffle_method}_shuffles")
     if make_dir: 
         os.makedirs(dir, exist_ok=True)
+    print(dir)
     return dir
 
 def transform_np_acc_to_df(acc, args):
@@ -308,7 +309,6 @@ def load_selected_features_df(args, feats, dir, conds, shuffle=False):
             args.condition = condition
             file_name = get_selected_features_file_name(args)
             try: 
-                # print(dir)
                 acc = np.load(os.path.join(dir, f"{file_name}_test_accs.npy"))
             except Exception as e:
                 if shuffle:
