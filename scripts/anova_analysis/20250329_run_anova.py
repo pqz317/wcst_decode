@@ -32,8 +32,11 @@ TimeBins is always a default condition
 Do analysis a feature at a time, looking for sessions where that feature appears in enough blocks
 """
 def load_data(session, args):
+    feat = args.feat
     beh = behavioral_utils.load_behavior_from_args(session, args)
-    beh = behavioral_utils.get_chosen_single(args.feat, beh)
+    beh["Choice"] = beh.apply(lambda x: "Chose" if x[FEATURE_TO_DIM[feat]] == feat else "Not Chose", axis=1)
+    beh["FeatPreferred"] = beh["PreferredBelief"].apply(lambda x: "Preferred" if x == feat else "Not Preferred")
+
     beh = behavioral_utils.filter_behavior(beh, args.beh_filters)
 
     frs = io_utils.get_frs_from_args(args, session)
