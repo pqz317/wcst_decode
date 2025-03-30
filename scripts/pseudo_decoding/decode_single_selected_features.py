@@ -87,7 +87,6 @@ def load_session_data(row, region_units, args):
 
     frs = io_utils.get_frs_from_args(args, sess_name)
     frs = frs.rename(columns={DATA_MODE: "Value"})
-    frs["PseudoUnitID"] = int(sess_name) * 100 + frs.UnitID.astype(int)
     if region_units is not None: 
         frs = frs[frs.PseudoUnitID.isin(region_units)]
     if len(frs) == 0 or len(sub_beh) == 0:

@@ -1,4 +1,4 @@
-from collections import namedtuple
+from typing import NamedTuple
 
 LEARNING_RATE = 0.05
 MAX_ITER = 500
@@ -21,8 +21,18 @@ STIM_ONSET_POST_INTERVAL = 1000
 
 INTERVAL_SIZE = 100
 
+SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sub}/{sess_name}_{fr_type}_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
+UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/all_units.pickle"
+
+
+class TrialInterval(NamedTuple):
+    event: str
+    pre_interval: int
+    post_interval: int
+    interval_size: int
+
+
 def get_trial_interval(trial_event):
-    TrialInterval = namedtuple('TrialInterval', ['event', 'pre_interval', 'post_interval', 'interval_size'])
     if trial_event == "StimOnset":
         return TrialInterval(
             "StimOnset", 

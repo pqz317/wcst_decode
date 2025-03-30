@@ -741,6 +741,7 @@ def get_chosen_not_preferred_trials(pair, beh, high_val_only=True):
 
 def get_chosen_single(feat, beh):
     beh["Choice"] = beh.apply(lambda x: feat if x[FEATURE_TO_DIM[feat]] == feat else "other", axis=1)
+    beh["FeatPreferred"] = beh["PreferredBelief"].apply(lambda x: "Preferred" if x == feat else "Not Preferred")
     return beh
 
 def get_chosen_preferred_single(feat, beh, high_val_only=False):
