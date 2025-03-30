@@ -33,7 +33,7 @@ def add_defaults_to_parser(default_configs, parser):
         elif field == "conditions":
             parser.add_argument(f'--{field}', default=value, type=lambda x: x.split(","))
         elif field == "time_range":
-            parser.add_argument(f'--{field}', default=value, type=lambda x: x.split(","))
+            parser.add_argument(f'--{field}', default=value, type=lambda x: [int(t) for t in x.split(",")])
         else: 
             parser.add_argument(f'--{field}', default=value, type=var_type)
     return parser

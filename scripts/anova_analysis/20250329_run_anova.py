@@ -41,7 +41,7 @@ def load_data(session, args):
     if args.time_range is not None: 
         if len(args.time_range) !=2: 
             raise ValueError("must have two ranges")
-        start, end = [x / args.interval_size for x in args.time_range]
+        start, end = [x / args.trial_interval.interval_size for x in args.time_range]
         frs = frs[(frs.TimeBins >= start) & (frs.TimeBins < end)]
     df = pd.merge(frs, beh, on="TrialNumber")
     return df
@@ -77,9 +77,9 @@ def main():
     args.sessions = valid_sess[valid_sess.session_name.isin(row.sessions)]
     args.trial_interval = get_trial_interval(args.trial_event)
 
-    print(args.beh_filters)
-    print(f"Anova for {args.feat}using {len(args.sessions)} sessions, conditions {args.conditions}", flush=True)
+    print(f"Anova for {args.feat} using {len(args.sessions)} sessions, conditions {args.conditions}", flush=True)
     print(f"Using {args.fr_type} as inputs", flush=True)
+    print(f"Time ranage: {args.time_range}")
     print(f"With filters {args.beh_filters}", flush=True)
     print(f"Shuffle {args.shuffle_idx} with method {args.shuffle_method}")
 
