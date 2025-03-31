@@ -17,7 +17,7 @@ from models.multinomial_logistic_regressor import NormedDropoutMultinomialLogist
 from trial_splitters.condition_trial_splitter import ConditionTrialSplitter 
 
 import argparse
-from anova_configs import add_defaults_to_parser, AnovaConfigs
+from .anova_configs import add_defaults_to_parser, AnovaConfigs
 import utils.io_utils as io_utils
 import utils.anova_utils as anova_utils
 import json
@@ -42,9 +42,12 @@ def load_data(session, args):
     frs = io_utils.get_frs_from_args(args, session)
 
     if args.time_range is not None: 
+        print("filter time range")
         if len(args.time_range) !=2: 
             raise ValueError("must have two ranges")
-        start, end = [x / args.trial_interval.interval_size for x in args.time_range]
+        # time_range specified in milliseconds, relative to trial event, convert to 
+        # be in seconds, relative to pre_interval
+        start, end = [x / 1000 + args.pre_interval for x in args.time_range]
         frs = frs[(frs.TimeBins >= start) & (frs.TimeBins < end)]
     df = pd.merge(frs, beh, on="TrialNumber")
     return df
@@ -55,6 +58,8 @@ def process_session(row, args):
     all_conds = ["TimeBins"] + args.conditions
     df = anova_utils.anova_factors(data, all_conds)
     unit_vars = df.groupby("PseudoUnitID").apply(lambda x: anova_utils.cal_unit_var(x, all_conds)).reset_index()
+    combined_cond_str = "".join(args.conditions)
+    unit_vars["combined_fracvar"] = unit_vars[f"x_{combined_cond_str}_fracvar"] + unit_vars[f"x_TimeBins{combined_cond_str}_fracvar"]
     unit_vars["feat"] = args.feat
     return unit_vars
 

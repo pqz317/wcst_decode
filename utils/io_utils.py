@@ -212,7 +212,7 @@ def get_anova_file_name(args):
     
 def get_anova_output_dir(args, make_dir=True):
     condition_str = "_".join(args.conditions)
-    time_range_str = f"{args.time_range[0]} to {args.time_range[1]}" if args.time_range else None
+    time_range_str = f"{args.time_range[0]}_to_{args.time_range[1]}" if args.time_range else None
     filt_str = "_".join([f"{k}_{v}"for k, v in args.beh_filters.items()])
     components = [args.subject, args.trial_event, condition_str, time_range_str, filt_str]
     run_name = "_".join(s for s in components if s)
