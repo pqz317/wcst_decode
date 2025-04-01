@@ -31,28 +31,28 @@ Script that runs factorial anova per unit on a set of conditions.
 TimeBins is always a default condition
 Do analysis a feature at a time, looking for sessions where that feature appears in enough blocks
 """
-def load_data(session, args):
+def load_data(session, args, return_merged=True):
     feat = args.feat
     beh = behavioral_utils.load_behavior_from_args(session, args)
     beh["Choice"] = beh.apply(lambda x: "Chose" if x[FEATURE_TO_DIM[feat]] == feat else "Not Chose", axis=1)
     beh["FeatPreferred"] = beh["PreferredBelief"].apply(lambda x: "Preferred" if x == feat else "Not Preferred")
 
     beh = behavioral_utils.filter_behavior(beh, args.beh_filters)
-
     frs = io_utils.get_frs_from_args(args, session)
 
     if args.time_range is not None: 
-        print("filter time range")
         if len(args.time_range) !=2: 
             raise ValueError("must have two ranges")
         # time_range specified in milliseconds, relative to trial event, convert to 
         # be in seconds, relative to pre_interval
         start, end = [(x + args.trial_interval.pre_interval) / 1000 for x in args.time_range]
         frs = frs[(frs.TimeBins >= start) & (frs.TimeBins < end)]
-    df = pd.merge(frs, beh, on="TrialNumber")
-    if len(df) == 0:
+    if len(beh) == 0 or len(frs) == 0:
         raise ValueError("no data loaded")
-    return df
+    if return_merged:
+        return pd.merge(frs, beh, on="TrialNumber")
+    else: 
+        return (beh, frs)
 
 
 def process_session(row, args):

@@ -7,7 +7,7 @@ sbatch --array=0-11 <<EOT
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
-#SBATCH --time=180
+#SBATCH --time=1:00:00
 
 module load singularity
 singularity exec --writable-tmpfs --nv \
@@ -26,7 +26,7 @@ sbatch --array=0-1199 <<EOT
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=32G
-#SBATCH --time=180
+#SBATCH --time=1:00:00
 
 module load singularity
 singularity exec --writable-tmpfs --nv \

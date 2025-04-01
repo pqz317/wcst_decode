@@ -42,8 +42,8 @@ def process_feat(args):
         res.append(df)
     res = pd.concat(res)
     # TODO: remove after combined_fracvar is added to anova script
-    combined_cond_str = "".join(args.conditions)
-    res["combined_fracvar"] = res[f"x_{combined_cond_str}_fracvar"] + res[f"x_TimeBins{combined_cond_str}_fracvar"]
+    # combined_cond_str = "".join(args.conditions)
+    # res["combined_fracvar"] = res[f"x_{combined_cond_str}_fracvar"] + res[f"x_TimeBins{combined_cond_str}_fracvar"]
     stats = res.groupby("PseudoUnitID").apply(compute_stats).reset_index()
 
     # store shuffle stats in parent dir: 
