@@ -41,7 +41,7 @@ def anova_factors(df, conditions):
         df["residual"] = df["residual"] - df[["x_" + "".join(comb) for comb in combs]].sum(axis=1)
     return df
 
-def cal_unit_var(unit_df, conditions):
+def calc_unit_var(unit_df, conditions):
     row = {}
     sum = 0.0
     total_var = unit_df.FiringRate.var()

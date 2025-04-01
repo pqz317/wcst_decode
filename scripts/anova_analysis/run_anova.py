@@ -47,9 +47,11 @@ def load_data(session, args):
             raise ValueError("must have two ranges")
         # time_range specified in milliseconds, relative to trial event, convert to 
         # be in seconds, relative to pre_interval
-        start, end = [x / 1000 + args.trial_interval.pre_interval for x in args.time_range]
+        start, end = [(x + args.trial_interval.pre_interval) / 1000 for x in args.time_range]
         frs = frs[(frs.TimeBins >= start) & (frs.TimeBins < end)]
     df = pd.merge(frs, beh, on="TrialNumber")
+    if len(df) == 0:
+        raise ValueError("no data loaded")
     return df
 
 
@@ -57,7 +59,8 @@ def process_session(row, args):
     data = load_data(row.session_name, args)
     all_conds = ["TimeBins"] + args.conditions
     df = anova_utils.anova_factors(data, all_conds)
-    unit_vars = df.groupby("PseudoUnitID").apply(lambda x: anova_utils.cal_unit_var(x, all_conds)).reset_index()
+    unit_vars = df.groupby("PseudoUnitID").apply(lambda x: anova_utils.calc_unit_var(x, all_conds)).reset_index()
+    print(unit_vars.columns)
     combined_cond_str = "".join(args.conditions)
     unit_vars["combined_fracvar"] = unit_vars[f"x_{combined_cond_str}_fracvar"] + unit_vars[f"x_TimeBins{combined_cond_str}_fracvar"]
     unit_vars["feat"] = args.feat
