@@ -47,7 +47,7 @@ def load_data(session, args):
             raise ValueError("must have two ranges")
         # time_range specified in milliseconds, relative to trial event, convert to 
         # be in seconds, relative to pre_interval
-        start, end = [x / 1000 + args.pre_interval for x in args.time_range]
+        start, end = [x / 1000 + args.trial_interval.pre_interval for x in args.time_range]
         frs = frs[(frs.TimeBins >= start) & (frs.TimeBins < end)]
     df = pd.merge(frs, beh, on="TrialNumber")
     return df
