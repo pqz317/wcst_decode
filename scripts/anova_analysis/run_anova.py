@@ -17,7 +17,7 @@ from models.multinomial_logistic_regressor import NormedDropoutMultinomialLogist
 from trial_splitters.condition_trial_splitter import ConditionTrialSplitter 
 
 import argparse
-from .anova_configs import add_defaults_to_parser, AnovaConfigs
+from scripts.anova_analysis.anova_configs import add_defaults_to_parser, AnovaConfigs
 import utils.io_utils as io_utils
 import utils.anova_utils as anova_utils
 import json
