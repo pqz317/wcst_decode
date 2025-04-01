@@ -60,7 +60,6 @@ def process_session(row, args):
     all_conds = ["TimeBins"] + args.conditions
     df = anova_utils.anova_factors(data, all_conds)
     unit_vars = df.groupby("PseudoUnitID").apply(lambda x: anova_utils.calc_unit_var(x, all_conds)).reset_index()
-    print(unit_vars.columns)
     combined_cond_str = "".join(args.conditions)
     unit_vars["combined_fracvar"] = unit_vars[f"x_{combined_cond_str}_fracvar"] + unit_vars[f"x_TimeBins{combined_cond_str}_fracvar"]
     unit_vars["feat"] = args.feat
