@@ -7,6 +7,7 @@ from scipy.ndimage import gaussian_filter1d
 import json
 from sklearn.linear_model import LinearRegression
 from constants.behavioral_constants import *
+from constants.decoding_constants import *
 
 
 
@@ -308,7 +309,24 @@ def get_region_units(region_level, regions, units_path):
     return all_units[all_units[region_level].isin(regions_arr)].PseudoUnitID.unique()
 
 
-# def get_sub_units(args, )
+def get_sig_units(args, units=None):
+    """
+    Grabs significant units per features, filters units to match. 
+    Returns back list of units
+    """
+    if not args.sig_unit_level: 
+        return units
+    sig_path = SIG_UNITS_PATH.format(
+        sub=args.subject,
+        event=args.trial_interval.event,
+        level=args.sig_unit_level,
+    )
+    sig_units = pd.read_pickle(sig_path)
+    feat_sig_units = sig_units[sig_units.feat == args.feat]
+    if units: 
+        return feat_sig_units[feat_sig_units.PseudoUnitID.isin(units)].PseudoUnitID.unique()
+    else:
+        return feat_sig_units.PseudoUnitID.unique()
 
 
 def regress_out_trial_number(frs):

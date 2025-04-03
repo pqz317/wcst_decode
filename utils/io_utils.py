@@ -197,7 +197,9 @@ def get_selected_features_output_dir(args, make_dir=True):
     filt_str = "".join([f"_{k}_{v}"for k, v in args.beh_filters.items()])
     v2_pseudo_str = "_v2_pseudo" if args.use_v2_pseudo else ""
     balance_str = "_balanced" if args.balance_by_filters else ""
-    run_name = f"{args.subject}_{args.trial_event}{fr_type_str}{region_str}{filt_str}{v2_pseudo_str}{balance_str}"
+    sig_units_str = f"_{args.sig_unit_level}_units" if args.sig_unit_level else ""
+    
+    run_name = f"{args.subject}_{args.trial_event}{fr_type_str}{region_str}{filt_str}{v2_pseudo_str}{balance_str}{sig_units_str}"
     if args.shuffle_idx is None: 
         dir = os.path.join(args.base_output_path, f"{run_name}")
     else: 

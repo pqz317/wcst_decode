@@ -20,8 +20,8 @@ class SingleSelectedFeatureConfigs(NamedTuple):
     train_test_seed: int = None
 
     # a file path for loading up significant units
-    # a dataframe in pickle format, with feature, event, PseudoUnitID columns
-    sig_units_path: str = None  
+    # a dataframe in pickle format, with feature, PseudoUnitID columns
+    sig_unit_level: str = None  
 
     # decoder configs
     learning_rate: float = 0.05

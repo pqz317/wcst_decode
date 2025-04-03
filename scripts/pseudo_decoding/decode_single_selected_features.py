@@ -100,7 +100,7 @@ def load_session_data(row, sub_units, args):
 
 def decode(args):
     sub_units = spike_utils.get_region_units(args.region_level, args.regions, UNITS_PATH.format(sub=args.subject))
-    # sub_units = spike_utils.get_sig_units(args, sub_units)
+    sub_units = spike_utils.get_sig_units(args, sub_units)
     trial_interval = args.trial_interval
     sessions = args.sessions
 
@@ -167,6 +167,8 @@ def main(args):
     print(f"With filters {args.beh_filters}", flush=True)
     if args.use_v2_pseudo: 
         print(f"Using new pseudo data generation")
+    if args.sig_unit_level:
+        print(f"Using only units that are selective with signifance level {args.sig_unit_level}")
     decode(args)
 
 
