@@ -1,0 +1,20 @@
+services:
+  train_mixed:
+    image: wcst_decode-notebook:latest  # This is the image built from the Dockerfile in the current directory
+    environment:
+      - "JUPYTER_PASSWORD=${JUPYTER_PASSWORD:-walkerlab}"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 2
+              capabilities: [gpu]
+        limits:
+          memory: 30G
+    volumes:
+      - .:/src/wcst_decode
+      - $HOME/.aws/credentials:/root/.aws/credentials:ro
+      - $HOME/.ssh/id_ed25519:/root/.ssh/id_ed25519:ro
+      - /mnt/U19_NAS:/data
+    command: /bin/python3 /src/rl_zoo/scripts/wcst/20241111_train_belief_rnn_all_mixed.py

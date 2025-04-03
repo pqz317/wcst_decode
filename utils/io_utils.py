@@ -433,7 +433,7 @@ def get_frs_from_args(args, sess_name):
     frs["PseudoUnitID"] = int(sess_name) * 100 + frs.UnitID.astype(int)
     # create a time field as well that's relative to the trial event
     frs["Time"] = frs["TimeBins"] - args.trial_interval.pre_interval / 1000
-    if args.time_range is not None: 
+    if hasattr(args, "time_range") and args.time_range is not None: 
         if len(args.time_range) !=2: 
             raise ValueError("must have two ranges")
         # time_range specified in milliseconds, relative to trial event, convert to 

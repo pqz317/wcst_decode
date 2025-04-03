@@ -39,7 +39,7 @@ SESS_BEHAVIOR_PATH = "/data/patrick_res/behavior/SA/{sess_name}_object_features.
 
 DATA_MODE = "FiringRate"
 
-def load_session_data(row, region_units, args):
+def load_session_data(row, sub_units, args):
     sess_name = row.session_name
     feat = args.feat
     
@@ -87,8 +87,8 @@ def load_session_data(row, region_units, args):
 
     frs = io_utils.get_frs_from_args(args, sess_name)
     frs = frs.rename(columns={DATA_MODE: "Value"})
-    if region_units is not None: 
-        frs = frs[frs.PseudoUnitID.isin(region_units)]
+    if sub_units is not None: 
+        frs = frs[frs.PseudoUnitID.isin(sub_units)]
     if len(frs) == 0 or len(sub_beh) == 0:
         return None
     splitter = ConditionTrialSplitter(sub_beh, "Choice", args.test_ratio, seed=args.train_test_seed)
@@ -99,7 +99,8 @@ def load_session_data(row, region_units, args):
 
 
 def decode(args):
-    region_units = spike_utils.get_region_units(args.region_level, args.regions, UNITS_PATH.format(sub=args.subject))
+    sub_units = spike_utils.get_region_units(args.region_level, args.regions, UNITS_PATH.format(sub=args.subject))
+    # sub_units = spike_utils.get_sig_units(args, sub_units)
     trial_interval = args.trial_interval
     sessions = args.sessions
 
@@ -109,7 +110,7 @@ def decode(args):
 
     # load up session data to train network
     sess_datas = sessions.apply(lambda row: load_session_data(
-        row, region_units, args
+        row, sub_units, args
     ), axis=1)
     sess_datas = sess_datas.dropna()
 
@@ -143,14 +144,11 @@ def decode(args):
         np.save(os.path.join(output_dir, f"{file_name}_models.npy"), models)
 
 
-def main():
+def main(args):
     """
     Loads a dataframe specifying sessions to use
     For each feature dimension, runs decoding, stores results. 
     """
-    parser = argparse.ArgumentParser()
-    parser = add_defaults_to_parser(SingleSelectedFeatureConfigs(), parser)
-    args = parser.parse_args()
 
     if args.subject == "SA": 
         feat_sessions = pd.read_pickle(FEATS_PATH)
@@ -173,4 +171,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser = add_defaults_to_parser(SingleSelectedFeatureConfigs(), parser)
+    args = parser.parse_args()
+    main(args)

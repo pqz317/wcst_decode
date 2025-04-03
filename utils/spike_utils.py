@@ -308,6 +308,9 @@ def get_region_units(region_level, regions, units_path):
     return all_units[all_units[region_level].isin(regions_arr)].PseudoUnitID.unique()
 
 
+def get_sub_units(args, )
+
+
 def regress_out_trial_number(frs):
     def regress_per_unit_timebin(group):
         y = group.FiringRate
