@@ -326,7 +326,8 @@ def load_selected_features_df(args, feats, dir, conds, shuffle=False):
             args.condition = condition
             file_name = get_selected_features_file_name(args)
             try: 
-                acc = np.load(os.path.join(dir, f"{file_name}_test_accs.npy"))
+                full_path = os.path.join(dir, f"{file_name}_test_accs.npy")
+                acc = np.load(full_path)
             except Exception as e:
                 if shuffle:
                     print(f"Warning, shuffle not found: {file_name}")
@@ -430,6 +431,15 @@ def get_frs_from_args(args, sess_name):
     )
     frs = pd.read_pickle(spikes_path)
     frs["PseudoUnitID"] = int(sess_name) * 100 + frs.UnitID.astype(int)
+    # create a time field as well that's relative to the trial event
+    frs["Time"] = frs["TimeBins"] - args.trial_interval.pre_interval / 1000
+    if args.time_range is not None: 
+        if len(args.time_range) !=2: 
+            raise ValueError("must have two ranges")
+        # time_range specified in milliseconds, relative to trial event, convert to 
+        # be in seconds, relative to pre_interval
+        start, end = [(x + args.trial_interval.pre_interval) / 1000 for x in args.time_range]
+        frs = frs[(frs.TimeBins >= start) & (frs.TimeBins < end)]
     return frs
 
 

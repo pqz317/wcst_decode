@@ -11,6 +11,11 @@ import pandas as pd
 from itertools import accumulate
 import matplotlib.patches as patches
 from scipy import stats
+import utils.behavioral_utils as behavioral_utils
+from spike_tools import (
+    general as spike_general,
+)
+import utils.spike_utils as spike_utils
 
 REGION_TO_COLOR = {
     "Amygdala": "#00ff00",
@@ -417,3 +422,27 @@ def visualize_preferred_beliefs(args, df, ax, show_shuffles=True):
     ax.set_ylabel("Decoder Accuracy")
     ax.set_xlabel(f"Time Relative to {args.trial_event}")
     ax.set_title(f"Subject {args.subject} preferred beliefs, {args.regions} regions")
+
+def visualize_unit_raster(subject, session, pseudo_unit_id, beh, trial_interval, ax):
+    """
+    Visualizes a raster plot of unit activity given some behavior condition
+    X axis will be time from even in seconds
+    Y axis will be trials, sorted by condition
+    colors will be by condition
+    """
+    spike_times = spike_general.get_spike_times(None, subject, session, species_dir="/data")
+    intervals = behavioral_utils.get_trial_intervals(
+        beh, 
+        trial_interval.event, 
+        trial_interval.pre_interval, 
+        trial_interval.post_interval
+    )
+    spike_by_trial_interval = spike_utils.get_spikes_by_trial_interval(spike_times, intervals)
+    spike_by_trial_interval.TrialNumber = spike_by_trial_interval.TrialNumber.astype(int)
+
+    unit_spikes = spike_by_trial_interval[spike_by_trial_interval.UnitID == int(pseudo_unit_id % 100)].copy()
+    unit_spikes["X"] = (unit_spikes.SpikeTimeFromStart - trial_interval.pre_interval) / 1000
+    sorted_beh = beh.sort_values(by=["condition", "TrialNumber"], ascending=False)
+    sorted_beh["Y"] = range(len(sorted_beh))
+    unit_spikes = pd.merge(unit_spikes, sorted_beh[["TrialNumber", "Y", "condition"]], on="TrialNumber")
+    sns.scatterplot(unit_spikes, x="X", y="Y", hue="condition", marker="_", linewidths=1, ax=ax)

@@ -12,6 +12,7 @@ class SingleSelectedFeatureConfigs(NamedTuple):
     beh_filters: dict = {}  # specified as a json string
     balance_by_filters: bool = False
     fr_type: str = "firing_rates"
+    # either circular_shift, session_permute, or random
     shuffle_method: str = "circular_shift"
     shuffle_idx: int = None
     region_level: str = None

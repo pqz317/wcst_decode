@@ -40,13 +40,6 @@ def load_data(session, args, return_merged=True):
     beh = behavioral_utils.filter_behavior(beh, args.beh_filters)
     frs = io_utils.get_frs_from_args(args, session)
 
-    if args.time_range is not None: 
-        if len(args.time_range) !=2: 
-            raise ValueError("must have two ranges")
-        # time_range specified in milliseconds, relative to trial event, convert to 
-        # be in seconds, relative to pre_interval
-        start, end = [(x + args.trial_interval.pre_interval) / 1000 for x in args.time_range]
-        frs = frs[(frs.TimeBins >= start) & (frs.TimeBins < end)]
     if len(beh) == 0 or len(frs) == 0:
         raise ValueError("no data loaded")
     if return_merged:
