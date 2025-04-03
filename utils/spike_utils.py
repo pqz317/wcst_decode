@@ -318,7 +318,7 @@ def get_sig_units(args, units=None):
         return units
     sig_path = SIG_UNITS_PATH.format(
         sub=args.subject,
-        event=args.trial_interval.event,
+        event=args.trial_event,
         level=args.sig_unit_level,
     )
     sig_units = pd.read_pickle(sig_path)

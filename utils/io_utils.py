@@ -339,6 +339,7 @@ def load_selected_features_df(args, feats, dir, conds, shuffle=False):
             df = transform_np_acc_to_df(acc, args)
             shuffle_str = "_shuffle" if shuffle else ""
             df["condition"] = f"{condition}{shuffle_str}"
+            df["feat"] = feat
             res.append(df)
     return pd.concat(res)
 
