@@ -34,7 +34,9 @@ import json
 from decode_single_selected_features import load_session_data, FEATS_PATH, SESSIONS_PATH, UNITS_PATH
 
 def cross_time_decode(args):
-    region_units = spike_utils.get_region_units(args.region_level, args.regions, UNITS_PATH.format(sub=args.subject))
+    sub_units = spike_utils.get_region_units(args.region_level, args.regions, UNITS_PATH.format(sub=args.subject))
+    sub_units = spike_utils.get_sig_units(args, sub_units)
+
     trial_interval = args.trial_interval
     sessions = args.sessions
 
@@ -45,7 +47,7 @@ def cross_time_decode(args):
 
     # load up session data to train network
     sess_datas = sessions.apply(lambda row: load_session_data(
-        row, region_units, args
+        row, sub_units, args
     ), axis=1)
     sess_datas = sess_datas.dropna()
 
