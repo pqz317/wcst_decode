@@ -446,3 +446,28 @@ def visualize_unit_raster(subject, session, pseudo_unit_id, beh, trial_interval,
     sorted_beh["Y"] = range(len(sorted_beh))
     unit_spikes = pd.merge(unit_spikes, sorted_beh[["TrialNumber", "Y", "condition"]], on="TrialNumber")
     sns.scatterplot(unit_spikes, x="X", y="Y", hue="condition", marker="_", linewidths=1, ax=ax)
+
+def visualize_cond_psth(beh, frs, unit_id, cond, ax, num_bins=None):
+    """
+    Plot a psth for neural activity for some unit grouped by condition. 
+    If condition is continuous, uses num_bins to bin data first
+    """
+    frs = frs[frs.PseudoUnitID == unit_id]
+    if num_bins is not None:
+        out, bins = pd.cut(beh[cond], 10, labels=False, retbins=True)
+        beh[f"{cond}Label"] = bins[out]
+        cond = f"{cond}Label"
+    sns.lineplot(pd.merge(beh, frs, on="TrialNumber"), x="Time", y="FiringRate", hue=cond, errorbar="se", ax=ax)
+
+def visualize_cond_correlations(beh, frs, unit_id, cond, ax):
+    """
+    Visualizes scatter and regression line of some condition and firing rate
+    Returns r, p value of regression
+    """
+    frs = frs[frs.PseudoUnitID == unit_id]
+    mean_frs = frs.groupby("TrialNumber").FiringRate.mean().reset_index(name="Mean FR")
+    merged = pd.merge(beh, mean_frs, on="TrialNumber")
+    sns.scatterplot(merged, x=cond, y="Mean FR", ax=ax)
+    slope, intercept, r_value, p_value, std_err = stats.linregress(merged[cond], merged["Mean FR"])
+    ax.plot(merged[cond], merged[cond] * slope + intercept, color="black", linewidth=2)
+    return r_value, p_value

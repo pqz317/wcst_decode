@@ -37,7 +37,7 @@ DATA_MODE = "FiringRate"
 
 UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/all_units.pickle"
 
-def load_session_data(row, cond, region_units, args):
+def load_session_data(row, cond, sub_units, args):
     """
     cond: either a feature or a pair of features: 
     """
@@ -90,9 +90,9 @@ def load_session_data(row, cond, region_units, args):
 
     frs = io_utils.get_frs_from_args(args, sess_name)
     frs = frs.rename(columns={DATA_MODE: "Value"})
-    if region_units is not None: 
+    if sub_units is not None: 
         frs["PseudoUnitID"] = int(sess_name) * 100 + frs.UnitID.astype(int)
-        frs = frs[frs.PseudoUnitID.isin(region_units)]
+        frs = frs[frs.PseudoUnitID.isin(sub_units)]
     if len(frs) == 0 or len(sub_beh) == 0:
         return None
     splitter = ConditionTrialSplitter(sub_beh, "BeliefStateValueBin", args.test_ratio)
@@ -100,8 +100,8 @@ def load_session_data(row, cond, region_units, args):
     session_data.pre_generate_splits(args.num_splits)
     return session_data
 
-def load_sess_datas(args, cond, region_units):
-    sess_datas = args.sessions.apply(lambda row: load_session_data(row, cond, region_units, args), axis=1)
+def load_sess_datas(args, cond, sub_units):
+    sess_datas = args.sessions.apply(lambda row: load_session_data(row, cond, sub_units, args), axis=1)
     sess_datas = sess_datas.dropna()
     return sess_datas
 
@@ -131,19 +131,20 @@ def train_decoder(sess_datas, time_bins):
 
     
 def decode(args):
-    region_units = spike_utils.get_region_units(args.region_level, args.regions, UNITS_PATH.format(sub=args.subject))
+    sub_units = spike_utils.get_region_units(args.region_level, args.regions, UNITS_PATH.format(sub=args.subject))
+    sub_units = spike_utils.get_sig_units(args, sub_units)
     trial_interval = args.trial_interval
     sessions = args.sessions
     file_name = io_utils.get_ccgp_val_file_name(args)
     output_dir = io_utils.get_ccgp_val_output_dir(args)
 
-    pair = args.row.pair
+    pair = args.feat_pair
     within_cond_accs = []
     across_cond_accs = []
     for feat in pair: 
         print(f"Training decoder for low vs.  high {feat}")
         # load up session data to train network
-        train_feat_sess_datas = load_sess_datas(args, [feat], region_units)
+        train_feat_sess_datas = load_sess_datas(args, [feat], sub_units)
 
         time_bins = np.arange(0, (trial_interval.post_interval + trial_interval.pre_interval) / 1000, trial_interval.interval_size / 1000)
         train_accs, test_accs, shuffled_accs, models = train_decoder(train_feat_sess_datas, time_bins)
@@ -151,14 +152,14 @@ def decode(args):
 
         # next, evaluate network on other dimensions
         test_feat = [f for f in pair if f != feat][0]
-        test_feat_sess_datas = load_sess_datas(args, [test_feat], region_units)
+        test_feat_sess_datas = load_sess_datas(args, [test_feat], sub_units)
         accs_across_time = pseudo_classifier_utils.evaluate_model_with_data(models, test_feat_sess_datas, time_bins, num_test_per_cond=NUM_TEST_PER_COND)
         across_cond_accs.append(accs_across_time)
         np.save(os.path.join(output_dir, f"{file_name}_feat_{feat}_models.npy"), models)
     within_cond_accs = np.hstack(within_cond_accs)
     across_cond_accs = np.hstack(across_cond_accs)
 
-    overall_sess_datas = load_sess_datas(args, pair, region_units)
+    overall_sess_datas = load_sess_datas(args, pair, sub_units)
     train_accs, test_accs, shuffled_accs, models = train_decoder(overall_sess_datas, time_bins)
     np.save(os.path.join(output_dir, f"{file_name}_overall_accs.npy"), test_accs)
     np.save(os.path.join(output_dir, f"{file_name}_overall_models.npy"), models)
@@ -176,16 +177,16 @@ def main(args):
         pairs = pd.read_pickle(SA_MORE_SESS_PAIRS_PATH)
     else: 
         pairs = pd.read_pickle(BL_PAIRS_PATH)
-    args.row = pairs.iloc[args.pair_idx]
+    pair_row = pairs.iloc[args.pair_idx]
+    args.feat_pair = pair_row.pair
     valid_sess = pd.read_pickle(SESSIONS_PATH.format(sub=subject))
-    args.sessions = valid_sess[valid_sess.session_name.isin(args.row.sessions)]
+    args.sessions = valid_sess[valid_sess.session_name.isin(pair_row.sessions)]
     args.trial_interval = get_trial_interval(args.trial_event)
-
 
     print(f"Computing CCGP for {subject} of belief state value in interval {args.trial_event}", flush=True)
     print(f"shuffle idx is {args.shuffle_idx}", flush=True)
     print(f"Looking at regions {args.region_level}: {args.regions}, using use_next_trial_value {args.use_next_trial_value}", flush=True)
-    print(f"examining conditions between {args.row.pair} using between {args.row.num_sessions} sessions", flush=True)
+    print(f"examining conditions between {args.feat_pair} using between {len(args.sessions)} sessions", flush=True)
     print(f"Conditioning on prev response being {args.prev_response}", flush=True)
     decode(args)
 

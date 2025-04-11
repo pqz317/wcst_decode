@@ -15,6 +15,10 @@ class CCGPValueConfigs(NamedTuple):
     region_level: str = None
     regions: str = None
 
+    # a file path for loading up significant units
+    # a dataframe in pickle format, with feature, PseudoUnitID columns
+    sig_unit_level: str = None  
+
     # decoder configs
     learning_rate: float = 0.05
     max_iter: int = 500

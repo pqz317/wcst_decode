@@ -854,7 +854,7 @@ def get_valid_belief_beh_for_sub_sess(sub, session):
     beh = get_valid_trials(beh, sub)
     feature_selections = get_selection_features(beh)
     beh = pd.merge(beh, feature_selections, on="TrialNumber", how="inner")
-    beh = get_beliefs_per_session(beh, session)
+    beh = get_beliefs_per_session(beh, session, sub)
     beh = get_belief_value_labels(beh)
     beh = get_prev_choice_fbs(beh)
     return beh

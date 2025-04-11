@@ -369,6 +369,8 @@ def get_cross_time_cosine_sim_of_weights(weights):
     """
     def cosine_sims_per_feat(feat_weights):
         merged = pd.merge(feat_weights, feat_weights, how="cross")
+        # don't consider cosine sims for the same run?
+        merged = merged[merged.run_x != merged.run_y]
         merged["cosine_sim"] = merged.apply(lambda x: cosine_sim(x.weights_x, x.weights_y), axis=1)    
         return merged
 

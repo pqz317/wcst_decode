@@ -122,7 +122,7 @@ def load_rpe_sess_beh_and_frs(sess_name, beh_path=SESS_BEHAVIOR_PATH, fr_path=SE
 
 def get_ccgp_val_file_name(args):
     # should consist of subject, event, region, next trial value, prev response, 
-    pair_str = pair_str = "_".join(args.row.pair)
+    pair_str = pair_str = "_".join(args.feat_pair)
     shuffle_str = "" if args.shuffle_idx is None else f"_shuffle_{args.shuffle_idx}"
     return f"{pair_str}{shuffle_str}"    
 
@@ -131,7 +131,9 @@ def get_ccgp_val_output_dir(args, make_dir=True):
     next_trial_str = "_next_trial_value" if args.use_next_trial_value else ""
     prev_response_str = "" if args.prev_response is None else f"_prev_res_{args.prev_response}"
     fr_type_str = f"_{args.fr_type}" if args.fr_type != "firing_rates" else ""
-    run_name = f"{args.subject}_{args.trial_event}{fr_type_str}{region_str}{next_trial_str}{prev_response_str}"
+    sig_units_str = f"_{args.sig_unit_level}_units" if args.sig_unit_level else ""
+
+    run_name = f"{args.subject}_{args.trial_event}{fr_type_str}{region_str}{next_trial_str}{prev_response_str}{sig_units_str}"
     if args.shuffle_idx is None: 
         dir = os.path.join(args.base_output_path, f"{run_name}")
     else: 
@@ -145,7 +147,7 @@ def get_preferred_beliefs_file_name(args):
     """
     Naming convention for preferred beliefs decoding files
     """
-    pair = args.row.pair
+    pair = args.feat_pair
     not_pref_str = "chosen_not_pref_" if args.chosen_not_preferred else ""
     pair_str = "_".join(pair)
     shuffle_str = "" if args.shuffle_idx is None else f"_shuffle_{args.shuffle_idx}"
@@ -379,6 +381,40 @@ def read_selected_features_models(args, feats, cond):
         res.append(df)
     return pd.concat(res)
 
+
+def get_selected_features_weights(models):
+    models["weights"] = models.apply(lambda x: x.models.coef_[0, :], axis=1)
+    return models[["Time", "feat", "run", "weights"]]
+
+def get_weights_per_model(row, unit_ids):
+    return pd.DataFrame({
+        "PseudoUnitID": unit_ids.PseudoUnitID,
+        "weight": row.models.coef_[0, :],
+        "Time": row.Time,
+        "run": row.run,
+    })
+
+def get_per_feat_unit_weights(group, args):
+    args.feat = group.name
+    dir = get_selected_features_output_dir(args, make_dir=False)
+    file_name = get_selected_features_file_name(args)
+    units = pd.read_csv(os.path.join(dir, f"{file_name}_unit_ids.csv"), names=["idx", "PseudoUnitID"], skiprows=1)
+    # pseudo unit ID indexes in models go by sorted PseudoUnitIDs
+    sorted = units.sort_values(by="PseudoUnitID")
+    df = pd.concat(group.apply(lambda row: get_weights_per_model(row, sorted), axis=1).values)
+    df["feat"] = group.name
+    return df
+    
+
+def get_selected_features_weights_with_ids(args, feats, cond):
+    """
+    Want to return df with columns: feat, run, time, pseudo_unit_id, weight
+    """
+    args.cond = cond
+    models = read_selected_features_models(args, feats, cond)
+    return models.groupby("feat").apply(lambda x: get_per_feat_unit_weights(x, args)).reset_index(drop=True)
+
+
 def read_selected_features_cross_cond(args, feats, cond_pair): 
     res = []
     dir = get_selected_features_output_dir(args, make_dir=False)
@@ -414,11 +450,22 @@ def read_selected_features_cross_time(args, feats, cond, avg=False):
         return df.groupby(["TrainTime", "TestTime"]).Accuracy.mean().reset_index(name="Accuracy")
     else: 
         return df
+    
 
-
-def get_selected_features_weights(models):
-    models["weights"] = models.apply(lambda x: x.models.coef_[0, :], axis=1)
-    return models[["Time", "feat", "run", "weights"]]
+def read_anova_good_units(args, percentile_str="95th"):
+    args.trial_interval = get_trial_interval(args.trial_event)
+    output_dir = get_anova_output_dir(args)
+    good_res = []
+    for feat in FEATURES:
+        res = pd.read_pickle(os.path.join(output_dir, f"{feat}_.pickle"))
+        shuffle_stats = pd.read_pickle(os.path.join(output_dir, f"{feat}_shuffle_stats.pickle"))
+        res = pd.merge(res, shuffle_stats, on="PseudoUnitID")
+        good_res.append(res[res.combined_fracvar > res[percentile_str]])
+    good_res = pd.concat(good_res)
+    unit_pos = pd.read_pickle(UNITS_PATH.format(sub="SA"))
+    # print(unit_pos.columns)
+    good_res = pd.merge(good_res, unit_pos[["PseudoUnitID", "drive", "structure_level2"]])
+    return good_res
 
 
 def get_frs_from_args(args, sess_name):
