@@ -18,6 +18,7 @@ class CCGPValueConfigs(NamedTuple):
     # a file path for loading up significant units
     # a dataframe in pickle format, with feature, PseudoUnitID columns
     sig_unit_level: str = None  
+    shuffle_method: str = "circular_shift"
 
     # decoder configs
     learning_rate: float = 0.05
