@@ -40,6 +40,7 @@ UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/all_units.pickle"
 def load_session_data(row, cond, sub_units, args):
     """
     cond: either a feature or a pair of features: 
+    TODO: refactor to match load_data in /src/wcst_decode/scripts/pseudo_decoding/decode_single_selected_features.py 
     """
     sess_name = row.session_name
     behavior_path = SESS_BEHAVIOR_PATH.format(

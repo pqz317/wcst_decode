@@ -136,8 +136,12 @@ def get_ccgp_val_output_dir(args, make_dir=True):
     run_name = f"{args.subject}_{args.trial_event}{fr_type_str}{region_str}{next_trial_str}{prev_response_str}{sig_units_str}"
     if args.shuffle_idx is None: 
         dir = os.path.join(args.base_output_path, f"{run_name}")
-    else: 
-        dir = os.path.join(args.base_output_path, f"{run_name}/{args.shuffle_method}_shuffles")
+    else:
+        if args.shuffle_method:  
+            dir = os.path.join(args.base_output_path, f"{run_name}/{args.shuffle_method}_shuffles")
+        else: 
+            # backwards compatibility
+            dir = os.path.join(args.base_output_path, f"{run_name}/shuffles")
     if make_dir: 
         os.makedirs(dir, exist_ok=True)
     return dir
@@ -159,8 +163,10 @@ def get_preferred_beliefs_output_dir(args, make_dir=True):
     """
     region_str = "" if args.regions is None else f"_{args.regions.replace(',', '_').replace(' ', '_')}"
     fr_type_str = f"_{args.fr_type}" if args.fr_type != "firing_rates" else ""
-    val_str = "" if args.high_val_only else "_all_vals"
-    run_name = f"{args.subject}_{args.trial_event}{fr_type_str}{region_str}{val_str}"
+    filt_str = "".join([f"_{k}_{v}"for k, v in args.beh_filters.items()])
+    sig_units_str = f"_{args.sig_unit_level}_units" if args.sig_unit_level else ""
+
+    run_name = f"{args.subject}_{args.trial_event}{fr_type_str}{region_str}{filt_str}{sig_units_str}"
     if args.shuffle_idx is None: 
         dir = os.path.join(args.base_output_path, f"{run_name}")
     else: 
@@ -245,14 +251,15 @@ def load_ccgp_value_df_from_pairs(args, pairs, dir, shuffle=False):
     for i, row in pairs.iterrows():
         # NOTE: hack, need to run 18 runs instead of 17.
         if i < 17:
-            args.row = row
+            args.feat_pair = row.pair
             file_name = get_ccgp_val_file_name(args)
             for cond in ["within_cond", "across_cond", "overall"]: 
                 try: 
-                    acc = np.load(os.path.join(dir, f"{file_name}_{cond}_accs.npy"))
+                    full_path = os.path.join(dir, f"{file_name}_{cond}_accs.npy")
+                    acc = np.load(full_path)
                 except Exception as e:
                     if shuffle:
-                        print(f"Warning, shuffle not found: {file_name}_{cond}_accs.npy")
+                        print(f"Warning, shuffle not found: {full_path}")
                         continue
                     else: 
                         raise e
@@ -267,6 +274,7 @@ def read_ccgp_value(args, pairs, num_shuffles=10):
     Returns two dataframes, one for ccgp one for shuffles
     """
     args.trial_interval = get_trial_interval(args.trial_event)
+    args.shuffle_idx = None
     dir = get_ccgp_val_output_dir(args, make_dir=False)
     res = load_ccgp_value_df_from_pairs(args, pairs, dir)
     shuffle_res = []
@@ -296,7 +304,7 @@ def load_preferred_belief_df_from_pairs(args, pairs, dir, shuffle=False):
     res = []
     for i, row in pairs.iterrows():
         for chosen_not_pref in [True, False]: 
-            args.row = row
+            args.feat_pair = row.pair
             args.chosen_not_preferred = chosen_not_pref
             file_name = get_preferred_beliefs_file_name(args)
             acc = np.load(os.path.join(dir, f"{file_name}_test_accs.npy"))

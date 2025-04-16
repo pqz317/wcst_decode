@@ -22,7 +22,7 @@ from models.multinomial_logistic_regressor import NormedDropoutMultinomialLogist
 from trial_splitters.condition_trial_splitter import ConditionTrialSplitter 
 
 import argparse
-from preferred_beliefs_configs import add_defaults_to_parser
+from scripts.pseudo_decoding.preferred_beliefs_by_pairs_configs import add_defaults_to_parser
 import utils.io_utils as io_utils
 import json
 
@@ -47,22 +47,16 @@ UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/all_units.pickle"
 DATA_MODE = "FiringRate"
 
 
-def load_session_data(row, region_units, args):
+def load_session_data(row, sub_units, args):
     sess_name = row.session_name
 
-    behavior_path = SESS_BEHAVIOR_PATH.format(sess_name=sess_name)
-    beh = pd.read_csv(behavior_path)
-    beh = behavioral_utils.get_valid_trials(beh)
-    feature_selections = behavioral_utils.get_selection_features(beh)
-    beh = pd.merge(beh, feature_selections, on="TrialNumber", how="inner")
-    beh = behavioral_utils.get_beliefs_per_session(beh, sess_name)
-    beh = behavioral_utils.get_belief_value_labels(beh)
+    beh = behavioral_utils.load_behavior_from_args(sess_name, args)
 
-    pair = args.row.pair
+    pair = args.feat_pair
 
-    # shift TrialNumbers by some random amount
-    if args.shuffle_idx is not None: 
-        beh = behavioral_utils.shuffle_beh_by_shift(beh, buffer=50, seed=args.shuffle_idx)
+    if args.balance_by_filters: 
+        beh = behavioral_utils.balance_trials_by_condition(beh, list(args.beh_filters.keys()))
+    beh = behavioral_utils.filter_behavior(beh, args.beh_filters)
 
     not_pref = behavioral_utils.get_chosen_not_preferred_trials(pair, beh, args.high_val_only)
     pref = behavioral_utils.get_chosen_preferred_trials(pair, beh, args.high_val_only)
@@ -78,9 +72,8 @@ def load_session_data(row, region_units, args):
 
     frs = io_utils.get_frs_from_args(args, sess_name)
     frs = frs.rename(columns={DATA_MODE: "Value"})
-    frs["PseudoUnitID"] = int(sess_name) * 100 + frs.UnitID.astype(int)
-    if region_units is not None: 
-        frs = frs[frs.PseudoUnitID.isin(region_units)]
+    if sub_units is not None: 
+        frs = frs[frs.PseudoUnitID.isin(sub_units)]
     if len(frs) == 0 or len(sub_beh) == 0:
         return None
     splitter = ConditionTrialSplitter(sub_beh, "Choice", args.test_ratio)
@@ -89,7 +82,8 @@ def load_session_data(row, region_units, args):
     return session_data
 
 def decode(args):
-    region_units = spike_utils.get_region_units(args.region_level, args.regions, UNITS_PATH.format(sub=args.subject))
+    sub_units = spike_utils.get_region_units(args.region_level, args.regions, UNITS_PATH.format(sub=args.subject))
+    sub_units = spike_utils.get_sig_units(args, sub_units)
     trial_interval = args.trial_interval
     sessions = args.sessions
 
@@ -98,9 +92,9 @@ def decode(args):
     output_dir = io_utils.get_preferred_beliefs_output_dir(args)
 
     # load up session data to train network
-    pair = args.row.pair
+    pair = args.feat_pair
     sess_datas = sessions.apply(lambda row: load_session_data(
-        row, region_units, args
+        row, sub_units, args
     ), axis=1)
     sess_datas = sess_datas.dropna()
 
@@ -146,11 +140,12 @@ def main():
         valid_sess = pd.read_pickle(SESSIONS_PATH)
     else: 
         raise ValueError("unsupported subject")
-    args.row = pairs.iloc[args.pair_idx]
-    args.sessions = valid_sess[valid_sess.session_name.isin(args.row.sessions)]
+    pair_row = pairs.iloc[args.pair_idx]
+    args.feat_pair = pair_row.pair
+    args.sessions = valid_sess[valid_sess.session_name.isin(pair_row.sessions)]
     args.trial_interval = get_trial_interval(args.trial_event)
 
-    print(f"Decoding between {args.row.pair} using between {args.row.num_sessions} sessions, chosen not preferred {args.chosen_not_preferred}", flush=True)
+    print(f"Decoding between {args.feat_pair} using between {len(args.sessions)} sessions, chosen not preferred {args.chosen_not_preferred}", flush=True)
     print(f"Using {args.fr_type} as inputs", flush=True)
     decode(args)
 
