@@ -66,7 +66,7 @@ def calc_firing_rate_for_interval(row, args):
     spike_times = spike_general.get_spike_times(None, args.subject, sess_name, species_dir="/data")
     if spike_times is None: 
         print(f"No spikes for session {sess_name} detected, skipping")
-        return
+        return None
 
     print("Calculating spikes by trial interval")
     interval_size_secs = args.interval_size / 1000
@@ -96,6 +96,7 @@ def calc_firing_rate_for_interval(row, args):
     print(f"For sub {args.subject}, session {sess_name}, storing FR of {firing_rates.UnitID.nunique()} units to {full_file_name}")
     if not args.dry_run: 
         firing_rates.to_pickle(full_file_name)
+    return full_file_name
 
 def main():
     parser = argparse.ArgumentParser()
@@ -115,7 +116,8 @@ def main():
     else: 
         valid_sess = pd.read_pickle(BL_SESSIONS_PATH)
     print(f"processing {len(valid_sess)} sessions for {args.subject}")
-    valid_sess.apply(lambda row: calc_firing_rate_for_interval(row, args), axis=1)
+    res = valid_sess.apply(lambda row: calc_firing_rate_for_interval(row, args), axis=1)
+    print(f"generated frs for {len(res[~res.isna()])} sessions")
 
 if __name__ == "__main__":
     main()
