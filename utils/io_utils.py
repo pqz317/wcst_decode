@@ -307,7 +307,16 @@ def load_preferred_belief_df_from_pairs(args, pairs, dir, shuffle=False):
             args.feat_pair = row.pair
             args.chosen_not_preferred = chosen_not_pref
             file_name = get_preferred_beliefs_file_name(args)
-            acc = np.load(os.path.join(dir, f"{file_name}_test_accs.npy"))
+            full_path = os.path.join(dir, f"{file_name}_test_accs.npy")
+            try: 
+                acc = np.load(full_path)
+            except Exception as e:
+                if shuffle:
+                    print(f"Warning, shuffle not found: {full_path}")
+                    continue
+                else: 
+                    raise e
+
             df = transform_np_acc_to_df(acc, args)
             pref_str = "not_pref" if chosen_not_pref else "pref"
             shuffle_str = "_shuffle" if shuffle else ""
@@ -319,6 +328,7 @@ def read_preferred_beliefs(args, pairs, num_shuffles=10):
     """
     Returns two dataframes, one for ccgp one for shuffles
     """
+    args.shuffle_idx = None
     args.trial_interval = get_trial_interval(args.trial_event)
     dir = get_preferred_beliefs_output_dir(args, make_dir=False)
     res = load_preferred_belief_df_from_pairs(args, pairs, dir)

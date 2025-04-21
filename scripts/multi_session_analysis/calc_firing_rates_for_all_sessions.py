@@ -41,7 +41,7 @@ SPECIES = 'nhp'
 # NUM_BINS_SMOOTH = 1
 # EVENT = "FeedbackOnset"
 
-BL_SESSIONS_PATH = "/data/patrick_res/sessions/BL/valid_sessions_61.pickle"
+BL_SESSIONS_PATH = "/data/patrick_res/sessions/BL/valid_sessions.pickle"
 SA_SESSIONS_PATH = "/data/patrick_res/sessions/SA/valid_sessions.pickle"
 
 
@@ -114,6 +114,7 @@ def main():
         valid_sess = pd.read_pickle(SA_SESSIONS_PATH)
     else: 
         valid_sess = pd.read_pickle(BL_SESSIONS_PATH)
+    print(f"processing {len(valid_sess)} sessions for {args.subject}")
     valid_sess.apply(lambda row: calc_firing_rate_for_interval(row, args), axis=1)
 
 if __name__ == "__main__":
