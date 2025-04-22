@@ -131,9 +131,10 @@ def get_ccgp_val_output_dir(args, make_dir=True):
     next_trial_str = "_next_trial_value" if args.use_next_trial_value else ""
     prev_response_str = "" if args.prev_response is None else f"_prev_res_{args.prev_response}"
     fr_type_str = f"_{args.fr_type}" if args.fr_type != "firing_rates" else ""
+    filt_str = "".join([f"_{k}_{v}"for k, v in args.beh_filters.items()])
     sig_units_str = f"_{args.sig_unit_level}_units" if args.sig_unit_level else ""
 
-    run_name = f"{args.subject}_{args.trial_event}{fr_type_str}{region_str}{next_trial_str}{prev_response_str}{sig_units_str}"
+    run_name = f"{args.subject}_{args.trial_event}{fr_type_str}{region_str}{next_trial_str}{prev_response_str}{filt_str}{sig_units_str}"
     if args.shuffle_idx is None: 
         dir = os.path.join(args.base_output_path, f"{run_name}")
     else:
@@ -470,7 +471,7 @@ def read_selected_features_cross_time(args, feats, cond, avg=False):
         return df
     
 
-def read_anova_good_units(args, percentile_str="95th"):
+def read_anova_good_units(args, percentile_str="95th", return_pos=True):
     args.trial_interval = get_trial_interval(args.trial_event)
     output_dir = get_anova_output_dir(args)
     good_res = []
@@ -480,9 +481,9 @@ def read_anova_good_units(args, percentile_str="95th"):
         res = pd.merge(res, shuffle_stats, on="PseudoUnitID")
         good_res.append(res[res.combined_fracvar > res[percentile_str]])
     good_res = pd.concat(good_res)
-    unit_pos = pd.read_pickle(UNITS_PATH.format(sub="SA"))
-    # print(unit_pos.columns)
-    good_res = pd.merge(good_res, unit_pos[["PseudoUnitID", "drive", "structure_level2"]])
+    if return_pos:
+        unit_pos = pd.read_pickle(UNITS_PATH.format(sub=args.subject))
+        good_res = pd.merge(good_res, unit_pos[["PseudoUnitID", "drive", "structure_level2"]])
     return good_res
 
 

@@ -3,8 +3,7 @@ import argparse
 from distutils.util import strtobool
 import json
 
-
-class CCGPValueConfigs(NamedTuple):
+class CCGPPreferenceConfigs(NamedTuple):
     # general configs
     subject: str = "SA"
     pair_idx: int = None
@@ -18,10 +17,11 @@ class CCGPValueConfigs(NamedTuple):
     beh_filters: dict = {}  # specified as a json string
     balance_by_filters: bool = False
 
+
     # a file path for loading up significant units
     # a dataframe in pickle format, with feature, PseudoUnitID columns
     sig_unit_level: str = None  
-    shuffle_method: str = "circular_shift"
+    shuffle_method: str = "session_permute"
 
     # decoder configs
     learning_rate: float = 0.05
@@ -34,13 +34,13 @@ class CCGPValueConfigs(NamedTuple):
 
     # file storage, naming
     run_name: str = None
-    base_output_path: str = "/data/patrick_res/ccgp_value"
+    base_output_path: str = "/data/patrick_res/ccgp_preference"
 
 
 
 def add_defaults_to_parser(parser):
     # Automatically add arguments based on the namedtuple fields
-    default_configs = CCGPValueConfigs()
+    default_configs = CCGPPreferenceConfigs()
     for field, value in default_configs._asdict().items():
         var_type = default_configs. __annotations__[field]
         if var_type is bool: 

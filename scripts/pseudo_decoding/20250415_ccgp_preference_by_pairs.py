@@ -1,5 +1,5 @@
 """
-Evaluate CCGP of Value in neural population, computing belief state value from belief state agent
+Uses cross condition to evaluate the preference across different pairs
 """
 import os
 import numpy as np
@@ -20,7 +20,7 @@ from models.multinomial_logistic_regressor import NormedDropoutMultinomialLogist
 from trial_splitters.condition_trial_splitter import ConditionTrialSplitter 
 from tqdm import tqdm
 import argparse
-from ccgp_value_configs import add_defaults_to_parser
+from ccgp_preference_configs import add_defaults_to_parser
 
 # path to a dataframe of sessions to analyze
 SESSIONS_PATH = "/data/patrick_res/sessions/{sub}/valid_sessions.pickle"
@@ -35,35 +35,20 @@ DATA_MODE = "FiringRate"
 
 UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/all_units.pickle"
 
-def load_session_data(row, cond, sub_units, args):
+def load_session_data(row, feat, sub_units, args):
     """
     cond: either a feature or a pair of features: 
     TODO: refactor to match load_data in /src/wcst_decode/scripts/pseudo_decoding/decode_single_selected_features.py 
     """
     sess_name = row.session_name
     beh = behavioral_utils.load_behavior_from_args(sess_name, args)
-
-    # subselect for either low conf, or high conf preferring feat, where feat is also chosen
-    if len(cond) == 1:
-        feat = cond[0] 
-        sub_beh = beh[
-            ((beh[FEATURE_TO_DIM[feat]] == feat) & (beh.BeliefStateValueLabel == f"High {feat}")) |
-            (beh.BeliefStateValueLabel == "Low")
-        ]
-    elif len(cond) == 2: 
-        feat1, feat2 = cond
-        sub_beh = beh[
-            ((beh[FEATURE_TO_DIM[feat1]] == feat1) & (beh.BeliefStateValueLabel == f"High {feat1}")) |
-            ((beh[FEATURE_TO_DIM[feat2]] == feat2) & (beh.BeliefStateValueLabel == f"High {feat2}")) |
-            (beh.BeliefStateValueLabel == "Low")
-        ]
-    else: 
-        raise ValueError("cond must be either 1 or 2 elements")
-
-
+    beh["FeatPreferred"] = beh["PreferredBelief"].apply(lambda x: "Preferred" if x == feat else "Not Preferred")
+    if args.balance_by_filters: 
+        beh = behavioral_utils.balance_trials_by_condition(beh, list(args.beh_filters.keys()))
+    beh = behavioral_utils.filter_behavior(beh, args.beh_filters)
 
     # balance the conditions out: 
-    sub_beh = behavioral_utils.balance_trials_by_condition(sub_beh, ["BeliefStateValueBin"])
+    sub_beh = behavioral_utils.balance_trials_by_condition(beh, ["FeatPreferred"])
 
     frs = io_utils.get_frs_from_args(args, sess_name)
     frs = frs.rename(columns={DATA_MODE: "Value"})
@@ -72,7 +57,7 @@ def load_session_data(row, cond, sub_units, args):
         frs = frs[frs.PseudoUnitID.isin(sub_units)]
     if len(frs) == 0 or len(sub_beh) == 0:
         return None
-    splitter = ConditionTrialSplitter(sub_beh, "BeliefStateValueBin", args.test_ratio)
+    splitter = ConditionTrialSplitter(sub_beh, "FeatPreferred", args.test_ratio)
     session_data = SessionData(sess_name, sub_beh, frs, splitter)
     session_data.pre_generate_splits(args.num_splits)
     return session_data
@@ -87,7 +72,7 @@ def load_sess_datas(args, cond, sub_units):
 def train_decoder(sess_datas, time_bins):
     # train the network
     # setup decoder, specify all possible label classes, number of neurons, parameters
-    classes = [0, 1]
+    classes = ["Preferred", "Not Preferred"]
     num_neurons = sess_datas.apply(lambda x: x.get_num_neurons()).sum()
     print(f"Training with {len(sess_datas)} sessions, {num_neurons} units")
     init_params = {"n_inputs": num_neurons, "p_dropout": args.p_dropout, "n_classes": len(classes)}
@@ -111,7 +96,7 @@ def decode(args):
     sub_units = spike_utils.get_region_units(args.region_level, args.regions, UNITS_PATH.format(sub=args.subject))
     sub_units = spike_utils.get_sig_units(args, sub_units)
     trial_interval = args.trial_interval
-    sessions = args.sessions
+
     file_name = io_utils.get_ccgp_val_file_name(args)
     output_dir = io_utils.get_ccgp_val_output_dir(args)
 
@@ -119,27 +104,22 @@ def decode(args):
     within_cond_accs = []
     across_cond_accs = []
     for feat in pair: 
-        print(f"Training decoder for low vs.  high {feat}")
+        print(f"Training decoder preference in {feat}")
         # load up session data to train network
-        train_feat_sess_datas = load_sess_datas(args, [feat], sub_units)
+        train_feat_sess_datas = load_sess_datas(args, feat, sub_units)
 
         time_bins = np.arange(0, (trial_interval.post_interval + trial_interval.pre_interval) / 1000, trial_interval.interval_size / 1000)
-        train_accs, test_accs, shuffled_accs, models = train_decoder(train_feat_sess_datas, time_bins)
+        _, test_accs, _, models = train_decoder(train_feat_sess_datas, time_bins)
         within_cond_accs.append(test_accs)
 
         # next, evaluate network on other dimensions
         test_feat = [f for f in pair if f != feat][0]
-        test_feat_sess_datas = load_sess_datas(args, [test_feat], sub_units)
+        test_feat_sess_datas = load_sess_datas(args, test_feat, sub_units)
         accs_across_time = pseudo_classifier_utils.evaluate_model_with_data(models, test_feat_sess_datas, time_bins, num_test_per_cond=NUM_TEST_PER_COND)
         across_cond_accs.append(accs_across_time)
         np.save(os.path.join(output_dir, f"{file_name}_feat_{feat}_models.npy"), models)
     within_cond_accs = np.hstack(within_cond_accs)
     across_cond_accs = np.hstack(across_cond_accs)
-
-    overall_sess_datas = load_sess_datas(args, pair, sub_units)
-    train_accs, test_accs, shuffled_accs, models = train_decoder(overall_sess_datas, time_bins)
-    np.save(os.path.join(output_dir, f"{file_name}_overall_accs.npy"), test_accs)
-    np.save(os.path.join(output_dir, f"{file_name}_overall_models.npy"), models)
 
     np.save(os.path.join(output_dir, f"{file_name}_within_cond_accs.npy"), within_cond_accs)
     np.save(os.path.join(output_dir, f"{file_name}_across_cond_accs.npy"), across_cond_accs)
@@ -160,7 +140,7 @@ def main(args):
     args.sessions = valid_sess[valid_sess.session_name.isin(pair_row.sessions)]
     args.trial_interval = get_trial_interval(args.trial_event)
 
-    print(f"Computing CCGP for {subject} of belief state value in interval {args.trial_event}", flush=True)
+    print(f"Computing CCGP for {subject} for preference for pairs {args.feat_pair} in {args.trial_event}", flush=True)
     print(f"shuffle idx is {args.shuffle_idx}", flush=True)
     print(f"Looking at regions {args.region_level}: {args.regions}, using use_next_trial_value {args.use_next_trial_value}", flush=True)
     print(f"examining conditions between {args.feat_pair} using between {len(args.sessions)} sessions", flush=True)

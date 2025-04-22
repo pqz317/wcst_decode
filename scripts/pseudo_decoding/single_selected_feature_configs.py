@@ -13,7 +13,7 @@ class SingleSelectedFeatureConfigs(NamedTuple):
     balance_by_filters: bool = False
     fr_type: str = "firing_rates"
     # either circular_shift, session_permute, or random
-    shuffle_method: str = "circular_shift"
+    shuffle_method: str = "session_permute"
     shuffle_idx: int = None
     region_level: str = None
     regions: str = None
