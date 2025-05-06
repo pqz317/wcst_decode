@@ -31,15 +31,17 @@ def generate_all_units(args):
         all_units = pd.concat(sessions.apply(lambda x: get_units_for_session(x, args), axis=1).values)
     print(f"{len(all_units)} units total")
     print(f"across {all_units.session.nunique()} sessions")
+
+    output_path = args.output_path.format(sub=args.subject)
+    print(f"saving to {output_path}")
     if not args.dry_run: 
-        print(f"saving to {args.output_path}")
-        all_units.to_pickle(args.output_path)
+        all_units.to_pickle(output_path)
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--subject', default="SA", type=str)
-    parser.add_argument('--sessions_path', type=str)
-    parser.add_argument('--output_path', type=str )
+    parser.add_argument('--sessions_path', default=SESSIONS_PATH, type=str)
+    parser.add_argument('--output_path', default=OUTPUT_PATH, type=str)
     parser.add_argument('--dry_run', default=True, type=lambda x: bool(strtobool(x)))
 
     args = parser.parse_args()

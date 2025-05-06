@@ -28,6 +28,8 @@ FEATURE_TO_DIM = {
     'SWIRL': 'Pattern'
 }
 
+BELIEF_PARTITION_THRESH = 0.5
+
 FEEDBACK_TYPES = ["Response", "RPEGroup"]
 
 # SESS_BEHAVIOR_PATH = "/data/rawdata/sub-SA/sess-{sess_name}/behavior/sub-SA_sess-{sess_name}_object_features.csv"

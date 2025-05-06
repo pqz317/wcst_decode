@@ -247,14 +247,14 @@ def transform_np_acc_to_df(acc, args):
     return df
 
 
-def load_ccgp_value_df_from_pairs(args, pairs, dir, shuffle=False):
+def load_ccgp_value_df_from_pairs(args, pairs, dir, conds, shuffle=False):
     res = []
     for i, row in pairs.iterrows():
         # NOTE: hack, need to run 18 runs instead of 17.
         if i < 17:
             args.feat_pair = row.pair
             file_name = get_ccgp_val_file_name(args)
-            for cond in ["within_cond", "across_cond", "overall"]: 
+            for cond in conds: 
                 try: 
                     full_path = os.path.join(dir, f"{file_name}_{cond}_accs.npy")
                     acc = np.load(full_path)
@@ -270,21 +270,48 @@ def load_ccgp_value_df_from_pairs(args, pairs, dir, shuffle=False):
                 res.append(df)
     return pd.concat(res)
 
-def read_ccgp_value(args, pairs, num_shuffles=10):
+def read_ccgp_value(args, pairs, conds=["within_cond", "across_cond", "overall"], num_shuffles=10):
     """
     Returns two dataframes, one for ccgp one for shuffles
     """
     args.trial_interval = get_trial_interval(args.trial_event)
     args.shuffle_idx = None
     dir = get_ccgp_val_output_dir(args, make_dir=False)
-    res = load_ccgp_value_df_from_pairs(args, pairs, dir)
+    res = load_ccgp_value_df_from_pairs(args, pairs, dir, conds)
     shuffle_res = []
     for shuffle_idx in range(num_shuffles):
         args.shuffle_idx = shuffle_idx
         dir = get_ccgp_val_output_dir(args, make_dir=False)
-        shuffle_res.append(load_ccgp_value_df_from_pairs(args, pairs, dir, shuffle=True))
+        shuffle_res.append(load_ccgp_value_df_from_pairs(args, pairs, dir, conds, shuffle=True))
     res = pd.concat(([res] + shuffle_res))
     return res
+
+def get_ccgp_feat_model_for_pair(args, dir, feat, feat_pair):
+    args.feat_pair = feat_pair
+    file_name = get_ccgp_val_file_name(args)
+    models = np.load(os.path.join(dir, f"{file_name}_feat_{feat}_models.npy"), allow_pickle=True)
+    df = pd.DataFrame(models).reset_index(names=["Time"])
+    ti = args.trial_interval
+    df["Time"] = (df["Time"] * ti.interval_size + ti.interval_size - ti.pre_interval) / 1000
+    df = df.melt(id_vars="Time", value_vars=list(range(models.shape[1])), var_name="run", value_name="models")
+    # set pair column as pair arr for every row
+    df["pair"] = [feat_pair] * len(df)
+    df["feat"] = feat
+    return df
+
+
+def read_ccgp_models(args, pairs):
+    """
+    Returns df with all the models for single selected feature decoding
+    """
+    args.trial_interval = get_trial_interval(args.trial_event)
+    dir = get_ccgp_val_output_dir(args, make_dir=False)
+    res = []
+    for i, row in pairs.iterrows():
+        pair = row.pair
+        res.append(get_ccgp_feat_model_for_pair(args, dir, pair[0], pair))
+        res.append(get_ccgp_feat_model_for_pair(args, dir, pair[1], pair))
+    return pd.concat(res)
 
 def read_ccgp_value_combine_fb(args, pairs, num_shuffles=10):
     assert args.trial_event == "FeedbackOnset"

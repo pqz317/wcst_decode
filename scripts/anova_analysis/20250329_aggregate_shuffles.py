@@ -1,35 +1,30 @@
 import os
-import numpy as np
 import pandas as pd
-import utils.pseudo_utils as pseudo_utils
-import utils.pseudo_classifier_utils as pseudo_classifier_utils
-import utils.behavioral_utils as behavioral_utils
-import utils.spike_utils as spike_utils
 
 from constants.behavioral_constants import *
 from constants.decoding_constants import *
-from utils.session_data import SessionData
-
-from models.trainer import Trainer
-from models.model_wrapper import ModelWrapper, ModelWrapperLinearRegression
-from models.multinomial_logistic_regressor import NormedDropoutMultinomialLogisticRegressor
-from trial_splitters.condition_trial_splitter import ConditionTrialSplitter 
 
 import argparse
 from anova_configs import add_defaults_to_parser, AnovaConfigs
 import utils.io_utils as io_utils
 import utils.anova_utils as anova_utils
-import json
 from tqdm import tqdm
 
 FEATS_PATH = "/data/patrick_res/sessions/{sub}/feats_at_least_3blocks.pickle"
 SESSIONS_PATH = "/data/patrick_res/sessions/{sub}/valid_sessions.pickle"
 
-def compute_stats(unit_res):
-    return pd.Series({
-        "95th": unit_res.combined_fracvar.quantile(0.95),
-        "99th": unit_res.combined_fracvar.quantile(0.99),
-    })
+def compute_stats(unit_res, conditions):
+    row = {}
+    combs = anova_utils.get_combs_of_conds(conditions)
+    for comb in combs: 
+        combined_cond_str = "".join(comb)
+        row[f"{combined_cond_str}_95th"] = unit_res[f"x_{combined_cond_str}_comb_time_fracvar"].quantile(0.95)
+        row[f"{combined_cond_str}_99th"] = unit_res[f"x_{combined_cond_str}_comb_time_fracvar"].quantile(0.99)
+    # HACK: 
+    if "BeliefLabel" in conditions: 
+        row["BeliefPref_95th"] = unit_res[f"x_BeliefPref_comb_time_fracvar"].quantile(0.95)
+        row["BeliefPref_99th"] = unit_res[f"x_BeliefPref_comb_time_fracvar"].quantile(0.99)
+    return pd.Series(row)
 
 def process_feat(args):
     res = []
@@ -44,7 +39,7 @@ def process_feat(args):
     # TODO: remove after combined_fracvar is added to anova script
     # combined_cond_str = "".join(args.conditions)
     # res["combined_fracvar"] = res[f"x_{combined_cond_str}_fracvar"] + res[f"x_TimeBins{combined_cond_str}_fracvar"]
-    stats = res.groupby("PseudoUnitID").apply(compute_stats).reset_index()
+    stats = res.groupby("PseudoUnitID").apply(lambda x: compute_stats(x, args.conditions)).reset_index()
 
     # store shuffle stats in parent dir: 
     args.shuffle_idx = None

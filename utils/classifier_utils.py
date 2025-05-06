@@ -379,12 +379,12 @@ def get_cross_time_cosine_sim_of_weights(weights):
     pivoted = mean_cosines.pivot(index="Time_x", columns="Time_y", values="cosine_sim")
     return pivoted
 
-def get_cross_cond_cosine_sim_of_weights(weights_a, weights_b, exclude_same_run=False):
+def get_cross_cond_cosine_sim_of_weights(weights_a, weights_b, merge_on=["Time", "feat"], exclude_same_run=False):
     """
     weights df has: feat, Time, weights
     where weights are np array
     """
-    merged = pd.merge(weights_a, weights_b, on=["Time", "feat"])
+    merged = pd.merge(weights_a, weights_b, on=merge_on)
     if exclude_same_run:
         merged = merged[merged.run_x != merged.run_y]
     merged["cosine_sim"] = merged.apply(lambda x: cosine_sim(x.weights_x, x.weights_y), axis=1)

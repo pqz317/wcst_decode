@@ -804,9 +804,35 @@ def get_belief_value_labels(beh):
     med = beh.BeliefStateValue.median()
     beh["BeliefStateValueBin"] = beh.apply(lambda x: 0 if x.BeliefStateValue < med else 1, axis=1)
     beh["PreferredBelief"] = beh[[f"{feat}Prob" for feat in FEATURES]].idxmax(axis=1).apply(lambda x: x[:-4])
+    beh["PreferredBeliefProb"] = beh.apply(lambda x: x[f"{x.PreferredBelief}Prob"], axis=1)
     beh["BeliefStateValueLabel"] = beh.apply(lambda x: f"High {x.PreferredBelief}" if x.BeliefStateValueBin == 1 else "Low", axis=1)
     beh["PreferredChosen"] = beh.apply(lambda x: x[FEATURE_TO_DIM[x.PreferredBelief]] == x.PreferredBelief, axis=1)
     return beh
+
+def get_belief_partitions(beh, feat, thresh=BELIEF_PARTITION_THRESH):
+    """
+    Adds two additional columns to be df
+    Partitions belief state space into: 
+     - Low (all beliefs < thresh)
+     - High X where X is the feature of interest, when X has the highest belief
+     - High Not X
+    Per trial (row), adds
+     - BeliefConf (Low or High)
+     - BeliefPartition (Low, High X, High Not X)
+    Assumes df already contains columns: 
+    - PreferredBeliefProb, PreferredBelief
+    """
+    def label_trial(row):
+        if row.PreferredBeliefProb <= thresh: 
+            return pd.Series(["Low", "Low"])
+        elif row.PreferredBelief == feat: 
+            return pd.Series(["High", f"High {feat}"])
+        else: 
+            return pd.Series(["High", f"High Not {feat}"])
+    beh[["BeliefConf", "BeliefPartition"]] = beh.apply(label_trial, axis=1)
+    return beh
+    
+
 
 
 def get_good_pairs_across_sessions(all_beh, block_thresh):
@@ -857,6 +883,7 @@ def get_valid_belief_beh_for_sub_sess(sub, session):
     beh = get_beliefs_per_session(beh, session, sub)
     beh = get_belief_value_labels(beh)
     beh = get_prev_choice_fbs(beh)
+    beh["session"] = session
     return beh
 
 def filter_behavior(beh, filters):
