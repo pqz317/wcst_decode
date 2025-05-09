@@ -23,7 +23,9 @@ INTERVAL_SIZE = 100
 
 SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sub}/{sess_name}_{fr_type}_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/all_units.pickle"
-SIG_UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/{event}_pref_{level}_units.pickle"
+
+# TODO: make this backwards compatible
+SIG_UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/{event}_{level}_units.pickle"
 
 
 class TrialInterval(NamedTuple):

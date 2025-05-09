@@ -809,7 +809,7 @@ def get_belief_value_labels(beh):
     beh["PreferredChosen"] = beh.apply(lambda x: x[FEATURE_TO_DIM[x.PreferredBelief]] == x.PreferredBelief, axis=1)
     return beh
 
-def get_belief_partitions(beh, feat, thresh=BELIEF_PARTITION_THRESH):
+def get_belief_partitions(beh, feat, use_x=False, thresh=BELIEF_PARTITION_THRESH):
     """
     Adds two additional columns to be df
     Partitions belief state space into: 
@@ -823,12 +823,13 @@ def get_belief_partitions(beh, feat, thresh=BELIEF_PARTITION_THRESH):
     - PreferredBeliefProb, PreferredBelief
     """
     def label_trial(row):
+        feat_str = "X" if use_x else feat
         if row.PreferredBeliefProb <= thresh: 
             return pd.Series(["Low", "Low"])
         elif row.PreferredBelief == feat: 
-            return pd.Series(["High", f"High {feat}"])
+            return pd.Series(["High", f"High {feat_str}"])
         else: 
-            return pd.Series(["High", f"High Not {feat}"])
+            return pd.Series(["High", f"High Not {feat_str}"])
     beh[["BeliefConf", "BeliefPartition"]] = beh.apply(label_trial, axis=1)
     return beh
     
@@ -931,6 +932,24 @@ def load_behavior_from_args(session, args):
             beh = shuffle_beh_by_session_permute(beh, session, args)
         else:
             raise ValueError(f"shuffle idx is set: {args.shuffle_idx} but invalid shuffle method: {args.shuffle_method}")
+    return beh
+
+
+def get_belief_partitions_by_mode(beh, args):
+    """
+    Returns df, with an extra column PartitionLabel 
+    """
+    beh = get_belief_partitions(beh, args.feat, use_x=True)
+    if args.mode == "conf":
+        beh["PartitionLabel"] = beh["BeliefConf"]
+    elif args.mode == "pref":
+        beh = beh[beh.BeliefPartition.isin(["High X", "High Not X"])]
+        beh["PartitionLabel"] = beh["BeliefPartition"]
+    elif args.mode == "feat_belief":
+        beh = beh[beh.BeliefPartition.isin(["Low", "High X"])]
+        beh["PartitionLabel"] = beh["BeliefPartition"]
+    else: 
+        raise ValueError("invalid mode in args")
     return beh
 
 

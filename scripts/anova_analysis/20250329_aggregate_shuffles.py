@@ -21,7 +21,7 @@ def compute_stats(unit_res, conditions):
         row[f"{combined_cond_str}_95th"] = unit_res[f"x_{combined_cond_str}_comb_time_fracvar"].quantile(0.95)
         row[f"{combined_cond_str}_99th"] = unit_res[f"x_{combined_cond_str}_comb_time_fracvar"].quantile(0.99)
     # HACK: 
-    if "BeliefLabel" in conditions: 
+    if "BeliefPartition" in conditions: 
         row["BeliefPref_95th"] = unit_res[f"x_BeliefPref_comb_time_fracvar"].quantile(0.95)
         row["BeliefPref_99th"] = unit_res[f"x_BeliefPref_comb_time_fracvar"].quantile(0.99)
     return pd.Series(row)

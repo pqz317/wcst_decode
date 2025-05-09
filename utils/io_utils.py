@@ -498,7 +498,7 @@ def read_selected_features_cross_time(args, feats, cond, avg=False):
         return df
     
 
-def read_anova_good_units(args, percentile_str="95th", return_pos=True):
+def read_anova_good_units(args, percentile_str="95th", cond="combined_fracvar", return_pos=True):
     args.trial_interval = get_trial_interval(args.trial_event)
     output_dir = get_anova_output_dir(args)
     good_res = []
@@ -506,7 +506,15 @@ def read_anova_good_units(args, percentile_str="95th", return_pos=True):
         res = pd.read_pickle(os.path.join(output_dir, f"{feat}_.pickle"))
         shuffle_stats = pd.read_pickle(os.path.join(output_dir, f"{feat}_shuffle_stats.pickle"))
         res = pd.merge(res, shuffle_stats, on="PseudoUnitID")
-        good_res.append(res[res.combined_fracvar > res[percentile_str]])
+        # HACK: this is for backwards compatability, previously only interested in one col
+        # named "combined" at a time. 
+        if cond != "combined_fracvar":
+            cond_col = f"x_{cond}_comb_time_fracvar"
+            percentile_col = f"{cond}_{percentile_str}"
+        else: 
+            cond_col = cond
+            percentile_col = percentile_str
+        good_res.append(res[res[cond_col] > res[percentile_col]])
     good_res = pd.concat(good_res)
     if return_pos:
         unit_pos = pd.read_pickle(UNITS_PATH.format(sub=args.subject))
@@ -515,6 +523,9 @@ def read_anova_good_units(args, percentile_str="95th", return_pos=True):
 
 
 def get_frs_from_args(args, sess_name):
+    """
+    TODO: deprecate, move to use spike_utils.get_frs_from_args
+    """
     trial_interval = args.trial_interval
     spikes_path = SESS_SPIKES_PATH.format(
         sub=args.subject,

@@ -361,3 +361,33 @@ def pref_belief_as_frs(frs, beh):
     merged = pd.merge(frs, beh[["TrialNumber", "PreferredBelief"]], on="TrialNumber")
     merged["FiringRate"] = merged.apply(lambda x: pref_belief_per_row(x), axis=1)
     return merged[["TrialNumber", "UnitID", "TimeBins", "FiringRate"]]
+
+def get_frs_from_args(args, sess_name):
+    """
+    """
+    sub_units = get_region_units(args.region_level, args.regions, UNITS_PATH.format(sub=args.subject))
+    sub_units = get_sig_units(args, sub_units)
+    trial_interval = args.trial_interval
+    spikes_path = SESS_SPIKES_PATH.format(
+        sub=args.subject,
+        sess_name=sess_name, 
+        fr_type=args.fr_type,
+        pre_interval=trial_interval.pre_interval, 
+        event=trial_interval.event, 
+        post_interval=trial_interval.post_interval, 
+        interval_size=trial_interval.interval_size
+    )
+    frs = pd.read_pickle(spikes_path)
+    frs["PseudoUnitID"] = int(sess_name) * 100 + frs.UnitID.astype(int)
+    if sub_units is not None: 
+        frs = frs[frs.PseudoUnitID.isin(sub_units)]
+    # create a time field as well that's relative to the trial event
+    frs["Time"] = frs["TimeBins"] - args.trial_interval.pre_interval / 1000
+    if hasattr(args, "time_range") and args.time_range is not None: 
+        if len(args.time_range) !=2: 
+            raise ValueError("must have two ranges")
+        # time_range specified in milliseconds, relative to trial event, convert to 
+        # be in seconds, relative to pre_interval
+        start, end = [(x + args.trial_interval.pre_interval) / 1000 for x in args.time_range]
+        frs = frs[(frs.TimeBins >= start) & (frs.TimeBins < end)]
+    return frs
