@@ -934,6 +934,10 @@ def load_behavior_from_args(session, args):
             raise ValueError(f"shuffle idx is set: {args.shuffle_idx} but invalid shuffle method: {args.shuffle_method}")
     return beh
 
+def get_feat_choice_label(beh, feat):
+    beh["Choice"] = beh.apply(lambda x: "Chose" if x[FEATURE_TO_DIM[feat]] == feat else "Not Chose", axis=1)
+    return beh
+
 
 def get_belief_partitions_by_mode(beh, args):
     """

@@ -43,7 +43,7 @@ def load_session_data(row, args):
     sess_name = row.session_name
     
     beh = behavioral_utils.load_behavior_from_args(sess_name, args)
-
+    beh = behavioral_utils.get_feat_choice_label(beh, args.feat)
     if args.balance_by_filters: 
         beh = behavioral_utils.balance_trials_by_condition(beh, list(args.beh_filters.keys()))
     beh = behavioral_utils.filter_behavior(beh, args.beh_filters)
