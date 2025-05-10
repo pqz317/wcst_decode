@@ -25,13 +25,19 @@ def get_file_name(args):
     shuffle_str = "" if args.shuffle_idx is None else f"_shuffle_{args.shuffle_idx}"
     return f"{args.feat}_{args.mode}{shuffle_str}"
 
+def get_cross_time_file_name(args):
+    """
+    Naming convention for preferred beliefs decoding files
+    """
+    return f"{args.feat}_{args.mode}_cross_time"
+
 def get_dir_name(args, make_dir=True):
     """
     Directory convention for preferred beliefs decoding
     """
     region_str = "" if args.regions is None else f"{args.regions.replace(',', '_').replace(' ', '_')}"
-    filt_str = "".join([f"_{k}_{v}"for k, v in args.beh_filters.items()])
-    sig_units_str = f"_{args.sig_unit_level}_units" if args.sig_unit_level else None
+    filt_str = "_".join([f"{k}_{v}"for k, v in args.beh_filters.items()])
+    sig_units_str = f"{args.sig_unit_level}_units" if args.sig_unit_level else None
     parts = [args.subject, args.trial_event, region_str, filt_str, sig_units_str]
     run_name = "_".join(x for x in parts if x)
     if args.shuffle_idx is None: 
