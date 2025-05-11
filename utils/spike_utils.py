@@ -322,11 +322,12 @@ def get_sig_units(args, units=None):
         level=args.sig_unit_level,
     )
     sig_units = pd.read_pickle(sig_path)
-    if "feat" in args:
-        feat_sig_units = sig_units[sig_units.feat == args.feat]
-    elif "feat_pair" in args:
+
+    if "feat_pair" in args:
         feat1, feat2 = args.feat_pair
         feat_sig_units = sig_units[(sig_units.feat == feat1) | (sig_units.feat == feat2)]
+    elif "feat" in args:
+        feat_sig_units = sig_units[sig_units.feat == args.feat]
     else: 
         raise ValueError("args has neither feat or feat_pair")
     if units: 
