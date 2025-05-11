@@ -31,6 +31,14 @@ def get_cross_time_file_name(args):
     """
     return f"{args.feat}_{args.mode}_cross_time"
 
+def get_ccgp_file_name(args):
+    """
+    Naming convention for preferred beliefs decoding files
+    """
+    pair_str = pair_str = "_".join(args.feat_pair)
+    shuffle_str = "" if args.shuffle_idx is None else f"_shuffle_{args.shuffle_idx}"
+    return f"{pair_str}_{args.mode}{shuffle_str}"
+
 def get_dir_name(args, make_dir=True):
     """
     Directory convention for preferred beliefs decoding
@@ -85,3 +93,22 @@ def read_results(args, feats, num_shuffles=10):
         shuffle_res.append(load_df(args, feats, dir, shuffle=True))
     res = pd.concat(([res] + shuffle_res))
     return res  
+
+def read_cross_time_results(args, feats, avg=False):
+    df = []
+    dir = get_dir_name(args, make_dir=False)
+    args.trial_interval = get_trial_interval(args.trial_event)
+    for feat in feats:
+        args.feat = feat
+        file_name = get_cross_time_file_name(args)
+        accs = np.load(os.path.join(dir, f"{file_name}_accs.npy"))
+        ti = args.trial_interval
+        for (train_time_idx, test_time_idx, run_idx), acc in np.ndenumerate(accs):
+            train_time =  (train_time_idx * ti.interval_size + ti.interval_size - ti.pre_interval) / 1000
+            test_time =  (test_time_idx * ti.interval_size + ti.interval_size - ti.pre_interval) / 1000
+            df.append({"TrainTime": train_time, "TestTime": test_time, "RunIdx": run_idx, "Feat": feat, "Accuracy": acc})
+    df = pd.DataFrame(df)
+    if avg: 
+        return df.groupby(["TrainTime", "TestTime"]).Accuracy.mean().reset_index(name="Accuracy")
+    else: 
+        return df

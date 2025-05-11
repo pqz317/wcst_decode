@@ -12,6 +12,7 @@ class BeliefPartitionConfigs(NamedTuple):
     # general configs
     subject: str = "SA"
     feat_idx: int = None
+    pair_idx: int = None
     trial_event: str = "StimOnset"
     beh_filters: dict = {}  # specified as a json string
     balance_by_filters: bool = False

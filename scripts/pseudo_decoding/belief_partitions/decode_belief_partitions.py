@@ -59,28 +59,7 @@ def load_session_data(row, args):
     session_data.pre_generate_splits(args.num_splits)
     return session_data
 
-
-
-def decode(args):
-    trial_interval = args.trial_interval
-    sessions = args.sessions
-
-    # naming for files, directory
-    file_name = belief_partitions_io.get_file_name(args)
-    output_dir = belief_partitions_io.get_dir_name(args)
-
-    # load up session data to train network
-    sess_datas = sessions.apply(lambda row: load_session_data(
-        row, args
-    ), axis=1)
-    sess_datas = sess_datas.dropna()
-
-    # save pseudo unit IDs
-    unit_ids = pd.DataFrame({"PseudoUnitIDs": np.concatenate(sess_datas.apply(lambda x: x.get_pseudo_unit_ids()).values)})
-    # unit_ids.to_pickle(os.path.join(output_dir, f"{file_name}_unit_ids.pickle"))
-    unit_ids.to_csv(os.path.join(output_dir, f"{file_name}_unit_ids.csv"))
-
-
+def train_decoder(sess_datas, args):
     # train the network
     # setup decoder, specify all possible label classes, number of neurons, parameters
     classes = MODE_TO_CLASSES[args.mode]
@@ -92,10 +71,36 @@ def decode(args):
     model = ModelWrapper(NormedDropoutMultinomialLogisticRegressor, init_params, trainer, classes)
 
     # calculate time bins (in seconds)
+    trial_interval = args.trial_interval
     time_bins = np.arange(0, (trial_interval.post_interval + trial_interval.pre_interval) / 1000, trial_interval.interval_size / 1000)
     _, test_accs, _, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(
         model, sess_datas, time_bins, NUM_SPLITS, NUM_TRAIN_PER_COND, NUM_TEST_PER_COND, use_v2=args.use_v2_pseudo
     )
+    return test_accs, models
+
+def load_session_datas(args):
+    sess_datas = args.sessions.apply(lambda row: load_session_data(
+        row, args
+    ), axis=1)
+    sess_datas = sess_datas.dropna()
+    return sess_datas
+
+
+def decode(args):
+    sess_datas = load_session_datas(args)
+    # naming for files, directory
+    file_name = belief_partitions_io.get_file_name(args)
+    output_dir = belief_partitions_io.get_dir_name(args)
+
+    # load up session data to train network
+
+
+    # save pseudo unit IDs
+    unit_ids = pd.DataFrame({"PseudoUnitIDs": np.concatenate(sess_datas.apply(lambda x: x.get_pseudo_unit_ids()).values)})
+    # unit_ids.to_pickle(os.path.join(output_dir, f"{file_name}_unit_ids.pickle"))
+    unit_ids.to_csv(os.path.join(output_dir, f"{file_name}_unit_ids.csv"))
+
+    test_accs, models = train_decoder(sess_datas, args)
 
     # np.save(os.path.join(output_dir, f"{file_name}_train_accs.npy"), train_accs)
     np.save(os.path.join(output_dir, f"{file_name}_test_accs.npy"), test_accs)
