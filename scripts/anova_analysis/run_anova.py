@@ -47,6 +47,7 @@ def run_anova(args, data, all_conds):
     if "BeliefPartition" in args.conditions: 
         unit_vars[f"x_BeliefPref_comb_time_fracvar"] = unit_vars[f"x_BeliefPartition_comb_time_fracvar"] - unit_vars[f"x_BeliefConf_comb_time_fracvar"]
     unit_vars["feat"] = args.feat    
+    return unit_vars
 
 
 def process_session(row, args):
@@ -54,8 +55,22 @@ def process_session(row, args):
     all_conds = ["TimeBins"] + args.conditions
     if args.window_size is None:
         unit_vars = run_anova(args, data, all_conds)
-    # else:
-    #     for i in range(starts)
+    else:
+        unit_vars = []
+        data["TimeMilli"] = (data.Time * 1000).round().astype(int)
+        pre = -1 * args.trial_interval.pre_interval
+        post = args.trial_interval.post_interval
+        for window_start in np.arange(pre, post - args.window_size + 1, args.trial_interval.interval_size):
+            window_end = window_start + args.window_size
+            print(f"Windows: {window_start}, {window_end}")
+            window_data = data[(data.TimeMilli >= window_start) & (data.TimeMilli < window_end)]
+            print(f"{window_data.Time.nunique()} time points: {window_data.Time.unique()}")
+            print("-------")
+            window_unit_vars = run_anova(args, window_data, all_conds)
+            window_unit_vars["WindowStartMilli"] = window_start
+            window_unit_vars["WindowEndMilli"] = window_end
+            unit_vars.append(window_unit_vars)
+        unit_vars = pd.concat(unit_vars)
     return unit_vars
 
 def anova(args):

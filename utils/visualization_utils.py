@@ -471,3 +471,12 @@ def visualize_cond_correlations(beh, frs, unit_id, cond, ax):
     slope, intercept, r_value, p_value, std_err = stats.linregress(merged[cond], merged["Mean FR"])
     ax.plot(merged[cond], merged[cond] * slope + intercept, color="black", linewidth=2)
     return r_value, p_value
+
+def visualize_cross_time(args, cross_res, decoder_res, ax):
+    shuffles = decoder_res[decoder_res["mode"] == f"{args.mode}_shuffle"]
+    shuffle_means = shuffles.groupby(["Time"]).Accuracy.mean().reset_index(name="ShuffleAccuracy")
+    cross_res = pd.merge(cross_res, shuffle_means, left_on="TestTime", right_on="Time")
+    overall_shuffle_mean = shuffle_means.ShuffleAccuracy.mean()
+    cross_res["Accuracy"] = cross_res.apply(lambda x: overall_shuffle_mean if x.Accuracy < x.ShuffleAccuracy else x.Accuracy, axis=1)
+    pivoted = cross_res.pivot(index="TrainTime", columns="TestTime", values="Accuracy")
+    sns.heatmap(pivoted, ax=ax, vmin=overall_shuffle_mean)
