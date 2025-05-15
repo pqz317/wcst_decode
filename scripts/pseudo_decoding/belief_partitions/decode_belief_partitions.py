@@ -34,6 +34,7 @@ MODE_TO_CLASSES = {
     "conf": ["Low", "High"],
     "pref": ["High X", "High Not X"],
     "feat_belief": ["Low", "High X"],
+    "policy": ["X", "Not X"]
 }
 
 def load_session_data(row, args):

@@ -946,6 +946,8 @@ def get_belief_partitions_by_mode(beh, feat, mode):
     beh = get_belief_partitions(beh, feat, use_x=True)
     if mode == "conf":
         beh["PartitionLabel"] = beh["BeliefConf"]
+    elif mode == "policy":
+        beh["PartitionLabel"] = beh["BeliefPolicy"]
     elif mode == "pref":
         beh = beh[beh.BeliefPartition.isin(["High X", "High Not X"])]
         beh["PartitionLabel"] = beh["BeliefPartition"]

@@ -8,6 +8,7 @@ class AnovaConfigs(NamedTuple):
     conditions: list = []  # specified as comma separated list
     subject: str = "SA"
     feat_idx: int = None
+    window_size: int = None
     trial_event: str = "FeedbackOnsetLong"
     time_range: list = None  # specified as comma separated list
     beh_filters: dict = {}  # specified as a json string

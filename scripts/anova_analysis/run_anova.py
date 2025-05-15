@@ -38,18 +38,24 @@ def load_data(session, args, return_merged=True):
         return pd.merge(frs, beh, on="TrialNumber")
     else: 
         return (beh, frs)
-
-
-def process_session(row, args):
-    data = load_data(row.session_name, args)
-    all_conds = ["TimeBins"] + args.conditions
+    
+def run_anova(args, data, all_conds):
     df = anova_utils.anova_factors(data, all_conds)
     unit_vars = df.groupby("PseudoUnitID").apply(lambda x: anova_utils.calc_unit_var(x, all_conds)).reset_index()
     unit_vars = anova_utils.combine_time_fracvar(unit_vars, args.conditions)
     # HACK: don't have a nice way way to compute preference frac var, just adding it here. 
     if "BeliefPartition" in args.conditions: 
         unit_vars[f"x_BeliefPref_comb_time_fracvar"] = unit_vars[f"x_BeliefPartition_comb_time_fracvar"] - unit_vars[f"x_BeliefConf_comb_time_fracvar"]
-    unit_vars["feat"] = args.feat
+    unit_vars["feat"] = args.feat    
+
+
+def process_session(row, args):
+    data = load_data(row.session_name, args)
+    all_conds = ["TimeBins"] + args.conditions
+    if args.window_size is None:
+        unit_vars = run_anova(args, data, all_conds)
+    # else:
+    #     for i in range(starts)
     return unit_vars
 
 def anova(args):
