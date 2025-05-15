@@ -14,6 +14,7 @@ class BeliefPartitionConfigs(NamedTuple):
     feat_idx: int = None
     pair_idx: int = None
     trial_event: str = "StimOnset"
+    model_trial_event: str = None
     beh_filters: dict = {}  # specified as a json string
     balance_by_filters: bool = False
     fr_type: str = "firing_rates"

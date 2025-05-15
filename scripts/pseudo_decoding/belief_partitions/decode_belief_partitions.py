@@ -47,7 +47,7 @@ def load_session_data(row, args):
     if args.balance_by_filters: 
         beh = behavioral_utils.balance_trials_by_condition(beh, list(args.beh_filters.keys()))
     beh = behavioral_utils.filter_behavior(beh, args.beh_filters)
-    beh = behavioral_utils.get_belief_partitions_by_mode(beh, args)
+    beh = behavioral_utils.get_belief_partitions_by_mode(beh, args.feat, args.mode)
     beh = behavioral_utils.balance_trials_by_condition(beh, ["PartitionLabel"])
 
     frs = spike_utils.get_frs_from_args(args, sess_name)

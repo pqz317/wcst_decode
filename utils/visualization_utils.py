@@ -399,8 +399,8 @@ def plot_accs_seaborn(datas, labels, pre_interval, interval_size, ax):
     sns.lineplot(res, x="Time", y="Accuracy", hue="label", linewidth=3, ax=ax)
 
 
-def visualize_ccpg_value(args, df, ax):
-    sns.lineplot(df, x="Time", y="Accuracy", hue="condition", linewidth=3, ax=ax)
+def visualize_ccpg_value(args, df, ax, hue_col="condition"):
+    sns.lineplot(df, x="Time", y="Accuracy", hue=hue_col, linewidth=3, ax=ax)
     # # add estimated chance
     ax.axhline(1/2, color='black', linestyle='dotted', label="Estimated Chance")
     if args.trial_event == "FeedbackOnset":

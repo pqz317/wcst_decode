@@ -514,7 +514,10 @@ def read_anova_good_units(args, percentile_str="95th", cond="combined_fracvar", 
         else: 
             cond_col = cond
             percentile_col = percentile_str
-        good_res.append(res[res[cond_col] > res[percentile_col]])
+        if percentile_str != "all":
+            good_res.append(res[res[cond_col] > res[percentile_col]])
+        else:
+            good_res.append(res)
     good_res = pd.concat(good_res)
     if return_pos:
         unit_pos = pd.read_pickle(UNITS_PATH.format(sub=args.subject))

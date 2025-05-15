@@ -825,12 +825,12 @@ def get_belief_partitions(beh, feat, use_x=False, thresh=BELIEF_PARTITION_THRESH
     def label_trial(row):
         feat_str = "X" if use_x else feat
         if row.PreferredBeliefProb <= thresh: 
-            return pd.Series(["Low", "Low"])
+            return pd.Series(["Low", f"Not {feat_str}", "Low"])
         elif row.PreferredBelief == feat: 
-            return pd.Series(["High", f"High {feat_str}"])
+            return pd.Series(["High", feat_str, f"High {feat_str}"])
         else: 
-            return pd.Series(["High", f"High Not {feat_str}"])
-    beh[["BeliefConf", "BeliefPartition"]] = beh.apply(label_trial, axis=1)
+            return pd.Series(["High", f"Not {feat_str}", f"High Not {feat_str}"])
+    beh[["BeliefConf", "BeliefPolicy", "BeliefPartition"]] = beh.apply(label_trial, axis=1)
     return beh
     
 
@@ -939,17 +939,17 @@ def get_feat_choice_label(beh, feat):
     return beh
 
 
-def get_belief_partitions_by_mode(beh, args):
+def get_belief_partitions_by_mode(beh, feat, mode):
     """
     Returns df, with an extra column PartitionLabel 
     """
-    beh = get_belief_partitions(beh, args.feat, use_x=True)
-    if args.mode == "conf":
+    beh = get_belief_partitions(beh, feat, use_x=True)
+    if mode == "conf":
         beh["PartitionLabel"] = beh["BeliefConf"]
-    elif args.mode == "pref":
+    elif mode == "pref":
         beh = beh[beh.BeliefPartition.isin(["High X", "High Not X"])]
         beh["PartitionLabel"] = beh["BeliefPartition"]
-    elif args.mode == "feat_belief":
+    elif mode == "feat_belief":
         beh = beh[beh.BeliefPartition.isin(["Low", "High X"])]
         beh["PartitionLabel"] = beh["BeliefPartition"]
     else: 

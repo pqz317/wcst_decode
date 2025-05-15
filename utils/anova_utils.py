@@ -3,26 +3,6 @@ import pandas as pd
 import itertools
 from constants.decoding_constants import SESS_SPIKES_PATH
 
-def load_data(sess_name, feat, trial_interval, subject="SA", unit_id=None):
-    beh = behavioral_utils.get_valid_belief_beh_for_sub_sess(subject, sess_name)
-    beh = behavioral_utils.get_chosen_single(feat, beh)
-    spikes_path = SESS_SPIKES_PATH.format(
-        sub=subject,
-        sess_name=sess_name, 
-        fr_type="firing_rates",
-        pre_interval=trial_interval.pre_interval, 
-        event=trial_interval.event, 
-        post_interval=trial_interval.post_interval, 
-        interval_size=trial_interval.interval_size
-    )
-    frs = pd.read_pickle(spikes_path)
-    frs["PseudoUnitID"] = int(sess_name) * 100 + frs.UnitID.astype(int)
-    frs = frs[frs.TimeBins > 1.8]
-    if unit_id is not None:
-        frs = frs[frs.PseudoUnitID == unit_id]
-    df = pd.merge(frs, beh, on="TrialNumber")
-    return df
-
 def compute_average_over(df, value_col, groupby_cols, name):
     avg = df.groupby(groupby_cols)[value_col].mean().reset_index(name=name)
     return pd.merge(df, avg, on=groupby_cols)
