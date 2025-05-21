@@ -12,7 +12,7 @@ import utils.spike_utils as spike_utils
 
 from constants.behavioral_constants import *
 from constants.decoding_constants import *
-from utils.session_data import SessionData
+import utils.session_data as session_data
 
 from models.trainer import Trainer
 from models.model_wrapper import ModelWrapper
@@ -37,7 +37,7 @@ MODE_TO_CLASSES = {
     "policy": ["X", "Not X"]
 }
 
-def load_session_data(row, args):
+def load_session_data(row, args, splits_df=None):
     """
     Loads behavior, neural data, prepares them for decoding
     """
@@ -55,19 +55,22 @@ def load_session_data(row, args):
     frs = frs.rename(columns={DATA_MODE: "Value"})
     if len(frs) == 0 or len(beh) == 0:
         return None
-    splitter = ConditionTrialSplitter(beh, "PartitionLabel", args.test_ratio, seed=args.train_test_seed)
-    session_data = SessionData(sess_name, beh, frs, splitter)
-    session_data.pre_generate_splits(args.num_splits)
-    return session_data
+    
+    if splits_df is None: 
+        splitter = ConditionTrialSplitter(beh, "PartitionLabel", args.test_ratio, seed=args.train_test_seed)
+        sess_data = session_data.create_from_splitter(sess_name, beh, frs, splitter, args.num_splits)
+    else: 
+        sess_data = session_data.create_from_splits_df(sess_name, beh, frs, splits_df)
+    return sess_data
 
 def train_decoder(sess_datas, args):
     # train the network
     # setup decoder, specify all possible label classes, number of neurons, parameters
     classes = MODE_TO_CLASSES[args.mode]
     num_neurons = sess_datas.apply(lambda x: x.get_num_neurons()).sum()
-    init_params = {"n_inputs": num_neurons, "p_dropout": 0.5, "n_classes": len(classes)}
+    init_params = {"n_inputs": num_neurons, "p_dropout": args.p_dropout, "n_classes": len(classes)}
     # create a trainer object
-    trainer = Trainer(learning_rate=0.05, max_iter=500, batch_size=1000)
+    trainer = Trainer(learning_rate=args.learning_rate, max_iter=args.max_iter)
     # create a wrapper for the decoder
     model = ModelWrapper(NormedDropoutMultinomialLogisticRegressor, init_params, trainer, classes)
 
@@ -75,7 +78,7 @@ def train_decoder(sess_datas, args):
     trial_interval = args.trial_interval
     time_bins = np.arange(0, (trial_interval.post_interval + trial_interval.pre_interval) / 1000, trial_interval.interval_size / 1000)
     _, test_accs, _, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(
-        model, sess_datas, time_bins, NUM_SPLITS, NUM_TRAIN_PER_COND, NUM_TEST_PER_COND, use_v2=args.use_v2_pseudo
+        model, sess_datas, time_bins, args.num_splits, args.num_train_per_cond, args.num_test_per_cond
     )
     return test_accs, models
 
@@ -93,21 +96,20 @@ def decode(args):
     file_name = belief_partitions_io.get_file_name(args)
     output_dir = belief_partitions_io.get_dir_name(args)
 
-    # load up session data to train network
-
-
-    # save pseudo unit IDs
-    unit_ids = pd.DataFrame({"PseudoUnitIDs": np.concatenate(sess_datas.apply(lambda x: x.get_pseudo_unit_ids()).values)})
-    # unit_ids.to_pickle(os.path.join(output_dir, f"{file_name}_unit_ids.pickle"))
-    unit_ids.to_csv(os.path.join(output_dir, f"{file_name}_unit_ids.csv"))
-
     test_accs, models = train_decoder(sess_datas, args)
-
-    # np.save(os.path.join(output_dir, f"{file_name}_train_accs.npy"), train_accs)
     np.save(os.path.join(output_dir, f"{file_name}_test_accs.npy"), test_accs)
-    # np.save(os.path.join(output_dir, f"{file_name}_shuffled_accs.npy"), shuffled_accs)
     if args.shuffle_idx is None: 
         np.save(os.path.join(output_dir, f"{file_name}_models.npy"), models)
+
+        # save pseudo unit IDs
+        unit_ids = pd.DataFrame({"PseudoUnitIDs": np.concatenate(sess_datas.apply(lambda x: x.get_pseudo_unit_ids()).values)})
+        # unit_ids.to_pickle(os.path.join(output_dir, f"{file_name}_unit_ids.pickle"))
+        unit_ids.to_csv(os.path.join(output_dir, f"{file_name}_unit_ids.csv"))
+
+        all_splits = pd.concat(sess_datas.apply(lambda x: x.get_splits_df()).values)
+        all_splits.to_pickle(os.path.join(output_dir, f"{file_name}_splits.pickle"))
+
+
 
 def process_args(args):
     """
@@ -125,8 +127,6 @@ def process_args(args):
     print(f"Decoding partitions for feat {args.feat} using {len(args.sessions)} sessions, mode {args.mode}", flush=True)
     print(f"Using {args.fr_type} as inputs", flush=True)
     print(f"With filters {args.beh_filters}", flush=True)
-    if args.use_v2_pseudo: 
-        print(f"Using new pseudo data generation")
     if args.sig_unit_level:
         print(f"Using only units that are selective with signifance level {args.sig_unit_level}")
     return args

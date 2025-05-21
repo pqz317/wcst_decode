@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import warnings
 
 def generate_pseudo_population(frs, split, num_train_samples=1000, num_test_samples=100, rng=None):
     """
@@ -25,6 +26,7 @@ def generate_pseudo_population(frs, split, num_train_samples=1000, num_test_samp
             - TimeBins
             - some data column (eg. SpikeCounts or FiringRates)
     """
+    raise ValueError("deprecated")
     if rng is None:
         rng = np.random.default_rng()
 
