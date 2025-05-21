@@ -46,6 +46,8 @@ def run_anova(args, data, all_conds):
     # HACK: don't have a nice way way to compute preference frac var, just adding it here. 
     if "BeliefPartition" in args.conditions: 
         unit_vars[f"x_BeliefPref_comb_time_fracvar"] = unit_vars[f"x_BeliefPartition_comb_time_fracvar"] - unit_vars[f"x_BeliefConf_comb_time_fracvar"]
+    if "NextBeliefPartition" in args.conditions: 
+        unit_vars[f"x_NextBeliefPref_comb_time_fracvar"] = unit_vars[f"x_NextBeliefPartition_comb_time_fracvar"] - unit_vars[f"x_NextBeliefConf_comb_time_fracvar"]
     unit_vars["feat"] = args.feat    
     return unit_vars
 
