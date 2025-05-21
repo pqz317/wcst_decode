@@ -503,6 +503,7 @@ def read_selected_features_cross_time(args, feats, cond, avg=False):
 def read_anova_good_units(args, percentile_str="95th", cond="combined_fracvar", return_pos=True):
     args.trial_interval = get_trial_interval(args.trial_event)
     output_dir = get_anova_output_dir(args, make_dir=False)
+    print(output_dir)
     good_res = []
     for feat in FEATURES:
         res = pd.read_pickle(os.path.join(output_dir, f"{feat}_.pickle"))

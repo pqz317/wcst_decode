@@ -23,7 +23,7 @@ class BeliefPartitionConfigs(NamedTuple):
     shuffle_idx: int = None
     region_level: str = None
     regions: str = None
-    train_test_seed: int = None
+    train_test_seed: int = 42
 
     # a file path for loading up significant units
     # a dataframe in pickle format, with feature, PseudoUnitID columns
