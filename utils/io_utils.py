@@ -507,7 +507,10 @@ def read_anova_good_units(args, percentile_str="95th", cond="combined_fracvar", 
     for feat in FEATURES:
         res = pd.read_pickle(os.path.join(output_dir, f"{feat}_.pickle"))
         shuffle_stats = pd.read_pickle(os.path.join(output_dir, f"{feat}_shuffle_stats.pickle"))
-        res = pd.merge(res, shuffle_stats, on="PseudoUnitID")
+        if args.window_size is None: 
+            res = pd.merge(res, shuffle_stats, on="PseudoUnitID")
+        else: 
+            res = pd.merge(res, shuffle_stats, on=["PseudoUnitID", "WindowStartMilli"])
         # HACK: this is for backwards compatability, previously only interested in one col
         # named "combined" at a time. 
         if cond != "combined_fracvar":

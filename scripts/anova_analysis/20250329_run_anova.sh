@@ -2,7 +2,7 @@
 sbatch --array=0-11 <<EOT
 #!/bin/bash
 #SBATCH --job-name=anov
-#SBATCH -p ckpt-all
+#SBATCH -p gpu-a100
 #SBATCH -A walkerlab
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
@@ -21,7 +21,7 @@ sbatch --array=0-1199 <<EOT
 #!/bin/bash
 #SBATCH --job-name=anov_shuf
 
-#SBATCH -p ckpt-all
+#SBATCH -p gpu-a100
 #SBATCH -A walkerlab
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1

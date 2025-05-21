@@ -39,7 +39,10 @@ def process_feat(args):
     # TODO: remove after combined_fracvar is added to anova script
     # combined_cond_str = "".join(args.conditions)
     # res["combined_fracvar"] = res[f"x_{combined_cond_str}_fracvar"] + res[f"x_TimeBins{combined_cond_str}_fracvar"]
-    stats = res.groupby("PseudoUnitID").apply(lambda x: compute_stats(x, args.conditions)).reset_index()
+    if args.window_size is None:
+        stats = res.groupby("PseudoUnitID").apply(lambda x: compute_stats(x, args.conditions)).reset_index()
+    else: 
+        stats = res.groupby(["PseudoUnitID", "WindowStartMilli"]).apply(lambda x: compute_stats(x, args.conditions)).reset_index()
 
     # store shuffle stats in parent dir: 
     args.shuffle_idx = None

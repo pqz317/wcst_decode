@@ -41,8 +41,7 @@ SPECIES = 'nhp'
 # NUM_BINS_SMOOTH = 1
 # EVENT = "FeedbackOnset"
 
-BL_SESSIONS_PATH = "/data/patrick_res/sessions/BL/valid_sessions.pickle"
-SA_SESSIONS_PATH = "/data/patrick_res/sessions/SA/valid_sessions.pickle"
+SESSIONS_PATH = "/data/patrick_res/sessions/{sub}/valid_sessions.pickle"
 
 
 def calc_firing_rate_for_interval(row, args):
@@ -111,10 +110,7 @@ def main():
     args = parser.parse_args()
 
     print(f"Running in dry run: {args.dry_run}")
-    if args.subject == "SA":
-        valid_sess = pd.read_pickle(SA_SESSIONS_PATH)
-    else: 
-        valid_sess = pd.read_pickle(BL_SESSIONS_PATH)
+    valid_sess = pd.read_pickle(SESSIONS_PATH.format(sub=args.subject))
     print(f"processing {len(valid_sess)} sessions for {args.subject}")
     res = valid_sess.apply(lambda row: calc_firing_rate_for_interval(row, args), axis=1)
     print(f"generated frs for {len(res[~res.isna()])} sessions")

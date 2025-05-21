@@ -831,6 +831,8 @@ def get_belief_partitions(beh, feat, use_x=False, thresh=BELIEF_PARTITION_THRESH
         else: 
             return pd.Series(["High", f"Not {feat_str}", f"High Not {feat_str}"])
     beh[["BeliefConf", "BeliefPolicy", "BeliefPartition"]] = beh.apply(label_trial, axis=1)
+    beh[["NextBeliefConf", "NextBeliefPolicy", "NextBeliefPartition"]] = beh[["BeliefConf", "BeliefPolicy", "BeliefPartition"]].shift(-1)
+    beh = beh[~beh.NextBeliefConf.isna()]
     return beh
     
 

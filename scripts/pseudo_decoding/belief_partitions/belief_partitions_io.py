@@ -123,9 +123,10 @@ def read_cross_time_results(args, feats, avg=False):
         args.feat = feat
         file_name = get_cross_time_file_name(args)
         accs = np.load(os.path.join(dir, f"{file_name}_accs.npy"))
-        ti = args.trial_interval
+        model_ti = get_trial_interval(args.model_trial_event) if args.model_trial_event else get_trial_interval(args.trial_event)
+        ti =  get_trial_interval(args.trial_event)
         for (train_time_idx, test_time_idx, run_idx), acc in np.ndenumerate(accs):
-            train_time =  (train_time_idx * ti.interval_size + ti.interval_size - ti.pre_interval) / 1000
+            train_time =  (train_time_idx * model_ti.interval_size + model_ti.interval_size - model_ti.pre_interval) / 1000
             test_time =  (test_time_idx * ti.interval_size + ti.interval_size - ti.pre_interval) / 1000
             df.append({"TrainTime": train_time, "TestTime": test_time, "RunIdx": run_idx, "Feat": feat, "Accuracy": acc})
     df = pd.DataFrame(df)
