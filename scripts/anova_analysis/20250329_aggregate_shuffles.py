@@ -28,13 +28,19 @@ def compute_stats(unit_res, conditions):
 
 def process_feat(args):
     res = []
+    num_shuffles_read = 0
     for shuffle_idx in tqdm(range(args.num_shuffles)):
         args.shuffle_idx = shuffle_idx
         file_name = io_utils.get_anova_file_name(args)
         output_dir = io_utils.get_anova_output_dir(args)
-        df = pd.read_pickle(os.path.join(output_dir, f"{file_name}.pickle"))
-        df["shuffle_idx"] = shuffle_idx
-        res.append(df)
+        try:
+            df = pd.read_pickle(os.path.join(output_dir, f"{file_name}.pickle"))
+            df["shuffle_idx"] = shuffle_idx
+            res.append(df)
+            num_shuffles_read += 1
+        except:
+             continue
+    print(f"{num_shuffles_read} shuffles read for feat {args.feat}")
     res = pd.concat(res)
     # TODO: remove after combined_fracvar is added to anova script
     # combined_cond_str = "".join(args.conditions)

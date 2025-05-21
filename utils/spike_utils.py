@@ -330,7 +330,7 @@ def get_sig_units(args, units=None):
         feat_sig_units = sig_units[sig_units.feat == args.feat]
     else: 
         raise ValueError("args has neither feat or feat_pair")
-    if units: 
+    if units is not None: 
         return feat_sig_units[feat_sig_units.PseudoUnitID.isin(units)].PseudoUnitID.unique()
     else:
         return feat_sig_units.PseudoUnitID.unique()
