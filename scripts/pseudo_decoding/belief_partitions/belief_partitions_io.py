@@ -47,7 +47,8 @@ def get_dir_name(args, make_dir=True):
     region_str = "" if args.regions is None else f"{args.regions.replace(',', '_').replace(' ', '_')}"
     filt_str = "_".join([f"{k}_{v}"for k, v in args.beh_filters.items()])
     sig_units_str = f"{args.sig_unit_level}_units" if args.sig_unit_level else None
-    parts = [args.subject, args.trial_event, region_str, filt_str, sig_units_str]
+    splitter_str = f"kfold_{args.num_splits}" if args.splitter == "kfold" else None
+    parts = [args.subject, args.trial_event, region_str, filt_str, sig_units_str, splitter_str]
     run_name = "_".join(x for x in parts if x)
     if args.shuffle_idx is None: 
         dir = os.path.join(args.base_output_path, f"{run_name}")
@@ -94,6 +95,22 @@ def read_results(args, feats, num_shuffles=10):
         shuffle_res.append(load_df(args, feats, dir, shuffle=True))
     res = pd.concat(([res] + shuffle_res))
     return res  
+
+def read_units(args, feats):
+    args.trial_interval = get_trial_interval(args.trial_event)
+    dir = get_dir_name(args, make_dir=False)
+    res = []
+    for feat in feats:
+        args.feat = feat
+        file_name = get_file_name(args)
+        df = pd.read_csv(os.path.join(dir, f"{file_name}_unit_ids.csv"))
+        # fixing a bug here...
+        df = df.rename(columns={"PseudoUnitIDs": "PseudoUnitID"})
+        df = df.sort_values(by="PseudoUnitID")
+        df["pos"] = range(len(df))
+        df["feat"] = feat
+        res.append(df)
+    return pd.concat(res)
 
 def read_models(args, feats):
     """

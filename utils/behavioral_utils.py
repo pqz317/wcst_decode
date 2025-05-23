@@ -836,8 +836,6 @@ def get_belief_partitions(beh, feat, use_x=False, thresh=BELIEF_PARTITION_THRESH
     return beh
     
 
-
-
 def get_good_pairs_across_sessions(all_beh, block_thresh):
     """
     Find pairs of features, and associated sessions where

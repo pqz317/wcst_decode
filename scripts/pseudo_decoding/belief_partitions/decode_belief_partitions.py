@@ -17,7 +17,6 @@ import utils.session_data as session_data
 from models.trainer import Trainer
 from models.model_wrapper import ModelWrapper
 from models.multinomial_logistic_regressor import NormedDropoutMultinomialLogisticRegressor
-from trial_splitters.condition_trial_splitter import ConditionTrialSplitter 
 
 import argparse
 from scripts.pseudo_decoding.belief_partitions.belief_partition_configs import BeliefPartitionConfigs, add_defaults_to_parser
@@ -57,8 +56,7 @@ def load_session_data(row, args, splits_df=None):
         return None
     
     if splits_df is None: 
-        splitter = ConditionTrialSplitter(beh, "PartitionLabel", args.test_ratio, seed=args.train_test_seed)
-        sess_data = session_data.create_from_splitter(sess_name, beh, frs, splitter, args.num_splits)
+        sess_data = session_data.create_from_splitter(args, "PartitionLabel", sess_name, beh, frs)
     else: 
         sess_data = session_data.create_from_splits_df(sess_name, beh, frs, splits_df)
     return sess_data

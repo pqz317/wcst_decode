@@ -100,9 +100,11 @@ def generate_pseudo_population_v2(frs, split, num_train_samples=1000, num_test_s
         test_trials = row["TestTrials"]
         test_samples = rng.choice(test_trials, num_test_samples)
         res.append(pd.DataFrame({"TrialNumber": test_samples, "Type": "Test", "Condition": condition}))
+    
     df = pd.concat(res)
     df["PseudoTrialNumber"] = np.arange(len(df))
     pop = pd.merge(df, frs, on="TrialNumber")
+
     num_pseudo_trials =  (num_train_samples + num_test_samples) * len(split)
     # print(len(pop))
     # print(num_pseudo_trials)

@@ -390,3 +390,8 @@ def get_cross_cond_cosine_sim_of_weights(weights_a, weights_b, merge_on=["Time",
     merged["cosine_sim"] = merged.apply(lambda x: cosine_sim(x.weights_x, x.weights_y), axis=1)
     return merged
 
+def get_weights_dff(models):
+    """
+    For a binary classifier, 
+    """
+

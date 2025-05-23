@@ -16,6 +16,10 @@ from spike_tools import (
     general as spike_general,
 )
 import utils.spike_utils as spike_utils
+import scripts.pseudo_decoding.belief_partitions.belief_partitions_io as belief_partitions_io
+from constants.behavioral_constants import *
+from constants.decoding_constants import *
+import copy
 
 REGION_TO_COLOR = {
     "Amygdala": "#00ff00",
@@ -481,3 +485,164 @@ def visualize_cross_time(args, cross_res, decoder_res, ax, cbar=True, vmin=None,
     cross_res["Accuracy"] = cross_res.apply(lambda x: vmin if x.Accuracy < x.ShuffleAccuracy else x.Accuracy, axis=1)
     pivoted = cross_res.pivot(index="TrainTime", columns="TestTime", values="Accuracy")
     sns.heatmap(pivoted, ax=ax, vmin=vmin, vmax=vmax, cbar=cbar)
+
+
+
+def plot_combined_accs(args):
+    stim_args = copy.deepcopy(args)
+    stim_args.trial_event = "StimOnset"
+    stim_res = belief_partitions_io.read_results(stim_args, FEATURES)
+    print(stim_res.feat.unique())
+    # stim_res = stim_res[stim_res.feat != "GREEN"]
+
+    fb_args = copy.deepcopy(args)
+    fb_args.trial_event = "FeedbackOnsetLong"
+    fb_res = belief_partitions_io.read_results(fb_args, FEATURES)
+    # fb_res = fb_res[fb_res.feat != "GREEN"]
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5), sharey='row', width_ratios=[stim_res.Time.nunique(), fb_res.Time.nunique()])
+
+    visualize_preferred_beliefs(stim_args, stim_res, ax1, hue_col="mode")
+    ax1.set_xlabel(f"Time Relative to Stim Onset")
+
+    visualize_preferred_beliefs(fb_args, fb_res, ax2, hue_col="mode")
+    ax2.set_xlabel(f"Time Relative to Feedback Onset")
+
+    fig.tight_layout()
+
+def plot_combined_cross_accs(args):
+    args.trial_event = "StimOnset"
+    stim_res = belief_partitions_io.read_results(args, FEATURES)
+    cross_stim_res = belief_partitions_io.read_cross_time_results(args, FEATURES, avg=True)
+    args.model_trial_event = "FeedbackOnsetLong"
+    fb_model_cross_stim_res = belief_partitions_io.read_cross_time_results(args, FEATURES, avg=True)
+    args.model_trial_event = None
+
+
+    args.trial_event = "FeedbackOnsetLong"
+    fb_res = belief_partitions_io.read_results(args, FEATURES)
+    cross_fb_res = belief_partitions_io.read_cross_time_results(args, FEATURES, avg=True)
+    args.model_trial_event = "StimOnset"
+    stim_model_cross_fb_res = belief_partitions_io.read_cross_time_results(args, FEATURES, avg=True)
+    args.model_trial_event = None
+
+    fig, axs = plt.subplots(
+        2, 2, figsize=(11, 10),                            
+        width_ratios=[cross_stim_res.TestTime.nunique(), cross_fb_res.TestTime.nunique()],
+        height_ratios=[cross_stim_res.TestTime.nunique(), cross_fb_res.TestTime.nunique()],
+        sharex="col",
+        sharey="row",
+    )
+    all_res = pd.concat((cross_stim_res, stim_model_cross_fb_res, fb_model_cross_stim_res, cross_fb_res))
+    all_max = all_res.groupby(["TestTime", "TrainTime"]).Accuracy.mean().max()
+    print(all_max)
+
+    all_decoder_res = pd.concat((stim_res, fb_res))
+    shuffles = all_decoder_res[all_decoder_res["mode"] == f"{args.mode}_shuffle"]
+    shuffle_means = shuffles.groupby(["Time"]).Accuracy.mean().reset_index(name="ShuffleAccuracy")
+    all_min = shuffle_means.ShuffleAccuracy.min()
+
+    visualize_cross_time(args, cross_stim_res, stim_res, axs[0, 0], cbar=False, vmin=all_min, vmax=all_max)
+    visualize_cross_time(args, stim_model_cross_fb_res, fb_res, axs[0, 1], cbar=False, vmin=all_min, vmax=all_max)
+    visualize_cross_time(args, fb_model_cross_stim_res, stim_res, axs[1, 0], cbar=False, vmin=all_min, vmax=all_max)
+    visualize_cross_time(args, cross_fb_res, fb_res, axs[1, 1], cbar=False, vmin=all_min, vmax=all_max)
+
+    # Adjust subplots to make space for colorbar
+    fig.subplots_adjust(right=0.85)
+
+    # Create a single colorbar to the right of ax2
+    cbar_ax = fig.add_axes([0.87, 0.15, 0.03, 0.7])
+    cbar = fig.colorbar(axs[1, 1].collections[0], cax=cbar_ax, orientation='vertical')
+    cbar.set_label('Accuracy')
+    # fig.tight_layout()
+
+def read_conts(args, region_level="whole_pop", sig_region_thresh=20):
+    models = belief_partitions_io.read_models(args, FEATURES)
+    unit_ids = belief_partitions_io.read_units(args, FEATURES)
+    
+    models["weightsdiffabs"] = models.apply(lambda x: np.abs(x.models.coef_[0, :] - x.models.coef_[1, :]), axis=1)
+    def avg_and_label(x):
+        means = np.mean(np.vstack(x.weightsdiffabs.values), axis=0)
+        pos = np.arange(len(means))
+        return pd.DataFrame({"pos": pos, "contribution": means})
+    conts = models.groupby(["Time", "feat"]).apply(avg_and_label).reset_index()
+    conts = pd.merge(conts, unit_ids, on=["feat", "pos"])
+    mean_conts = conts.groupby(["PseudoUnitID", "Time"]).contribution.mean().reset_index(name="mean_cont")
+
+    # assign regions
+    units_pos = pd.read_pickle(UNITS_PATH.format(sub=args.subject))
+    mean_conts = pd.merge(mean_conts, units_pos, on="PseudoUnitID")
+    mean_conts["whole_pop"] = "all_regions"
+
+    num_units_by_region = mean_conts.groupby(region_level).PseudoUnitID.nunique().reset_index(name="num_units")
+    sig_regions = num_units_by_region[num_units_by_region.num_units > sig_region_thresh][region_level]
+    mean_conts = mean_conts[mean_conts[region_level].isin(sig_regions)]
+
+    mean_conts["trial_event"] = args.trial_event
+    return mean_conts
+
+def plot_weights(args, region_level="whole_pop", sig_region_thresh=20, unit_orders=None):
+    args.trial_event = "StimOnset"
+    stim_conts = read_conts(args, region_level, sig_region_thresh)
+    stim_conts["abs_time"] = stim_conts.Time
+
+    args.trial_event = "FeedbackOnsetLong"
+    fb_conts = read_conts(args, region_level, sig_region_thresh)
+    fb_conts["abs_time"] = fb_conts.Time + 2.8
+
+    all_conts = pd.concat((stim_conts, fb_conts)).reset_index()
+
+    unit_counts = stim_conts.groupby(region_level).PseudoUnitID.nunique().values
+    regions_to_idx = {r: i for i, r in enumerate(np.sort(stim_conts[region_level].unique()))}
+
+    fig, axs = plt.subplots(
+        len(unit_counts), 2, 
+        figsize=(15, 15), 
+        width_ratios=[stim_conts.Time.nunique(), fb_conts.Time.nunique()],
+        height_ratios=unit_counts, 
+        sharex="col",
+        sharey="row",
+        squeeze=False
+    )
+    vmin = all_conts.mean_cont.min()
+    vmax = all_conts.mean_cont.max()
+
+    used_unit_orders = {}
+    def plot_region(reg_conts):
+        # sort pivoted by peak times
+        def find_peak(group):
+            return group.loc[group.mean_cont.idxmax()].abs_time
+        
+        region = reg_conts.name
+        if unit_orders: 
+            order = unit_orders[region]
+        else: 
+            order = reg_conts.groupby("PseudoUnitID").apply(find_peak).reset_index(name="peak_time").sort_values(by="peak_time").PseudoUnitID
+        used_unit_orders[region] = order
+        for i, event in enumerate(["StimOnset", "FeedbackOnsetLong"]):
+            event_conts = reg_conts[reg_conts.trial_event == event]
+            # print(reg_conts.co)
+            pivoted = event_conts.pivot(index="PseudoUnitID", columns="Time", values="mean_cont")
+            # print(pivoted.index)
+            pivoted = pivoted.loc[order]
+            ax = axs[regions_to_idx[region], i]
+            sns.heatmap(pivoted, vmin=vmin, vmax=vmax, cbar=False, ax=ax, cmap="viridis")
+            ax.set_yticks([])
+            ax.set_yticklabels("")
+            ax.set_xlabel("")
+            ax.set_ylabel("")
+        axs[regions_to_idx[region], 0].set_title(region)
+        
+    all_conts.groupby(region_level).apply(plot_region)
+    axs[-1, 0].set_xlabel("Time to StimOnset (s)")
+    axs[-1, 1].set_xlabel("Time to FeedbackOnset (s)")
+    fig.tight_layout()
+    # Adjust subplots to make space for colorbar
+    fig.subplots_adjust(right=0.85)
+
+    # Create a single colorbar to the right of ax2
+    cbar_ax = fig.add_axes([0.87, 0.15, 0.03, 0.7])
+    cbar = fig.colorbar(axs[-1, -1].collections[0], cax=cbar_ax, orientation='vertical')
+    cbar.set_label('Contribution')
+    return used_unit_orders
+

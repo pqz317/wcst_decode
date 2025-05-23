@@ -5,6 +5,8 @@ from itertools import cycle
 
 from . import pseudo_utils
 from . import behavioral_utils
+from trial_splitters.condition_trial_splitter import ConditionTrialSplitter 
+from trial_splitters.condition_kfold_splitter import ConditionKFoldSplitter
 
 class SessionData: 
     """
@@ -66,9 +68,16 @@ class SessionData:
         return self.splits_df
     
 
-def create_from_splitter(sess_name, beh, frs, splitter, num_splits):
+def create_from_splitter(args, column_name, sess_name, beh, frs):
+    if args.splitter == "random":
+        splitter = ConditionTrialSplitter(beh, column_name, args.test_ratio, seed=args.train_test_seed)
+    elif args.splitter == "kfold":
+        splitter = ConditionKFoldSplitter(beh, column_name, args.num_splits, seed=args.train_test_seed)
+    else:
+        raise ValueError(f"Invalid splitter in args: {args.splitter}")
+
     splits = []
-    for split_idx in range(num_splits):
+    for split_idx in range(args.num_splits):
         split = next(splitter)
         split["split_idx"] = split_idx
         splits.append(split)
