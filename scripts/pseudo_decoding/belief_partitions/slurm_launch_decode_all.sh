@@ -10,7 +10,7 @@ submit_job_array () {
     local array_range=$1
     local job_name=$2
     local python_args=$3
-    sbatch --array="$array_range" <<EOT
+    sbatch --array="$array_range" <<EOT;
 #!/bin/bash
 #SBATCH --job-name=$job_name
 #SBATCH -p ckpt-all

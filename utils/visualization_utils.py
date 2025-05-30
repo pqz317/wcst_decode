@@ -17,6 +17,7 @@ from spike_tools import (
 )
 import utils.spike_utils as spike_utils
 import scripts.pseudo_decoding.belief_partitions.belief_partitions_io as belief_partitions_io
+from scripts.anova_analysis.run_anova import load_data
 from constants.behavioral_constants import *
 from constants.decoding_constants import *
 import copy
@@ -556,41 +557,26 @@ def plot_combined_cross_accs(args):
     cbar.set_label('Accuracy')
     # fig.tight_layout()
 
-def read_conts(args, region_level="whole_pop", sig_region_thresh=20):
-    models = belief_partitions_io.read_models(args, FEATURES)
-    unit_ids = belief_partitions_io.read_units(args, FEATURES)
-    
-    models["weightsdiffabs"] = models.apply(lambda x: np.abs(x.models.coef_[0, :] - x.models.coef_[1, :]), axis=1)
-    def avg_and_label(x):
-        means = np.mean(np.vstack(x.weightsdiffabs.values), axis=0)
-        pos = np.arange(len(means))
-        return pd.DataFrame({"pos": pos, "contribution": means})
-    conts = models.groupby(["Time", "feat"]).apply(avg_and_label).reset_index()
-    conts = pd.merge(conts, unit_ids, on=["feat", "pos"])
-    mean_conts = conts.groupby(["PseudoUnitID", "Time"]).contribution.mean().reset_index(name="mean_cont")
+def find_peaks(conts, region_level, value_col="mean_cont"):
+    def find_peak(group):
+        return group.loc[group[value_col].idxmax()].abs_time
+    return conts.groupby(["PseudoUnitID", region_level]).apply(find_peak).reset_index(name="peak_time")
 
-    # assign regions
-    units_pos = pd.read_pickle(UNITS_PATH.format(sub=args.subject))
-    mean_conts = pd.merge(mean_conts, units_pos, on="PseudoUnitID")
-    mean_conts["whole_pop"] = "all_regions"
-
-    num_units_by_region = mean_conts.groupby(region_level).PseudoUnitID.nunique().reset_index(name="num_units")
-    sig_regions = num_units_by_region[num_units_by_region.num_units > sig_region_thresh][region_level]
-    mean_conts = mean_conts[mean_conts[region_level].isin(sig_regions)]
-
-    mean_conts["trial_event"] = args.trial_event
-    return mean_conts
-
-def plot_weights(args, region_level="whole_pop", sig_region_thresh=20, unit_orders=None):
+def get_contributions_for_all_time(args, region_level, sig_region_thresh, run_idx, feat_agg_func="mean"):
     args.trial_event = "StimOnset"
-    stim_conts = read_conts(args, region_level, sig_region_thresh)
+    stim_conts = belief_partitions_io.read_contributions(args, region_level, sig_region_thresh, run_idx, feat_agg_func)
     stim_conts["abs_time"] = stim_conts.Time
 
     args.trial_event = "FeedbackOnsetLong"
-    fb_conts = read_conts(args, region_level, sig_region_thresh)
+    fb_conts = belief_partitions_io.read_contributions(args, region_level, sig_region_thresh, run_idx, feat_agg_func)
     fb_conts["abs_time"] = fb_conts.Time + 2.8
 
     all_conts = pd.concat((stim_conts, fb_conts)).reset_index()
+
+    return stim_conts, fb_conts, all_conts
+
+def plot_weights(args, region_level="whole_pop", sig_region_thresh=20, unit_orders=None, run_idx=None, feat_agg_func="mean"):
+    stim_conts, fb_conts, all_conts = get_contributions_for_all_time(args, region_level, sig_region_thresh, run_idx, feat_agg_func)
 
     unit_counts = stim_conts.groupby(region_level).PseudoUnitID.nunique().values
     regions_to_idx = {r: i for i, r in enumerate(np.sort(stim_conts[region_level].unique()))}
@@ -604,25 +590,25 @@ def plot_weights(args, region_level="whole_pop", sig_region_thresh=20, unit_orde
         sharey="row",
         squeeze=False
     )
-    vmin = all_conts.mean_cont.min()
-    vmax = all_conts.mean_cont.max()
 
+    value_col = f"{feat_agg_func}_cont"
+
+    vmin = all_conts[value_col].min()
+    vmax = all_conts[value_col].max()
+
+    peaks = find_peaks(all_conts, region_level, value_col)
     used_unit_orders = {}
-    def plot_region(reg_conts):
-        # sort pivoted by peak times
-        def find_peak(group):
-            return group.loc[group.mean_cont.idxmax()].abs_time
-        
+    def plot_region(reg_conts):        
         region = reg_conts.name
         if unit_orders: 
             order = unit_orders[region]
         else: 
-            order = reg_conts.groupby("PseudoUnitID").apply(find_peak).reset_index(name="peak_time").sort_values(by="peak_time").PseudoUnitID
+            order = peaks[peaks[region_level] == region].sort_values(by="peak_time").PseudoUnitID
         used_unit_orders[region] = order
         for i, event in enumerate(["StimOnset", "FeedbackOnsetLong"]):
             event_conts = reg_conts[reg_conts.trial_event == event]
             # print(reg_conts.co)
-            pivoted = event_conts.pivot(index="PseudoUnitID", columns="Time", values="mean_cont")
+            pivoted = event_conts.pivot(index="PseudoUnitID", columns="Time", values=value_col)
             # print(pivoted.index)
             pivoted = pivoted.loc[order]
             ax = axs[regions_to_idx[region], i]
@@ -646,3 +632,32 @@ def plot_weights(args, region_level="whole_pop", sig_region_thresh=20, unit_orde
     cbar.set_label('Contribution')
     return used_unit_orders
 
+def plot_belief_partition_psth(unit_id, feat, args):
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(13, 4), sharey=True)
+    args.feat = feat
+    session = int(unit_id / 100)
+    beh, frs = load_data(session, args, return_merged=False)
+    frs = frs[frs.PseudoUnitID == unit_id]
+
+    order = ["Low", "High"]
+    colors = ["tab:green", "tab:purple"]
+    sns.lineplot(pd.merge(frs, beh, on="TrialNumber"), x="Time", y="FiringRate", errorbar="se", hue="BeliefConf", hue_order=order, palette=colors, ax=ax1)
+    ax1.set_xlabel(f"Time to {args.trial_event} (s)")
+    ax1.set_title("Confidence")
+
+    sub_beh = beh[beh.BeliefPartition.isin([f"High {args.feat}", f"High Not {args.feat}"])]
+    order = [f"High Not {args.feat}", f"High {args.feat}"]
+    colors = ["tab:blue", "tab:red"]
+
+    sns.lineplot(pd.merge(frs, sub_beh, on="TrialNumber"), x="Time", y="FiringRate", errorbar="se", hue="BeliefPartition", hue_order=order, palette=colors, ax=ax2)
+    ax2.set_xlabel(f"Time to {args.trial_event} (s)")
+    ax2.set_title("Preference")
+
+    order = ["Low", f"High Not {args.feat}", f"High {args.feat}"]
+    colors = ["tab:green", "tab:blue", "tab:red"]
+
+    sns.lineplot(pd.merge(frs, beh, on="TrialNumber"), x="Time", y="FiringRate", errorbar="se", hue="BeliefPartition", hue_order=order, palette=colors, ax=ax3)
+    ax3.set_xlabel(f"Time to {args.trial_event} (s)")
+    ax3.set_title("Belief Partitions")
+    fig.tight_layout()
+    return fig, (ax1, ax2, ax3)

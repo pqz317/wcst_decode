@@ -25,10 +25,9 @@ def get_units_for_session(row, args):
 
 def generate_all_units(args):
     sessions = pd.read_pickle(args.sessions_path.format(sub=args.subject))
-    if args.subject == "SA": 
-        all_units = spike_utils.get_unit_positions(sessions, fr_path=None)
-    else: 
-        all_units = pd.concat(sessions.apply(lambda x: get_units_for_session(x, args), axis=1).values)
+    get_manual_regions = args.subject == "SA"  # only get manual regions for SA
+    all_units = spike_utils.get_unit_positions(sessions, args.subject, get_manual_regions, fr_path=None)
+
     print(f"{len(all_units)} units total")
     print(f"across {all_units.session.nunique()} sessions")
 

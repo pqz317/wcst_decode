@@ -218,3 +218,35 @@ def read_ccgp_models(args, pairs):
         res.append(get_ccgp_feat_model_for_pair(args, dir, pair[0], pair))
         res.append(get_ccgp_feat_model_for_pair(args, dir, pair[1], pair))
     return pd.concat(res)
+
+def read_contributions(args, region_level="whole_pop", sig_region_thresh=20, run_idx=None, feat_agg_func="mean"):
+    models = read_models(args, FEATURES)
+    unit_ids = read_units(args, FEATURES)
+    if run_idx is not None: 
+        models = models[models.run == run_idx]
+    models["weightsdiffabs"] = models.apply(lambda x: np.abs(x.models.coef_[0, :] - x.models.coef_[1, :]), axis=1)
+    def avg_and_label(x):
+        means = np.mean(np.vstack(x.weightsdiffabs.values), axis=0)
+        pos = np.arange(len(means))
+        return pd.DataFrame({"pos": pos, "contribution": means})
+    conts = models.groupby(["Time", "feat"]).apply(avg_and_label).reset_index()
+    conts = pd.merge(conts, unit_ids, on=["feat", "pos"])
+
+    col_name = f"{feat_agg_func}_cont"
+    if feat_agg_func == "mean":
+        grouped_conts = conts.groupby(["PseudoUnitID", "Time"]).contribution.mean().reset_index(name=col_name)
+    elif feat_agg_func == "max": 
+        grouped_conts = conts.groupby(["PseudoUnitID", "Time"]).contribution.max().reset_index(name=col_name)
+
+
+    # assign regions
+    units_pos = pd.read_pickle(UNITS_PATH.format(sub=args.subject))
+    grouped_conts = pd.merge(grouped_conts, units_pos, on="PseudoUnitID")
+    grouped_conts["whole_pop"] = "all_regions"
+
+    num_units_by_region = grouped_conts.groupby(region_level).PseudoUnitID.nunique().reset_index(name="num_units")
+    sig_regions = num_units_by_region[num_units_by_region.num_units > sig_region_thresh][region_level]
+    grouped_conts = grouped_conts[grouped_conts[region_level].isin(sig_regions)]
+
+    grouped_conts["trial_event"] = args.trial_event
+    return grouped_conts

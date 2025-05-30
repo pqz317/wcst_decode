@@ -171,8 +171,8 @@ def get_unit_fr_array(frs, column_name):
 
 DEFAULT_FR_PATH = "/data/patrick_res/firing_rates/SA/{session}_firing_rates_1300_FeedbackOnset_1500_100_bins_1_smooth.pickle"
 
-def get_unit_positions_per_sess(session, fr_path=DEFAULT_FR_PATH):
-    info_path = f"/data/rawdata/sub-SA/sess-{session}/session_info/sub-SA_sess-{session}_sessioninfomodified.json"
+def get_unit_positions_per_sess(session, subject="SA", fr_path=DEFAULT_FR_PATH):
+    info_path = f"/data/rawdata/sub-{subject}/sess-{session}/session_info/sub-{subject}_sess-{session}_sessioninfomodified.json"
 
     with open(info_path, 'r') as f:
         data = json.load(f)
@@ -192,7 +192,7 @@ def get_unit_positions_per_sess(session, fr_path=DEFAULT_FR_PATH):
     # ensure a position exists
     electrode_pos_not_nan = locs_df[~locs_df['x'].isna() & ~locs_df['y'].isna() & ~locs_df['z'].isna()]
     # grab unit to electrode mapping
-    units = spike_general.list_session_units(None, "SA", session, species_dir="/data")
+    units = spike_general.list_session_units(None, subject, session, species_dir="/data")
     unit_pos = pd.merge(units, electrode_pos_not_nan, left_on="Channel", right_on="electrode_id", how="left")
     unit_pos = unit_pos.astype({"UnitID": int})
     unit_pos["session"] = session
@@ -245,19 +245,21 @@ def get_manual_structure(positions):
     positions["manual_structure"] = positions.apply(lambda x: LEVEL_2_TO_MANUALS[x.structure_level2], axis=1)
     return positions
 
-def get_unit_positions(sessions, fr_path=DEFAULT_FR_PATH):
+def get_unit_positions(sessions, subject="SA", get_manual_regions=True, fr_path=DEFAULT_FR_PATH):
     """
     For each session, finds unit positions, concatenates
     """
     positions = pd.concat(sessions.apply(
-        lambda x: get_unit_positions_per_sess(x.session_name, fr_path), 
+        lambda x: get_unit_positions_per_sess(x.session_name, subject, fr_path), 
         axis=1
     ).values)
     # still want to plot the None units
     positions = positions.fillna("unknown")
-    positions = get_manual_structure(positions)
+    if get_manual_regions:
+        positions = get_manual_structure(positions)
+        positions["manual_structure_cleaned"] = positions.manual_structure.apply(lambda x: x.replace(" ", "_").replace("/", "_"))
+
     positions["drive"] = positions.Channel.apply(lambda x: "Anterior" if "a" in x else "Temporal")
-    positions["manual_structure_cleaned"] = positions.manual_structure.apply(lambda x: x.replace(" ", "_").replace("/", "_"))
     return positions
 
 def get_subpop_ratios_by_region(subpop, valid_sess):

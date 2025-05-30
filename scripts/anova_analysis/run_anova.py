@@ -27,10 +27,16 @@ def load_data(session, args, return_merged=True):
     beh = behavioral_utils.get_belief_partitions(beh, feat)
     beh["Choice"] = beh.apply(lambda x: "Chose" if x[FEATURE_TO_DIM[feat]] == feat else "Not Chose", axis=1)
     beh["FeatPreferred"] = beh["PreferredBelief"].apply(lambda x: "Preferred" if x == feat else "Not Preferred")
-
-
     beh = behavioral_utils.filter_behavior(beh, args.beh_filters)
     frs = io_utils.get_frs_from_args(args, session)
+
+    if args.split_idx is not None: 
+        print("loading splits, choosing subset of trials")
+        splits = pd.read_pickle(io_utils.get_anova_split_path(args))
+        row = splits[(splits.sessions == session) & (splits.feat == feat)].iloc[0]
+        trials = row[f"split_{args.split_idx}"]
+        beh = beh[beh.TrialNumber.isin(trials)]
+        frs = frs[frs.TrialNumber.isin(trials)]
 
     if len(beh) == 0 or len(frs) == 0:
         raise ValueError("no data loaded")

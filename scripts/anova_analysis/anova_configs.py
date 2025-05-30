@@ -17,6 +17,8 @@ class AnovaConfigs(NamedTuple):
     shuffle_method: str = "circular_shift"
     shuffle_idx: int = None
 
+    split_idx: int = None
+
     # file storage, naming
     run_name: str = None
     base_output_path: str = "/data/patrick_res/anova"

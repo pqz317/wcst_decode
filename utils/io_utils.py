@@ -217,6 +217,10 @@ def get_selected_features_output_dir(args, make_dir=True):
         os.makedirs(dir, exist_ok=True)
     return dir
 
+def get_anova_split_path(args):
+    filt_str = "_".join([f"{k}_{v}"for k, v in args.beh_filters.items()])
+    return f"/data/patrick_res/sessions/{args.subject}/belief_partition_splits_{filt_str}.pickle"
+
 def get_anova_file_name(args):
     shuffle_str = "" if args.shuffle_idx is None else f"_shuffle_{args.shuffle_idx}"
     return f"{args.feat}_{shuffle_str}"
@@ -226,8 +230,8 @@ def get_anova_output_dir(args, make_dir=True):
     time_range_str = f"{args.time_range[0]}_to_{args.time_range[1]}" if args.time_range else None
     filt_str = "_".join([f"{k}_{v}"for k, v in args.beh_filters.items()])
     window_str = f"window_{args.window_size}" if args.window_size else None
-
-    components = [args.subject, args.trial_event, condition_str, time_range_str, filt_str, window_str]
+    split_str = f"split_{args.split_idx}" if args.split_idx is not None else None
+    components = [args.subject, args.trial_event, condition_str, time_range_str, filt_str, window_str, split_str]
     run_name = "_".join(s for s in components if s)
     if args.shuffle_idx is None: 
         dir = os.path.join(args.base_output_path, f"{run_name}")
@@ -503,7 +507,6 @@ def read_selected_features_cross_time(args, feats, cond, avg=False):
 def read_anova_good_units(args, percentile_str="95th", cond="combined_fracvar", return_pos=True):
     args.trial_interval = get_trial_interval(args.trial_event)
     output_dir = get_anova_output_dir(args, make_dir=False)
-    print(output_dir)
     good_res = []
     for feat in FEATURES:
         res = pd.read_pickle(os.path.join(output_dir, f"{feat}_.pickle"))
@@ -511,7 +514,7 @@ def read_anova_good_units(args, percentile_str="95th", cond="combined_fracvar", 
         if args.window_size is None: 
             res = pd.merge(res, shuffle_stats, on="PseudoUnitID")
         else: 
-            res = pd.merge(res, shuffle_stats, on=["PseudoUnitID", "WindowStartMilli"])
+            res = pd.merge(res, shuffle_stats, on=["PseudoUnitID", "WindowStartMilli"], how="outer")
         # HACK: this is for backwards compatability, previously only interested in one col
         # named "combined" at a time. 
         if cond != "combined_fracvar":
