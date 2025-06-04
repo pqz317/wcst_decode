@@ -394,3 +394,24 @@ def get_frs_from_args(args, sess_name):
         start, end = [(x + args.trial_interval.pre_interval) / 1000 for x in args.time_range]
         frs = frs[(frs.TimeBins >= start) & (frs.TimeBins < end)]
     return frs
+
+def find_peaks(df, value_col, region_level="whole_pop", time_col="Time"):
+    """
+    Given a df with PseudoUnitID, some value column, and some time column
+    Finds peak times, the time which each unit has the highest value
+    Returns a df with PseudoUnitID, peak_times, and a sorted list of PseudoUnitIDs
+    """
+    region_peaks = {}
+    region_orders = {}
+    def find_peak(group):
+        row_idx = group[value_col].idxmax()
+        return group.loc[row_idx][time_col]
+    
+    def process_per_region(region_df):
+        peaks = region_df.groupby("PseudoUnitID").apply(find_peak).reset_index(name="peak_time")
+        orders = peaks.sort_values(by="peak_time").PseudoUnitID
+        region_peaks[region_df.name] = peaks
+        region_orders[region_df.name] = orders
+
+    df.groupby(region_level).apply(process_per_region)
+    return region_peaks, region_orders

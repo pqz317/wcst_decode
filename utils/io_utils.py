@@ -504,17 +504,18 @@ def read_selected_features_cross_time(args, feats, cond, avg=False):
         return df
     
 
-def read_anova_good_units(args, percentile_str="95th", cond="combined_fracvar", return_pos=True):
+def read_anova_good_units(args, percentile_str="95th", cond="combined_fracvar", return_pos=True, read_shuffle=True):
     args.trial_interval = get_trial_interval(args.trial_event)
     output_dir = get_anova_output_dir(args, make_dir=False)
     good_res = []
     for feat in FEATURES:
         res = pd.read_pickle(os.path.join(output_dir, f"{feat}_.pickle"))
-        shuffle_stats = pd.read_pickle(os.path.join(output_dir, f"{feat}_shuffle_stats.pickle"))
-        if args.window_size is None: 
-            res = pd.merge(res, shuffle_stats, on="PseudoUnitID")
-        else: 
-            res = pd.merge(res, shuffle_stats, on=["PseudoUnitID", "WindowStartMilli"], how="outer")
+        if read_shuffle:
+            shuffle_stats = pd.read_pickle(os.path.join(output_dir, f"{feat}_shuffle_stats.pickle"))
+            if args.window_size is None: 
+                res = pd.merge(res, shuffle_stats, on="PseudoUnitID")
+            else: 
+                res = pd.merge(res, shuffle_stats, on=["PseudoUnitID", "WindowStartMilli"], how="outer")
         # HACK: this is for backwards compatability, previously only interested in one col
         # named "combined" at a time. 
         if cond != "combined_fracvar":
@@ -531,7 +532,23 @@ def read_anova_good_units(args, percentile_str="95th", cond="combined_fracvar", 
     if return_pos:
         unit_pos = pd.read_pickle(UNITS_PATH.format(sub=args.subject))
         good_res = pd.merge(good_res, unit_pos[["PseudoUnitID", "drive", "structure_level2"]])
+        good_res["whole_pop"] = "all_regions"
+    good_res["trial_event"] = args.trial_event
     return good_res
+
+
+def read_anova_res_all_time(args, percentile_str="95th", cond="combined_fracvar", return_pos=True, read_shuffle=True):
+    args.trial_event = "StimOnset"
+    stim_res = read_anova_good_units(args, percentile_str, cond, return_pos, read_shuffle)
+    stim_res["abs_time"] = stim_res.WindowEndMilli
+
+    args.trial_event = "FeedbackOnsetLong"
+    fb_res = read_anova_good_units(args, percentile_str, cond, return_pos, read_shuffle)
+    fb_res["abs_time"] = fb_res.WindowEndMilli + 2400
+
+    all_res = pd.concat((stim_res, fb_res)).reset_index()
+
+    return stim_res, fb_res, all_res
 
 
 def get_frs_from_args(args, sess_name):

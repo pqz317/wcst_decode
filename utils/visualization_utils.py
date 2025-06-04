@@ -392,6 +392,15 @@ def plot_and_calc_correlation(var_a, var_b, ax):
     ax.plot(var_a, var_a * slope + intercept)
     return slope, intercept, r_value, p_value, std_err
 
+def sns_plot_correlation(df, x_col, y_col, ax):
+    """
+    Same as above just taking a df and using seaborn scatter 
+    """
+    slope, intercept, r_value, p_value, std_err = stats.linregress(df[x_col], df[y_col])
+    sns.scatterplot(df, x=x_col, y=y_col, alpha=0.3, color="black", ax=ax)
+    ax.plot(df[x_col], df[x_col] * slope + intercept)
+    return slope, intercept, r_value, p_value, std_err
+
 def plot_accs_seaborn(datas, labels, pre_interval, interval_size, ax):
     dfs = []
     for i, data in enumerate(datas): 
@@ -557,60 +566,38 @@ def plot_combined_cross_accs(args):
     cbar.set_label('Accuracy')
     # fig.tight_layout()
 
-def find_peaks(conts, region_level, value_col="mean_cont"):
-    def find_peak(group):
-        return group.loc[group[value_col].idxmax()].abs_time
-    return conts.groupby(["PseudoUnitID", region_level]).apply(find_peak).reset_index(name="peak_time")
 
-def get_contributions_for_all_time(args, region_level, sig_region_thresh, run_idx, feat_agg_func="mean"):
-    args.trial_event = "StimOnset"
-    stim_conts = belief_partitions_io.read_contributions(args, region_level, sig_region_thresh, run_idx, feat_agg_func)
-    stim_conts["abs_time"] = stim_conts.Time
+def plot_pop_heatmap_by_time(stim_data, fb_data, all_data, value_col, time_col="Time", region_level="whole_pop", orders=None):
+    """
+    """
 
-    args.trial_event = "FeedbackOnsetLong"
-    fb_conts = belief_partitions_io.read_contributions(args, region_level, sig_region_thresh, run_idx, feat_agg_func)
-    fb_conts["abs_time"] = fb_conts.Time + 2.8
-
-    all_conts = pd.concat((stim_conts, fb_conts)).reset_index()
-
-    return stim_conts, fb_conts, all_conts
-
-def plot_weights(args, region_level="whole_pop", sig_region_thresh=20, unit_orders=None, run_idx=None, feat_agg_func="mean"):
-    stim_conts, fb_conts, all_conts = get_contributions_for_all_time(args, region_level, sig_region_thresh, run_idx, feat_agg_func)
-
-    unit_counts = stim_conts.groupby(region_level).PseudoUnitID.nunique().values
-    regions_to_idx = {r: i for i, r in enumerate(np.sort(stim_conts[region_level].unique()))}
+    unit_counts = all_data.groupby(region_level).PseudoUnitID.nunique().values
+    regions_to_idx = {r: i for i, r in enumerate(np.sort(all_data[region_level].unique()))}
 
     fig, axs = plt.subplots(
         len(unit_counts), 2, 
         figsize=(15, 15), 
-        width_ratios=[stim_conts.Time.nunique(), fb_conts.Time.nunique()],
+        width_ratios=[stim_data[time_col].nunique(), fb_data[time_col].nunique()],
         height_ratios=unit_counts, 
         sharex="col",
         sharey="row",
         squeeze=False
     )
 
-    value_col = f"{feat_agg_func}_cont"
+    vmin = all_data[value_col].min()
+    vmax = all_data[value_col].max()
 
-    vmin = all_conts[value_col].min()
-    vmax = all_conts[value_col].max()
-
-    peaks = find_peaks(all_conts, region_level, value_col)
-    used_unit_orders = {}
     def plot_region(reg_conts):        
         region = reg_conts.name
-        if unit_orders: 
-            order = unit_orders[region]
-        else: 
-            order = peaks[peaks[region_level] == region].sort_values(by="peak_time").PseudoUnitID
-        used_unit_orders[region] = order
+
         for i, event in enumerate(["StimOnset", "FeedbackOnsetLong"]):
             event_conts = reg_conts[reg_conts.trial_event == event]
             # print(reg_conts.co)
-            pivoted = event_conts.pivot(index="PseudoUnitID", columns="Time", values=value_col)
+            pivoted = event_conts.pivot(index="PseudoUnitID", columns=time_col, values=value_col)
             # print(pivoted.index)
-            pivoted = pivoted.loc[order]
+            if orders: 
+                order = orders[region]
+                pivoted = pivoted.loc[order]
             ax = axs[regions_to_idx[region], i]
             sns.heatmap(pivoted, vmin=vmin, vmax=vmax, cbar=False, ax=ax, cmap="viridis")
             ax.set_yticks([])
@@ -619,18 +606,18 @@ def plot_weights(args, region_level="whole_pop", sig_region_thresh=20, unit_orde
             ax.set_ylabel("")
         axs[regions_to_idx[region], 0].set_title(region)
         
-    all_conts.groupby(region_level).apply(plot_region)
+    all_data.groupby(region_level).apply(plot_region)
     axs[-1, 0].set_xlabel("Time to StimOnset (s)")
     axs[-1, 1].set_xlabel("Time to FeedbackOnset (s)")
     fig.tight_layout()
     # Adjust subplots to make space for colorbar
     fig.subplots_adjust(right=0.85)
 
-    # Create a single colorbar to the right of ax2
+    # # Create a single colorbar to the right of ax2
     cbar_ax = fig.add_axes([0.87, 0.15, 0.03, 0.7])
     cbar = fig.colorbar(axs[-1, -1].collections[0], cax=cbar_ax, orientation='vertical')
     cbar.set_label('Contribution')
-    return used_unit_orders
+    return fig, axs
 
 def plot_belief_partition_psth(unit_id, feat, args):
     fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(13, 4), sharey=True)
