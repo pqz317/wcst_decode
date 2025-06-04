@@ -86,6 +86,7 @@ def load_session_datas_for_sub(args, splits_df=None):
     valid_sess = pd.read_pickle(SESSIONS_PATH.format(sub=args.subject))
     row = feat_sessions[feat_sessions.feat == args.feat].iloc[0]
     sessions = valid_sess[valid_sess.session_name.isin(row.sessions)]
+    args.sessions = sessions
     print(f"reading data from {len(sessions)} sessions for {args.subject}")
     sess_datas = sessions.apply(lambda row: load_session_data(
         row, args, splits_df
