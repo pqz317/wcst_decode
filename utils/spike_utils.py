@@ -255,6 +255,11 @@ def get_unit_positions(sessions, subject="SA", get_manual_regions=True, fr_path=
     ).values)
     # still want to plot the None units
     positions = positions.fillna("unknown")
+    # clean structure_level2 to not inlcude spaces or parentheses:
+    positions["structure_level2_cleaned"] = (positions["structure_level2"]
+        .str.replace(r'[()]', '', regex=True)
+        .str.replace(' ', '_')
+    )
     if get_manual_regions:
         positions = get_manual_structure(positions)
         positions["manual_structure_cleaned"] = positions.manual_structure.apply(lambda x: x.replace(" ", "_").replace("/", "_"))

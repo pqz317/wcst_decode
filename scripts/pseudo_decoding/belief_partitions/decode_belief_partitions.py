@@ -21,6 +21,7 @@ from models.multinomial_logistic_regressor import NormedDropoutMultinomialLogist
 import argparse
 from scripts.pseudo_decoding.belief_partitions.belief_partition_configs import BeliefPartitionConfigs, add_defaults_to_parser
 import scripts.pseudo_decoding.belief_partitions.belief_partitions_io as belief_partitions_io
+import copy
 
 FEATS_PATH = "/data/patrick_res/sessions/{sub}/feats_at_least_3blocks.pickle"
 SESSIONS_PATH = "/data/patrick_res/sessions/{sub}/valid_sessions.pickle"
@@ -80,12 +81,31 @@ def train_decoder(sess_datas, args):
     )
     return test_accs, models
 
-def load_session_datas(args):
-    sess_datas = args.sessions.apply(lambda row: load_session_data(
-        row, args
+def load_session_datas_for_sub(args, splits_df=None):
+    feat_sessions = pd.read_pickle(FEATS_PATH.format(sub=args.subject))
+    valid_sess = pd.read_pickle(SESSIONS_PATH.format(sub=args.subject))
+    row = feat_sessions[feat_sessions.feat == args.feat].iloc[0]
+    sessions = valid_sess[valid_sess.session_name.isin(row.sessions)]
+    print(f"reading data from {len(sessions)} sessions for {args.subject}")
+    sess_datas = sessions.apply(lambda row: load_session_data(
+        row, args, splits_df
     ), axis=1)
     sess_datas = sess_datas.dropna()
     return sess_datas
+
+def load_session_datas(args, splits_df=None):
+    if args.subject == "both":
+        sa_args = copy.deepcopy(args)
+        sa_args.subject = "SA"
+        sa_sessions = load_session_datas_for_sub(sa_args, splits_df)
+
+        bl_args = copy.deepcopy(args)
+        bl_args.subject = "BL"
+        bl_sessions = load_session_datas_for_sub(bl_args, splits_df)
+
+        return pd.concat((sa_sessions, bl_sessions))
+    else: 
+        return load_session_datas_for_sub(args, splits_df)
 
 
 def decode(args):
@@ -114,15 +134,10 @@ def process_args(args):
     Determines features, sessions, trial intervals, to use for decoding,
     Adds them to args
     """
-    feat_sessions = pd.read_pickle(FEATS_PATH.format(sub=args.subject))
-    valid_sess = pd.read_pickle(SESSIONS_PATH.format(sub=args.subject))
     args.feat = FEATURES[args.feat_idx]
-    row = feat_sessions[feat_sessions.feat == args.feat].iloc[0]
-    args.sessions = valid_sess[valid_sess.session_name.isin(row.sessions)]
     args.trial_interval = get_trial_interval(args.trial_event)
-
     print(args.beh_filters)
-    print(f"Decoding partitions for feat {args.feat} using {len(args.sessions)} sessions, mode {args.mode}", flush=True)
+    print(f"Decoding partitions for feat {args.feat} sessions, mode {args.mode}", flush=True)
     print(f"Using {args.fr_type} as inputs", flush=True)
     print(f"With filters {args.beh_filters}", flush=True)
     if args.sig_unit_level:

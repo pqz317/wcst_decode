@@ -8,7 +8,7 @@ from constants.decoding_constants import *
 import argparse
 from belief_partition_configs import add_defaults_to_parser, BeliefPartitionConfigs
 
-from decode_belief_partitions import load_session_data, process_args, FEATS_PATH, SESSIONS_PATH
+from decode_belief_partitions import load_session_datas, process_args, FEATS_PATH, SESSIONS_PATH
 import scripts.pseudo_decoding.belief_partitions.belief_partitions_io as belief_partitions_io
 import copy
 import pandas as pd
@@ -28,11 +28,7 @@ def cross_time_decode(args):
 
     # load up session data to train network
     trial_interval = args.trial_interval
-    sessions = args.sessions
-    sess_datas = sessions.apply(lambda row: load_session_data(
-        row, args, splits_df
-    ), axis=1)
-    sess_datas = sess_datas.dropna()
+    sess_datas = load_session_datas(args, splits_df)
 
     # calculate time bins (in seconds)
     time_bins = np.arange(0, (trial_interval.post_interval + trial_interval.pre_interval) / 1000, trial_interval.interval_size / 1000)
