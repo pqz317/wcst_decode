@@ -82,30 +82,46 @@ def train_decoder(sess_datas, args):
     return test_accs, models
 
 def load_session_datas_for_sub(args, splits_df=None):
-    feat_sessions = pd.read_pickle(FEATS_PATH.format(sub=args.subject))
-    valid_sess = pd.read_pickle(SESSIONS_PATH.format(sub=args.subject))
-    row = feat_sessions[feat_sessions.feat == args.feat].iloc[0]
-    sessions = valid_sess[valid_sess.session_name.isin(row.sessions)]
-    args.sessions = sessions
-    print(f"reading data from {len(sessions)} sessions for {args.subject}")
-    sess_datas = sessions.apply(lambda row: load_session_data(
+    print(f"reading data from {len(args.sub_sessions)} sessions for {args.subject}")
+    sess_datas = args.sub_sessions.apply(lambda row: load_session_data(
         row, args, splits_df
     ), axis=1)
     sess_datas = sess_datas.dropna()
     return sess_datas
 
+def find_valid_sessions_for_feat_sub(args):
+    feat_sessions = pd.read_pickle(FEATS_PATH.format(sub=args.subject))
+    valid_sess = pd.read_pickle(SESSIONS_PATH.format(sub=args.subject))
+    row = feat_sessions[feat_sessions.feat == args.feat].iloc[0]
+    sessions = valid_sess[valid_sess.session_name.isin(row.sessions)]
+    return sessions
+
 def load_session_datas(args, splits_df=None):
     if args.subject == "both":
         sa_args = copy.deepcopy(args)
         sa_args.subject = "SA"
-        sa_sessions = load_session_datas_for_sub(sa_args, splits_df)
-
+    
         bl_args = copy.deepcopy(args)
         bl_args.subject = "BL"
-        bl_sessions = load_session_datas_for_sub(bl_args, splits_df)
 
-        return pd.concat((sa_sessions, bl_sessions))
+        sa_sessions = find_valid_sessions_for_feat_sub(sa_args)
+        bl_sessions = find_valid_sessions_for_feat_sub(bl_args)
+
+        all_sessions = pd.concat((sa_sessions, bl_sessions))
+
+        sa_args.sub_sessions = sa_sessions
+        sa_args.all_sessions = all_sessions
+        sa_datas = load_session_datas_for_sub(sa_args, splits_df)
+
+        bl_args.sub_sessions = bl_sessions
+        bl_args.all_sessions = all_sessions
+        bl_datas = load_session_datas_for_sub(bl_args, splits_df)
+
+        return pd.concat((sa_datas, bl_datas))
     else: 
+        sessions = find_valid_sessions_for_feat_sub(args)
+        args.sub_sessions = sessions
+        args.all_sessions = sessions
         return load_session_datas_for_sub(args, splits_df)
 
 

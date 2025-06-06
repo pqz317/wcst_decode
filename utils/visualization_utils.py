@@ -12,6 +12,7 @@ from itertools import accumulate
 import matplotlib.patches as patches
 from scipy import stats
 import utils.behavioral_utils as behavioral_utils
+import utils.classifier_utils as classifier_utils
 from spike_tools import (
     general as spike_general,
 )
@@ -502,7 +503,6 @@ def plot_combined_accs(args):
     stim_args = copy.deepcopy(args)
     stim_args.trial_event = "StimOnset"
     stim_res = belief_partitions_io.read_results(stim_args, FEATURES)
-    print(stim_res.feat.unique())
     # stim_res = stim_res[stim_res.feat != "GREEN"]
 
     fb_args = copy.deepcopy(args)
@@ -519,6 +519,37 @@ def plot_combined_accs(args):
     ax2.set_xlabel(f"Time Relative to Feedback Onset")
 
     fig.tight_layout()
+
+def plot_combined_accs_by_regions(args, regions, region_level="structure_level2_cleaned"):
+    all_stim_res = []
+    all_fb_res = []
+    args.region_level = region_level
+    for region in regions:
+        print(region)
+        args.regions = region
+        stim_args = copy.deepcopy(args)
+        stim_args.trial_event = "StimOnset"
+        stim_res = belief_partitions_io.read_results(stim_args, FEATURES, num_shuffles=0)
+        stim_res["region"] = region
+        all_stim_res.append(stim_res)
+
+        fb_args = copy.deepcopy(args)
+        fb_args.trial_event = "FeedbackOnsetLong"
+        fb_res = belief_partitions_io.read_results(fb_args, FEATURES, num_shuffles=0)
+        fb_res["region"] = region
+        all_fb_res.append(fb_res)
+    all_stim_res = pd.concat(all_stim_res)
+    all_fb_res = pd.concat(all_fb_res)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5), sharey='row', width_ratios=[all_stim_res.Time.nunique(), all_fb_res.Time.nunique()])
+
+    visualize_preferred_beliefs(stim_args, all_stim_res, ax1, hue_col="region")
+    ax1.set_xlabel(f"Time Relative to Stim Onset")
+
+    visualize_preferred_beliefs(fb_args, all_fb_res, ax2, hue_col="region")
+    ax2.set_xlabel(f"Time Relative to Feedback Onset")
+
+    fig.tight_layout()
+
 
 def plot_combined_cross_accs(args):
     args.trial_event = "StimOnset"
@@ -648,3 +679,19 @@ def plot_belief_partition_psth(unit_id, feat, args):
     ax3.set_title("Belief Partitions")
     fig.tight_layout()
     return fig, (ax1, ax2, ax3)
+
+def plot_cosine_sim_between_conf_pref(args):
+    fig, axs = plt.subplots(1, 2, figsize=(15, 5), sharey='row', width_ratios=[20, 33])
+    for i, event in enumerate(["StimOnset", "FeedbackOnsetLong"]):
+        args = copy.deepcopy(args)
+        args.trial_event = event
+        both_models = []
+        for mode in ["pref", "conf"]:
+            args.mode = mode
+            models = belief_partitions_io.read_models(args, FEATURES)
+            models["weights"] = models.apply(lambda x: x.models.coef_[0, :] - x.models.coef_[1, :], axis=1)
+            both_models.append(models)
+        sim_res = classifier_utils.get_cross_cond_cosine_sim_of_weights(both_models[0], both_models[1])
+        sns.lineplot(sim_res, x="Time", y="cosine_sim", linewidth=3, color="black", ax=axs[i])
+        axs[i].set_xlabel(f"Time to {event}")
+    fig.tight_layout()

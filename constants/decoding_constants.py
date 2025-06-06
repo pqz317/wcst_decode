@@ -26,7 +26,7 @@ UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/all_units.pickle"
 
 # TODO: make this backwards compatible
 SIG_UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/{event}_{level}_units.pickle"
-
+BOTH_SIG_UNITS_PATH = "/data/patrick_res/firing_rates/{level}_units.pickle"
 
 class TrialInterval(NamedTuple):
     event: str

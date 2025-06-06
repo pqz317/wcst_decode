@@ -895,16 +895,25 @@ def filter_behavior(beh, filters):
         beh = beh[beh[col] == val]
     return beh
 
+def get_sub_for_session(session):
+    """
+    Hacky way to get the subject from only a session
+    Works because all fo BL sessions recorded during 2019
+    """
+    return "SA" if int(session) < 20190101 else "BL"
+
 
 def shuffle_beh_by_session_permute(beh, session, args):
     """
     Shuffles behavior by permuting sessions
     """
-    other_sessions = [s for s in args.sessions.session_name if s != session]
+    other_sessions = [s for s in args.all_sessions.session_name if s != session]
+    print(f"Session permutation shuffle set, randomly choosing from {len(other_sessions)} other sessions")
     seed = int(session) * 100 + args.shuffle_idx
     rng = np.random.default_rng(seed)
     other_session = rng.choice(other_sessions)
-    other_beh = get_valid_belief_beh_for_sub_sess(args.subject, other_session)    
+    other_sub = get_sub_for_session(other_session)
+    other_beh = get_valid_belief_beh_for_sub_sess(other_sub, other_session)    
     min_trials = np.min((len(beh), len(other_beh)))
     other_beh = other_beh[:min_trials]
     other_beh["TrialNumber"] = sorted(beh[:min_trials].TrialNumber.unique())

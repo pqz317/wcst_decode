@@ -238,9 +238,13 @@ def read_contributions(args, region_level="whole_pop", sig_region_thresh=20, run
     elif feat_agg_func == "max": 
         grouped_conts = conts.groupby(["PseudoUnitID", "Time"]).contribution.max().reset_index(name=col_name)
 
-
     # assign regions
-    units_pos = pd.read_pickle(UNITS_PATH.format(sub=args.subject))
+    if args.subject == "both":
+        sa_pos = pd.read_pickle(UNITS_PATH.format(sub="SA"))
+        bl_pos = pd.read_pickle(UNITS_PATH.format(sub="BL"))
+        units_pos = pd.concat((sa_pos, bl_pos))
+    else:
+        units_pos = pd.read_pickle(UNITS_PATH.format(sub=args.subject))
     grouped_conts = pd.merge(grouped_conts, units_pos, on="PseudoUnitID")
     grouped_conts["whole_pop"] = "all_regions"
 
