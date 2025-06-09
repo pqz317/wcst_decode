@@ -34,8 +34,14 @@ def load_anova_res_for_event(args):
         pref_res = io_utils.read_anova_good_units(args, args.sig_thresh, "BeliefPref", return_pos=True)
         conf_res = io_utils.read_anova_good_units(args, args.sig_thresh, "BeliefConf", return_pos=True)
         return pd.concat([pref_res, conf_res])
+    elif args.sig_type == "pref":
+        return io_utils.read_anova_good_units(args, args.sig_thresh, "BeliefPref", return_pos=True)
+    elif args.sig_type == "conf":
+        return io_utils.read_anova_good_units(args, args.sig_thresh, "BeliefConf", return_pos=True)
     elif args.sig_type == "belief_partition":
         return io_utils.read_anova_good_units(args, args.sig_thresh, "BeliefPartition", return_pos=True)
+    else:
+        raise ValueError(f"unknown sig type {args.sig_type}")
 
 
 def find_sig_units_for_sub(args):

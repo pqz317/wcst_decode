@@ -544,9 +544,10 @@ def plot_combined_accs_by_regions(args, regions, region_level="structure_level2_
 
     visualize_preferred_beliefs(stim_args, all_stim_res, ax1, hue_col="region")
     ax1.set_xlabel(f"Time Relative to Stim Onset")
-
+    ax1.set_title(f"{args.mode}")
     visualize_preferred_beliefs(fb_args, all_fb_res, ax2, hue_col="region")
     ax2.set_xlabel(f"Time Relative to Feedback Onset")
+    ax2.set_title("")
 
     fig.tight_layout()
 
@@ -680,7 +681,11 @@ def plot_belief_partition_psth(unit_id, feat, args):
     fig.tight_layout()
     return fig, (ax1, ax2, ax3)
 
-def plot_cosine_sim_between_conf_pref(args):
+
+def plot_cosine_sim_between_conf_pref(args, include_shuffle=True):
+    """
+    Plots the distribution of cosine similarie
+    """
     fig, axs = plt.subplots(1, 2, figsize=(15, 5), sharey='row', width_ratios=[20, 33])
     for i, event in enumerate(["StimOnset", "FeedbackOnsetLong"]):
         args = copy.deepcopy(args)
@@ -694,4 +699,10 @@ def plot_cosine_sim_between_conf_pref(args):
         sim_res = classifier_utils.get_cross_cond_cosine_sim_of_weights(both_models[0], both_models[1])
         sns.lineplot(sim_res, x="Time", y="cosine_sim", linewidth=3, color="black", ax=axs[i])
         axs[i].set_xlabel(f"Time to {event}")
+    if include_shuffle:
+        bounds = classifier_utils.get_shuffled_cosine_sim_of_weights(both_models[0])
+        for event_idx in range(2):
+            axs[event_idx].axhspan(bounds[0], bounds[1], alpha=0.3, color='gray')
+
+
     fig.tight_layout()

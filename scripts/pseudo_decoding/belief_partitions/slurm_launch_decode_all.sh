@@ -1,4 +1,17 @@
 #!/bin/bash
+
+# Default values
+partition="ckpt-all"
+
+while getopts "p:" opt; do
+  case $opt in
+    p) partition="$OPTARG"
+    ;;
+  esac
+done
+shift $((OPTIND-1))
+
+
 trial_events="StimOnset FeedbackOnsetLong"
 modes="pref conf"
 
@@ -13,7 +26,7 @@ submit_job_array () {
     sbatch --array="$array_range" <<EOT;
 #!/bin/bash
 #SBATCH --job-name=$job_name
-#SBATCH -p ckpt-all
+#SBATCH -p $partition
 #SBATCH -A walkerlab
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1

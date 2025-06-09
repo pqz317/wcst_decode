@@ -390,8 +390,24 @@ def get_cross_cond_cosine_sim_of_weights(weights_a, weights_b, merge_on=["Time",
     merged["cosine_sim"] = merged.apply(lambda x: cosine_sim(x.weights_x, x.weights_y), axis=1)
     return merged
 
-def get_weights_dff(models):
-    """
-    For a binary classifier, 
-    """
+def random_vector(n):
+    vec = np.random.normal(0, 1, n)  # Generate random numbers from normal distribution
+    return vec
 
+def get_shuffled_cosine_sim_of_weights(weights, num_shuffle=1000, num_runs=8):
+    """
+    NOTE: wildy inefficient, not sure if it matters...
+    """
+    num_shuffle = 1000
+    feat_dims = weights.groupby("feat").apply(lambda x: len(x.iloc[0].weights)).to_dict()
+    res = []
+    for i in range(num_shuffle):
+        shuffs = []
+        for feat in FEATURES:
+            dim = feat_dims[feat]
+            for run_x in range(num_runs):
+                for run_y in range(num_runs):
+                    if run_x != run_y:
+                        shuffs.append(cosine_sim(random_vector(dim), random_vector(dim)))
+        res.append(np.mean(shuffs))
+    return np.percentile(res, 0.5), np.percentile(res, 99.5)
