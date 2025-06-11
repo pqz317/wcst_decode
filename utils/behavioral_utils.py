@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from lfp_tools import startup
 from constants.behavioral_constants import *
+from constants.decoding_constants import *
 import os
 
 
@@ -472,6 +473,12 @@ def get_prev_choice_fbs(beh):
     for dim in FEATURE_DIMS:
         beh[f"Prev{dim}"] = beh[dim].shift()
     return beh[~beh.PrevResponse.isna()]
+
+def get_next_choice_fbs(beh):
+    beh["NextResponse"] = beh.Response.shift(-1)
+    for dim in FEATURE_DIMS:
+        beh[f"Next{dim}"] = beh[dim].shift(-1)
+    return beh[~beh.NextResponse.isna()]
 
 def get_max_feature_value(beh, num_bins=None, quantize_bins=False):
     """
@@ -947,22 +954,37 @@ def get_feat_choice_label(beh, feat):
     beh["Choice"] = beh.apply(lambda x: "Chose" if x[FEATURE_TO_DIM[feat]] == feat else "Not Chose", axis=1)
     return beh
 
+def get_prev_feat_choice_label(beh, feat):
+    beh["PrevChoice"] = beh.apply(lambda x: "Chose" if x[f"Prev{FEATURE_TO_DIM[feat]}"] == feat else "Not Chose", axis=1)
+    return beh
 
-def get_belief_partitions_by_mode(beh, feat, mode):
+def get_next_feat_choice_label(beh, feat):
+    beh["NextChoice"] = beh.apply(lambda x: "Chose" if x[f"Next{FEATURE_TO_DIM[feat]}"] == feat else "Not Chose", axis=1)
+    return beh
+
+def get_label_by_mode(beh, mode):
     """
-    Returns df, with an extra column PartitionLabel 
+    Adds a column called label to beh df, populates it depending on mode. 
+    Potentially filters beh df as well. 
     """
-    beh = get_belief_partitions(beh, feat, use_x=True)
     if mode == "conf":
-        beh["PartitionLabel"] = beh["BeliefConf"]
+        beh["label"] = beh["BeliefConf"]
     elif mode == "policy":
-        beh["PartitionLabel"] = beh["BeliefPolicy"]
+        beh["label"] = beh["BeliefPolicy"]
     elif mode == "pref":
         beh = beh[beh.BeliefPartition.isin(["High X", "High Not X"])]
-        beh["PartitionLabel"] = beh["BeliefPartition"]
+        beh["label"] = beh["BeliefPartition"]
     elif mode == "feat_belief":
         beh = beh[beh.BeliefPartition.isin(["Low", "High X"])]
-        beh["PartitionLabel"] = beh["BeliefPartition"]
+        beh["label"] = beh["BeliefPartition"]
+    elif mode == "choice":
+        beh["label"] = beh["Choice"]
+    elif mode == "reward":
+        beh["label"] = beh["Response"]
+    elif mode == "chose_and_correct":
+        beh["label"] = beh.apply(
+            lambda x: "Chose and Correct" if x.Choice == "Chose" and x.Response == "Correct" else "Not Chose or Incorrect", 
+        axis=1)
     else: 
         raise ValueError("invalid mode in args")
     return beh

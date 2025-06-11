@@ -119,7 +119,6 @@ def evaluate_model_with_data(models_by_bin, sess_datas, time_bins, num_train_per
     for time_bin_idx, time_bin in enumerate(time_bins):
         print(f"evaluating models for bin idx {time_bin_idx}")
         models = models_by_bin[time_bin_idx, :]
-        split_accs = []
         for split_idx, model in enumerate(models):
             # assumes models, splits are ordered the same
             pseudo_sess = pd.concat(sess_datas.apply(

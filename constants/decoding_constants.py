@@ -23,10 +23,22 @@ INTERVAL_SIZE = 100
 
 SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sub}/{sess_name}_{fr_type}_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/all_units.pickle"
+FEATS_PATH = "/data/patrick_res/sessions/{sub}/feats_at_least_3blocks.pickle"
 
 # TODO: make this backwards compatible
 SIG_UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/{event}_{level}_units.pickle"
 BOTH_SIG_UNITS_PATH = "/data/patrick_res/firing_rates/{level}_units.pickle"
+
+MODE_TO_CLASSES = {
+    "conf": ["Low", "High"],
+    "pref": ["High X", "High Not X"],
+    "feat_belief": ["Low", "High X"],
+    "policy": ["X", "Not X"],
+    "reward": ["Correct", "Incorrect"],
+    "choice": ["Chose", "Not Chose"],
+    "chose_and_correct": ["Chose and Correct", "Not Chose or Incorrect"]
+}
+
 
 class TrialInterval(NamedTuple):
     event: str

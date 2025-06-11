@@ -30,13 +30,6 @@ SESS_BEHAVIOR_PATH = "/data/patrick_res/behavior/SA/{sess_name}_object_features.
 
 DATA_MODE = "FiringRate"
 
-MODE_TO_CLASSES = {
-    "conf": ["Low", "High"],
-    "pref": ["High X", "High Not X"],
-    "feat_belief": ["Low", "High X"],
-    "policy": ["X", "Not X"]
-}
-
 def load_session_data(row, args, splits_df=None):
     """
     Loads behavior, neural data, prepares them for decoding
@@ -48,8 +41,10 @@ def load_session_data(row, args, splits_df=None):
     if args.balance_by_filters: 
         beh = behavioral_utils.balance_trials_by_condition(beh, list(args.beh_filters.keys()))
     beh = behavioral_utils.filter_behavior(beh, args.beh_filters)
-    beh = behavioral_utils.get_belief_partitions_by_mode(beh, args.feat, args.mode)
-    beh = behavioral_utils.balance_trials_by_condition(beh, ["PartitionLabel"])
+    beh = behavioral_utils.get_belief_partitions(beh, args.feat, use_x=True)
+    beh = behavioral_utils.get_label_by_mode(beh, args.mode)
+    
+    beh = behavioral_utils.balance_trials_by_condition(beh, condition_columns=args.balance_cols if args.balance_cols else ["label"])
 
     frs = spike_utils.get_frs_from_args(args, sess_name)
     frs = frs.rename(columns={DATA_MODE: "Value"})
@@ -57,7 +52,7 @@ def load_session_data(row, args, splits_df=None):
         return None
     
     if splits_df is None: 
-        sess_data = session_data.create_from_splitter(args, "PartitionLabel", sess_name, beh, frs)
+        sess_data = session_data.create_from_splitter(args, "label", sess_name, beh, frs)
     else: 
         sess_data = session_data.create_from_splits_df(sess_name, beh, frs, splits_df)
     return sess_data

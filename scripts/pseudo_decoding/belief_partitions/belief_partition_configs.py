@@ -8,15 +8,19 @@ class BeliefPartitionConfigs(NamedTuple):
     Set of configurations for performing binary decoding of belief partitions of a single feature
     mode of either confidence (low vs high), preference (high X vs. high not X), or feature belief (low vs. high X)
     """
-    mode: str = None  # either conf, pref, or feat_belief
+    mode: str = None  # either conf, pref, or feat_belief, choice, reward, chose_and_correct
     # general configs
     subject: str = "SA"
     feat_idx: int = None
     pair_idx: int = None
     trial_event: str = "StimOnset"
     model_trial_event: str = None
+
+    # configs to specify filters and/or balancing of trials
     beh_filters: dict = {}  # specified as a json string
     balance_by_filters: bool = False
+    balance_cols: list = [] # if balancing should be done on conditions other than the label, comma separated list
+
     fr_type: str = "firing_rates"
     # either circular_shift, session_permute, or random
     shuffle_method: str = "session_permute"
@@ -54,6 +58,8 @@ def add_defaults_to_parser(default_configs, parser):
             parser.add_argument(f'--{field}', default=value, type=lambda x: bool(strtobool(x)))
         elif field == "beh_filters": 
             parser.add_argument(f'--{field}', default=value, type=lambda x: json.loads(x))
+        elif field == "balance_cols":
+            parser.add_argument(f'--{field}', default=value, type=lambda x: x.split(","))
         else: 
             parser.add_argument(f'--{field}', default=value, type=var_type)
     return parser

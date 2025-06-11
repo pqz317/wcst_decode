@@ -3,15 +3,6 @@
 # Default values
 partition="ckpt-all"
 
-while getopts "p:" opt; do
-  case $opt in
-    p) partition="$OPTARG" ;; # if -p, set to partition
-    --) break ;; ## stop parsing after encountering --
-  esac
-done
-shift $((OPTIND-1))
-
-
 trial_events="StimOnset FeedbackOnsetLong"
 modes="pref conf"
 

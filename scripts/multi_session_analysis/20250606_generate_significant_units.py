@@ -40,6 +40,12 @@ def load_anova_res_for_event(args):
         return io_utils.read_anova_good_units(args, args.sig_thresh, "BeliefConf", return_pos=True)
     elif args.sig_type == "belief_partition":
         return io_utils.read_anova_good_units(args, args.sig_thresh, "BeliefPartition", return_pos=True)
+    elif args.sig_type == "all":
+        units = pd.read_pickle(UNITS_PATH.format(sub=args.subject))
+        feat_sessions = pd.read_pickle(FEATS_PATH.format(sub=args.subject))
+        return pd.merge(feat_sessions.explode("sessions"), units, left_on="sessions", right_on="session")[
+            ["feat", "structure_level2", "session", "PseudoUnitID"]
+        ]
     else:
         raise ValueError(f"unknown sig type {args.sig_type}")
 
@@ -81,7 +87,8 @@ def report_region_stats(all_units):
 def get_sig_level_str(args):
     window_str = "window" if args.window_size else None
     filter_str = "filter_drift" if args.filter_drift else None
-    parts = [args.sig_type, args.sig_thresh, window_str, filter_str]
+    thresh_str = args.sig_thresh if args.sig_type != "all" else None
+    parts = [args.sig_type, thresh_str, window_str, filter_str]
     return "_".join(x for x in parts if x)
 
 def main():
