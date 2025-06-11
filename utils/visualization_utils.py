@@ -499,7 +499,7 @@ def visualize_cross_time(args, cross_res, decoder_res, ax, cbar=True, vmin=None,
 
 
 
-def plot_combined_accs(args, by_dim=False):
+def plot_combined_accs(args, by_dim=False, fig=None, axs=None):
     stim_args = copy.deepcopy(args)
     stim_args.trial_event = "StimOnset"
     stim_res = belief_partitions_io.read_results(stim_args, FEATURES)
@@ -513,9 +513,10 @@ def plot_combined_accs(args, by_dim=False):
         fb_res["mode"] = fb_res.apply(lambda x: FEATURE_TO_DIM[x.feat] + " " + x["mode"], axis=1)
         stim_res["mode"] = stim_res.apply(lambda x: FEATURE_TO_DIM[x.feat] + " " + x["mode"], axis=1)
     # fb_res = fb_res[fb_res.feat != "GREEN"]
-
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5), sharey='row', width_ratios=[stim_res.Time.nunique(), fb_res.Time.nunique()])
-
+    if fig is None: 
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5), sharey='row', width_ratios=[stim_res.Time.nunique(), fb_res.Time.nunique()])
+    else: 
+        ax1, ax2 = axs
     visualize_preferred_beliefs(stim_args, stim_res, ax1, hue_col="mode")
     ax1.set_xlabel(f"Time Relative to Stim Onset")
 
@@ -523,6 +524,7 @@ def plot_combined_accs(args, by_dim=False):
     ax2.set_xlabel(f"Time Relative to Feedback Onset")
 
     fig.tight_layout()
+    return fig, (ax1, ax2)
 
 def plot_combined_accs_by_attr(args, attr, values, num_shuffles=0):
     all_stim_res = []
