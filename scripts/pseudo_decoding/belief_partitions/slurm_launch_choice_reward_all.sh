@@ -4,8 +4,8 @@
 partition="ckpt-all"
 
 trial_events="StimOnset FeedbackOnsetLong"
-modes="reward choice chose_correct"
-
+# modes="reward choice chose_and_correct"
+modes="chose_and_correct"
 # Optional args passed to decoding script
 extra_args="$@"
 

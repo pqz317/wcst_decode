@@ -587,7 +587,7 @@ def plot_combined_cross_accs(args):
     all_decoder_res = pd.concat((stim_res, fb_res))
     shuffles = all_decoder_res[all_decoder_res["mode"] == f"{args.mode}_shuffle"]
     shuffle_means = shuffles.groupby(["Time"]).Accuracy.mean().reset_index(name="ShuffleAccuracy")
-    all_min = shuffle_means.ShuffleAccuracy.min()
+    all_min = shuffle_means.ShuffleAccuracy.max()
 
     visualize_cross_time(args, cross_stim_res, stim_res, axs[0, 0], cbar=False, vmin=all_min, vmax=all_max)
     visualize_cross_time(args, stim_model_cross_fb_res, fb_res, axs[0, 1], cbar=False, vmin=all_min, vmax=all_max)
