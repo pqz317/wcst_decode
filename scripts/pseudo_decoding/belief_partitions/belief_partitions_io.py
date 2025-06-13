@@ -148,9 +148,10 @@ def read_cross_time_results(args, feats, avg=False):
             df.append({"TrainTime": train_time, "TestTime": test_time, "RunIdx": run_idx, "Feat": feat, "Accuracy": acc})
     df = pd.DataFrame(df)
     if avg: 
-        return df.groupby(["TrainTime", "TestTime"]).Accuracy.mean().reset_index(name="Accuracy")
-    else: 
-        return df
+        df = df.groupby(["TrainTime", "TestTime"]).Accuracy.mean().reset_index(name="Accuracy")
+    df["TrainEvent"] = args.model_trial_event if args.model_trial_event else args.trial_event
+    df["TestEvent"] = args.trial_event
+    return df
     
 def load_ccgp_df(args, pairs, dir, conds, shuffle=False):
     res = []

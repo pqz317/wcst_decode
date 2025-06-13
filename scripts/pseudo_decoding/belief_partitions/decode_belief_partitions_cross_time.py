@@ -21,10 +21,7 @@ def cross_time_decode(args):
     model_file_name = belief_partitions_io.get_file_name(model_args)
     model_dir = belief_partitions_io.get_dir_name(model_args)
     models = np.load(os.path.join(model_dir, f"{model_file_name}_models.npy"), allow_pickle=True)
-
-    data_dir = belief_partitions_io.get_dir_name(args)
-    data_file_name = belief_partitions_io.get_file_name(args)
-    splits_df = pd.read_pickle(os.path.join(data_dir, f"{data_file_name}_splits.pickle"))
+    splits_df = pd.read_pickle(os.path.join(model_dir, f"{model_file_name}_splits.pickle"))
 
     # load up session data to train network
     trial_interval = args.trial_interval
@@ -35,7 +32,8 @@ def cross_time_decode(args):
     cross_time_accs = pseudo_classifier_utils.cross_evaluate_by_time_bins(models, sess_datas, time_bins, avg=False)
 
     save_file_name = belief_partitions_io.get_cross_time_file_name(args)
-    np.save(os.path.join(data_dir, f"{save_file_name}_accs.npy"), cross_time_accs)
+    save_dir = belief_partitions_io.get_dir_name(args)
+    np.save(os.path.join(save_dir, f"{save_file_name}_accs.npy"), cross_time_accs)
 
 
 def main():

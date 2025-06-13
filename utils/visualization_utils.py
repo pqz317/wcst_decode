@@ -499,24 +499,35 @@ def visualize_cross_time(args, cross_res, decoder_res, ax, cbar=True, vmin=None,
 
 
 
-def plot_combined_accs(args, by_dim=False, fig=None, axs=None):
-    stim_args = copy.deepcopy(args)
-    stim_args.trial_event = "StimOnset"
-    stim_res = belief_partitions_io.read_results(stim_args, FEATURES)
+def plot_combined_accs(args, by_dim=False, modes=None):
+    if not modes: 
+        stim_args = copy.deepcopy(args)
+        stim_args.trial_event = "StimOnset"
+        stim_res = belief_partitions_io.read_results(stim_args, FEATURES)
 
-    # stim_res = stim_res[stim_res.feat != "GREEN"]
+        fb_args = copy.deepcopy(args)
+        fb_args.trial_event = "FeedbackOnsetLong"
+        fb_res = belief_partitions_io.read_results(fb_args, FEATURES)
+    else: 
+        stim_res = []
+        fb_res = []
+        for mode in modes: 
+            stim_args = copy.deepcopy(args)
+            stim_args.mode = mode
+            stim_args.trial_event = "StimOnset"
+            stim_res.append(belief_partitions_io.read_results(stim_args, FEATURES))
 
-    fb_args = copy.deepcopy(args)
-    fb_args.trial_event = "FeedbackOnsetLong"
-    fb_res = belief_partitions_io.read_results(fb_args, FEATURES)
+            fb_args = copy.deepcopy(args)
+            fb_args.mode = mode
+            fb_args.trial_event = "FeedbackOnsetLong"
+            fb_res.append(belief_partitions_io.read_results(fb_args, FEATURES))
+        stim_res = pd.concat(stim_res)
+        fb_res = pd.concat(fb_res)
     if by_dim: 
         fb_res["mode"] = fb_res.apply(lambda x: FEATURE_TO_DIM[x.feat] + " " + x["mode"], axis=1)
         stim_res["mode"] = stim_res.apply(lambda x: FEATURE_TO_DIM[x.feat] + " " + x["mode"], axis=1)
     # fb_res = fb_res[fb_res.feat != "GREEN"]
-    if fig is None: 
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5), sharey='row', width_ratios=[stim_res.Time.nunique(), fb_res.Time.nunique()])
-    else: 
-        ax1, ax2 = axs
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5), sharey='row', width_ratios=[stim_res.Time.nunique(), fb_res.Time.nunique()])
     visualize_preferred_beliefs(stim_args, stim_res, ax1, hue_col="mode")
     ax1.set_xlabel(f"Time Relative to Stim Onset")
 
@@ -524,7 +535,7 @@ def plot_combined_accs(args, by_dim=False, fig=None, axs=None):
     ax2.set_xlabel(f"Time Relative to Feedback Onset")
 
     fig.tight_layout()
-    return fig, (ax1, ax2)
+    # return fig, (ax1, ax2)
 
 def plot_combined_accs_by_attr(args, attr, values, num_shuffles=0):
     all_stim_res = []
@@ -584,12 +595,13 @@ def plot_combined_cross_accs(args):
         sharey="row",
     )
     all_res = pd.concat((cross_stim_res, stim_model_cross_fb_res, fb_model_cross_stim_res, cross_fb_res))
-    all_max = all_res.groupby(["TestTime", "TrainTime"]).Accuracy.mean().max()
+    all_max = all_res.groupby(["TestTime", "TrainTime", "TrainEvent", "TestEvent"]).Accuracy.mean().max()
+    print(all_max)
 
     all_decoder_res = pd.concat((stim_res, fb_res))
     shuffles = all_decoder_res[all_decoder_res["mode"] == f"{args.mode}_shuffle"]
     shuffle_means = shuffles.groupby(["Time"]).Accuracy.mean().reset_index(name="ShuffleAccuracy")
-    all_min = shuffle_means.ShuffleAccuracy.max()
+    all_min = shuffle_means.ShuffleAccuracy.mean()
 
     visualize_cross_time(args, cross_stim_res, stim_res, axs[0, 0], cbar=False, vmin=all_min, vmax=all_max)
     visualize_cross_time(args, stim_model_cross_fb_res, fb_res, axs[0, 1], cbar=False, vmin=all_min, vmax=all_max)
