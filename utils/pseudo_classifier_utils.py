@@ -16,9 +16,11 @@ def transform_input_data(pseudo_data):
     sorted_by_trial = pseudo_data.sort_values(by=["PseudoTrialNumber", "PseudoUnitID"])
     return sorted_by_trial["Value"].to_numpy().reshape((num_trials, num_units))
 
-def transform_label_data(pseudo_data):
+def transform_label_data(pseudo_data, condition_label_map=None):
     pseudo_data = pseudo_data[["PseudoTrialNumber", "Condition"]].drop_duplicates()
     sorted = pseudo_data.sort_values(by=["PseudoTrialNumber"])
+    if condition_label_map is not None: 
+        sorted["Condition"] = sorted["Condition"].map(condition_label_map)
     return sorted["Condition"].to_numpy()
 
 
@@ -29,6 +31,7 @@ def evaluate_classifiers_by_time_bins(
     num_test_per_cond=400, 
     seed=42, 
     proj_matrix=None,
+    condition_label_map=None
 ):
     training_accs_by_bin = np.empty((len(time_bins), num_splits))
     test_accs_by_bin = np.empty((len(time_bins), num_splits))
@@ -46,10 +49,10 @@ def evaluate_classifiers_by_time_bins(
             test_data = pseudo_sess[pseudo_sess.Type == "Test"]
 
             x_train = transform_input_data(train_data)
-            y_train = transform_label_data(train_data)
+            y_train = transform_label_data(train_data, condition_label_map)
 
             x_test = transform_input_data(test_data)
-            y_test = transform_label_data(test_data)
+            y_test = transform_label_data(test_data, condition_label_map)
 
             if proj_matrix is not None:
                 # means = np.mean(x_train, axis=1)

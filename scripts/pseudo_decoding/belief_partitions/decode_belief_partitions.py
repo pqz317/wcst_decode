@@ -44,7 +44,7 @@ def load_session_data(row, args, splits_df=None):
     beh = behavioral_utils.get_belief_partitions(beh, args.feat, use_x=True)
     beh = behavioral_utils.get_label_by_mode(beh, args.mode)
     
-    beh = behavioral_utils.balance_trials_by_condition(beh, condition_columns=args.balance_cols if args.balance_cols else ["label"])
+    beh = behavioral_utils.balance_trials_by_condition(beh, condition_columns=args.balance_cols if args.balance_cols else ["condition"])
 
     frs = spike_utils.get_frs_from_args(args, sess_name)
     frs = frs.rename(columns={DATA_MODE: "Value"})
@@ -52,7 +52,7 @@ def load_session_data(row, args, splits_df=None):
         return None
     
     if splits_df is None: 
-        sess_data = session_data.create_from_splitter(args, "label", sess_name, beh, frs)
+        sess_data = session_data.create_from_splitter(args, "condition", sess_name, beh, frs)
     else: 
         sess_data = session_data.create_from_splits_df(sess_name, beh, frs, splits_df)
     return sess_data
@@ -72,7 +72,9 @@ def train_decoder(sess_datas, args):
     trial_interval = args.trial_interval
     time_bins = np.arange(0, (trial_interval.post_interval + trial_interval.pre_interval) / 1000, trial_interval.interval_size / 1000)
     _, test_accs, _, models = pseudo_classifier_utils.evaluate_classifiers_by_time_bins(
-        model, sess_datas, time_bins, args.num_splits, args.num_train_per_cond, args.num_test_per_cond
+        model, sess_datas, time_bins, 
+        args.num_splits, args.num_train_per_cond, args.num_test_per_cond, 
+        condition_label_map=MODE_COND_LABEL_MAPS[args.mode]
     )
     return test_accs, models
 
@@ -121,7 +123,14 @@ def load_session_datas(args, splits_df=None):
 
 
 def decode(args):
-    sess_datas = load_session_datas(args)
+    # naming for files, directory
+    file_name = belief_partitions_io.get_file_name(args)
+    output_dir = belief_partitions_io.get_dir_name(args)
+
+    splits = None
+    if args.splits_file_name:
+        splits = pd.read_pickle(os.path.join(output_dir, f"{args.feat}_{args.splits_file_name}"))
+    sess_datas = load_session_datas(args, splits_df=splits)
     # naming for files, directory
     file_name = belief_partitions_io.get_file_name(args)
     output_dir = belief_partitions_io.get_dir_name(args)

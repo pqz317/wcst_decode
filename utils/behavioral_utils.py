@@ -968,23 +968,21 @@ def get_label_by_mode(beh, mode):
     Potentially filters beh df as well. 
     """
     if mode == "conf":
-        beh["label"] = beh["BeliefConf"]
+        beh["condition"] = beh["BeliefConf"]
     elif mode == "policy":
-        beh["label"] = beh["BeliefPolicy"]
+        beh["condition"] = beh["BeliefPolicy"]
     elif mode == "pref":
         beh = beh[beh.BeliefPartition.isin(["High X", "High Not X"])]
-        beh["label"] = beh["BeliefPartition"]
+        beh["condition"] = beh["BeliefPartition"]
     elif mode == "feat_belief":
         beh = beh[beh.BeliefPartition.isin(["Low", "High X"])]
-        beh["label"] = beh["BeliefPartition"]
+        beh["condition"] = beh["BeliefPartition"]
     elif mode == "choice":
-        beh["label"] = beh["Choice"]
+        beh["condition"] = beh["Choice"]
     elif mode == "reward":
-        beh["label"] = beh["Response"]
-    elif mode == "chose_and_correct":
-        beh["label"] = beh.apply(
-            lambda x: "Chose and Correct" if x.Choice == "Chose" and x.Response == "Correct" else "Not Chose or Incorrect", 
-        axis=1)
+        beh["condition"] = beh["Response"]
+    elif mode in ["chose_and_correct", "reward_int", "choice_int"]:
+        beh["condition"] = beh["Choice"] + " " + beh["Response"]
     else: 
         raise ValueError("invalid mode in args")
     return beh

@@ -26,7 +26,7 @@ For each option, report number of units this would give per region/feature.
 """
 
 DRIFT_PATH = "/data/patrick_res/firing_rates/{sub}/drifting_units.pickle"
-REGIONS = ["inferior_temporal_cortex (ITC)", "medial_pallium (MPal)", "basal_ganglia (BG)", "amygdala (Amy)"]
+REGIONS = ["all_regions", "inferior_temporal_cortex (ITC)", "medial_pallium (MPal)", "basal_ganglia (BG)", "amygdala (Amy)"]
 
 
 def load_anova_res_for_event(args):
@@ -65,7 +65,8 @@ def filter_drift(units, args):
     return units[~units.PseudoUnitID.isin(drift_units.PseudoUnitID)]
 
 def get_sub_stats(units, region):
-    units = units[units.structure_level2 == region]
+    if region != "all_regions":
+        units = units[units.structure_level2 == region]
     per_feat_sig = units.groupby("feat").PseudoUnitID.nunique().reindex(FEATURES, fill_value=0).reset_index(name="num_units_sig")
     per_feat_sess = units.groupby("feat").session.nunique().reindex(FEATURES, fill_value=0).reset_index(name="num_sessions_sig")
 

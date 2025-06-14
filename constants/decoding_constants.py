@@ -35,8 +35,43 @@ MODE_TO_CLASSES = {
     "feat_belief": ["Low", "High X"],
     "policy": ["X", "Not X"],
     "reward": ["Correct", "Incorrect"],
+    "reward_int": ["Correct", "Incorrect"],
     "choice": ["Chose", "Not Chose"],
-    "chose_and_correct": ["Chose and Correct", "Not Chose or Incorrect"]
+    "choice_int": ["Chose", "Not Chose"],
+    "chose_and_correct": ["Chose Correct", "Not"]
+}
+
+MODE_COND_LABEL_MAPS = {
+    "conf": None,
+    "pref": None,
+    "feat_belief": None,
+    "policy": None,
+    "reward": None,
+    "choice": None,
+    "reward_int": {
+        "Chose Correct": "Correct",
+        "Chose Incorrect": "Incorrect",
+        "Not Chose Correct": "Correct",
+        "Not Chose Incorrect": "Incorrect",
+    },
+    "choice_int": {
+        "Chose Correct": "Chose",
+        "Chose Incorrect": "Chose",
+        "Not Chose Correct": "Not Chose",
+        "Not Chose Incorrect": "Not Chose",
+    },
+    "reward_int": {
+        "Chose Correct": "Correct",
+        "Chose Incorrect": "Incorrect",
+        "Not Chose Correct": "Correct",
+        "Not Chose Incorrect": "Incorrect",
+    },
+    "chose_and_correct": {
+        "Chose Correct": "Chose Correct",
+        "Chose Incorrect": "Not",
+        "Not Chose Correct": "Not",
+        "Not Chose Incorrect": "Not",
+    },
 }
 
 
