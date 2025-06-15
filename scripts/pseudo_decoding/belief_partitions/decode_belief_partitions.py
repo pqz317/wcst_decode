@@ -128,8 +128,8 @@ def decode(args):
     output_dir = belief_partitions_io.get_dir_name(args)
 
     splits = None
-    if args.splits_file_name:
-        splits = pd.read_pickle(os.path.join(output_dir, f"{args.feat}_{args.splits_file_name}"))
+    if args.use_splits:
+        splits = pd.read_pickle(os.path.join(args.base_output_path, f"splits/{args.feat}_splits.pickle"))
     sess_datas = load_session_datas(args, splits_df=splits)
     # naming for files, directory
     file_name = belief_partitions_io.get_file_name(args)

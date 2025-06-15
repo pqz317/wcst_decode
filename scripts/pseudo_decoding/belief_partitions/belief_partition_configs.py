@@ -45,7 +45,7 @@ class BeliefPartitionConfigs(NamedTuple):
 
     # file storage, naming
     run_name: str = None
-    splits_file_name: str = None
+    use_splits: bool = False
     base_output_path: str = "/data/patrick_res/belief_partitions"
 
 
