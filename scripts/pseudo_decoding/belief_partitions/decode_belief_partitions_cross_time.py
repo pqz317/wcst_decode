@@ -29,7 +29,7 @@ def cross_time_decode(args):
 
     # calculate time bins (in seconds)
     time_bins = np.arange(0, (trial_interval.post_interval + trial_interval.pre_interval) / 1000, trial_interval.interval_size / 1000)
-    cross_time_accs = pseudo_classifier_utils.cross_evaluate_by_time_bins(models, sess_datas, time_bins, avg=False)
+    cross_time_accs = pseudo_classifier_utils.cross_evaluate_by_time_bins(models, sess_datas, time_bins, avg=False, condition_label_map=MODE_COND_LABEL_MAPS[args.mode])
 
     save_file_name = belief_partitions_io.get_cross_time_file_name(args)
     save_dir = belief_partitions_io.get_dir_name(args)

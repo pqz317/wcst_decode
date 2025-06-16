@@ -16,7 +16,7 @@ import utils.session_data as session_data
 
 from models.trainer import Trainer
 from models.model_wrapper import ModelWrapper
-from models.multinomial_logistic_regressor import NormedDropoutMultinomialLogisticRegressor
+from models.multinomial_logistic_regressor import NormedDropoutMultinomialLogisticRegressor, NormedDropoutNonlinear
 
 import argparse
 from scripts.pseudo_decoding.belief_partitions.belief_partition_configs import BeliefPartitionConfigs, add_defaults_to_parser
@@ -66,7 +66,8 @@ def train_decoder(sess_datas, args):
     # create a trainer object
     trainer = Trainer(learning_rate=args.learning_rate, max_iter=args.max_iter)
     # create a wrapper for the decoder
-    model = ModelWrapper(NormedDropoutMultinomialLogisticRegressor, init_params, trainer, classes)
+    # model = ModelWrapper(NormedDropoutMultinomialLogisticRegressor, init_params, trainer, classes)
+    model = ModelWrapper(NormedDropoutNonlinear, init_params, trainer, classes)
 
     # calculate time bins (in seconds)
     trial_interval = args.trial_interval

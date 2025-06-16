@@ -981,7 +981,7 @@ def get_label_by_mode(beh, mode):
         beh["condition"] = beh["Choice"]
     elif mode == "reward":
         beh["condition"] = beh["Response"]
-    elif mode in ["chose_and_correct", "reward_int", "choice_int"]:
+    elif mode in ["chose_and_correct", "reward_int", "choice_int", "updates_beliefs"]:
         beh["condition"] = beh["Choice"] + " " + beh["Response"]
     else: 
         raise ValueError("invalid mode in args")

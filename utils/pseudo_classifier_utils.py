@@ -80,7 +80,7 @@ def evaluate_classifiers_by_time_bins(
             models_by_bin[time_bin_idx, split_idx] = copy.deepcopy(model)
     return training_accs_by_bin, test_accs_by_bin, shuffled_accs_by_bin, models_by_bin
 
-def cross_evaluate_by_time_bins(models_by_bin, sess_datas, input_bins, num_train_per_cond=0, num_test_per_cond=200, avg=True):
+def cross_evaluate_by_time_bins(models_by_bin, sess_datas, input_bins, num_train_per_cond=0, num_test_per_cond=200, avg=True, condition_label_map=None):
     """
     Cross evaluates different pseudo models on different time bins
     Assumes sess_datas was generated with the same seed, has splits pre_generated
@@ -105,7 +105,7 @@ def cross_evaluate_by_time_bins(models_by_bin, sess_datas, input_bins, num_train
                 test_data = pseudo_sess[pseudo_sess.Type == "Test"]
 
                 x_test = transform_input_data(test_data)
-                y_test = transform_label_data(test_data)
+                y_test = transform_label_data(test_data, condition_label_map)
                 accs.append(model.score(x_test, y_test))
             if avg: 
                 avg_acc = np.mean(accs)
@@ -114,7 +114,7 @@ def cross_evaluate_by_time_bins(models_by_bin, sess_datas, input_bins, num_train
                 cross_accs[model_bin_idx, test_bin_idx, :] = accs
     return cross_accs
 
-def evaluate_model_with_data(models_by_bin, sess_datas, time_bins, num_train_per_cond=0, num_test_per_cond=200):
+def evaluate_model_with_data(models_by_bin, sess_datas, time_bins, num_train_per_cond=0, num_test_per_cond=200, condition_label_map=None):
     """
     Evaluates model with session datas passed in, ideally from a different condition as what the model was trained on
     """
@@ -125,13 +125,13 @@ def evaluate_model_with_data(models_by_bin, sess_datas, time_bins, num_train_per
         for split_idx, model in enumerate(models):
             # assumes models, splits are ordered the same
             pseudo_sess = pd.concat(sess_datas.apply(
-                lambda x: x.generate_pseudo_data(num_train_per_cond, num_test_per_cond, time_bin)
+                lambda x: x.generate_pseudo_data(num_train_per_cond, num_test_per_cond, time_bin, split_idx)
             ).values, ignore_index=True)
 
             test_data = pseudo_sess[pseudo_sess.Type == "Test"]
 
             x_test = transform_input_data(test_data)
-            y_test = transform_label_data(test_data)
+            y_test = transform_label_data(test_data, condition_label_map)
             # print(x_test.shape)
             # print(x_test[:10, :10])
             # print(y_test.shape)

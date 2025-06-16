@@ -38,7 +38,8 @@ MODE_TO_CLASSES = {
     "reward_int": ["Correct", "Incorrect"],
     "choice": ["Chose", "Not Chose"],
     "choice_int": ["Chose", "Not Chose"],
-    "chose_and_correct": ["Chose Correct", "Not"]
+    "chose_and_correct": ["Chose Correct", "Not"],
+    "updates_beliefs": ["Increases", "Decreases"],
 }
 
 MODE_COND_LABEL_MAPS = {
@@ -72,6 +73,12 @@ MODE_COND_LABEL_MAPS = {
         "Not Chose Correct": "Not",
         "Not Chose Incorrect": "Not",
     },
+    "updates_beliefs": {
+        "Chose Correct": "Increases",
+        "Chose Incorrect": "Decreases",
+        "Not Chose Correct": "Decreases",
+        "Not Chose Incorrect": "Increases",
+    }
 }
 
 
