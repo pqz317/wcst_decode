@@ -66,8 +66,6 @@ class ChoiceRewardModel:
 
         # element-wise multiply interaction probabilities with mask, sum per row. 
         pos_probs = (int_probs * self.class_mask).sum(axis=(1, 2))
-        print("pos probs")
-        print(pos_probs[:10])
         labels = np.where(pos_probs.detach().cpu().numpy() > 0.5, self.classes[0], self.classes[1])
         return labels
 
@@ -90,11 +88,6 @@ class ChoiceRewardModel:
             Accuracy score between 0 and 1
         """
         labels = self.predict(x_test)
-        print("pred labels")
-        print(labels[:10])
-        print("true labels")
-        print(np.unique(y_test))
-        print(f"ratio true labels positive: {(y_test == 'Chose Correct').sum() / len(y_test)}")
         score = np.sum(labels == y_test) / len(y_test)
         return score
     

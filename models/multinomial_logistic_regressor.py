@@ -70,7 +70,7 @@ class NormedDropoutNonlinear(nn.Module):
         in_layer (nn.Linear): weights and biases of input layer
     """
 
-    def __init__(self, n_inputs, n_classes, p_dropout, hidden_sizes=[200]):
+    def __init__(self, n_inputs, n_classes, p_dropout, hidden_sizes=[50]):
         super().__init__()  # needed to invoke the properties of the parent class nn.Module
         self.norm = nn.BatchNorm1d(n_inputs, affine=False)
         self.dropout = nn.Dropout(p=p_dropout)
