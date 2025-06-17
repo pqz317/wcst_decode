@@ -259,15 +259,12 @@ def read_contributions(args, region_level="whole_pop", sig_region_thresh=20, run
     grouped_conts["trial_event"] = args.trial_event
     return grouped_conts
 
-def get_contributions_for_all_time(args, region_level, sig_region_thresh=20, run_idx=None, feat_agg_func="mean"):
-    args.trial_event = "StimOnset"
-    stim_conts = read_contributions(args, region_level, sig_region_thresh, run_idx, feat_agg_func)
-    stim_conts["abs_time"] = stim_conts.Time
-
-    args.trial_event = "FeedbackOnsetLong"
-    fb_conts = read_contributions(args, region_level, sig_region_thresh, run_idx, feat_agg_func)
-    fb_conts["abs_time"] = fb_conts.Time + 2.8
-
-    all_conts = pd.concat((stim_conts, fb_conts)).reset_index()
-
-    return stim_conts, fb_conts, all_conts
+def get_contributions_for_all_time(args, region_level, sig_region_thresh=20, run_idx=None, feat_agg_func="mean", events=["StimOnset", "FeedbackOnsetLong"]):
+    all_conts = []
+    for event in events: 
+        args.trial_event = event 
+        conts = read_contributions(args, region_level, sig_region_thresh, run_idx, feat_agg_func)
+        conts["abs_time"] = conts.Time + 2.8 if event == "FeedbackOnsetLong" else conts.Time
+        all_conts.append(conts)
+    all_conts = pd.concat(all_conts).reset_index()
+    return all_conts

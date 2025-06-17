@@ -916,6 +916,7 @@ def shuffle_beh_by_session_permute(beh, session, args):
     """
     other_sessions = [s for s in args.all_sessions.session_name if s != session]
     print(f"Session permutation shuffle set, randomly choosing from {len(other_sessions)} other sessions")
+    
     seed = int(session) * 100 + args.shuffle_idx
     rng = np.random.default_rng(seed)
     other_session = rng.choice(other_sessions)

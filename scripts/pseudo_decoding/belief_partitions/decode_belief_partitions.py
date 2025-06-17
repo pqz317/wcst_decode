@@ -51,7 +51,8 @@ def load_session_data(row, args, splits_df=None):
     if len(frs) == 0 or len(beh) == 0:
         return None
     
-    if splits_df is None: 
+    if splits_df is None or args.shuffle_idx is not None:
+        # HACK: A bit hacky, but if we're evaluating a shuffle, just ignore the splits df
         sess_data = session_data.create_from_splitter(args, "condition", sess_name, beh, frs)
     else: 
         sess_data = session_data.create_from_splits_df(sess_name, beh, frs, splits_df)
@@ -66,8 +67,7 @@ def train_decoder(sess_datas, args):
     # create a trainer object
     trainer = Trainer(learning_rate=args.learning_rate, max_iter=args.max_iter)
     # create a wrapper for the decoder
-    # model = ModelWrapper(NormedDropoutMultinomialLogisticRegressor, init_params, trainer, classes)
-    model = ModelWrapper(NormedDropoutNonlinear, init_params, trainer, classes)
+    model = ModelWrapper(NormedDropoutMultinomialLogisticRegressor, init_params, trainer, classes)
 
     # calculate time bins (in seconds)
     trial_interval = args.trial_interval

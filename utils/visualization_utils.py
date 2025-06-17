@@ -618,17 +618,19 @@ def plot_combined_cross_accs(args):
     # fig.tight_layout()
 
 
-def plot_pop_heatmap_by_time(stim_data, fb_data, all_data, value_col, time_col="Time", region_level="whole_pop", orders=None):
+def plot_pop_heatmap_by_time(all_data, value_col, time_col="Time", region_level="whole_pop", orders=None, event_labels=None):
     """
     """
 
     unit_counts = all_data.groupby(region_level).PseudoUnitID.nunique().values
     regions_to_idx = {r: i for i, r in enumerate(np.sort(all_data[region_level].unique()))}
+    trial_events = all_data.trial_event.unique()
+    width_ratios = [all_data[all_data.trial_event == e][time_col].nunique() for e in trial_events]
 
     fig, axs = plt.subplots(
-        len(unit_counts), 2, 
+        len(unit_counts), len(trial_events), 
         figsize=(15, 15), 
-        width_ratios=[stim_data[time_col].nunique(), fb_data[time_col].nunique()],
+        width_ratios=width_ratios,
         height_ratios=unit_counts, 
         sharex="col",
         sharey="row",
@@ -641,7 +643,7 @@ def plot_pop_heatmap_by_time(stim_data, fb_data, all_data, value_col, time_col="
     def plot_region(reg_conts):        
         region = reg_conts.name
 
-        for i, event in enumerate(["StimOnset", "FeedbackOnsetLong"]):
+        for i, event in enumerate(trial_events):
             event_conts = reg_conts[reg_conts.trial_event == event]
             # print(reg_conts.co)
             pivoted = event_conts.pivot(index="PseudoUnitID", columns=time_col, values=value_col)
@@ -658,8 +660,9 @@ def plot_pop_heatmap_by_time(stim_data, fb_data, all_data, value_col, time_col="
         axs[regions_to_idx[region], 0].set_title(region)
         
     all_data.groupby(region_level).apply(plot_region)
-    axs[-1, 0].set_xlabel("Time to StimOnset (s)")
-    axs[-1, 1].set_xlabel("Time to FeedbackOnset (s)")
+
+    for i, event in enumerate(trial_events):
+        axs[-1, i].set_xlabel(event_labels.get(event, f"Time to {event} (s)"))
     fig.tight_layout()
     # Adjust subplots to make space for colorbar
     fig.subplots_adjust(right=0.85)
