@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Default values
-# partition="ckpt-all"
-partition="gpu-a100"
+partition="ckpt-all"
+# partition="gpu-a100"
 trial_event="FeedbackOnsetLong"
 modes="reward_int choice_int updates_beliefs"
 # Optional args passed to decoding script
@@ -20,7 +20,6 @@ submit_job_array () {
 #SBATCH -A walkerlab
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
-#SBATCH --gpus=1
 #SBATCH --mem=16G
 #SBATCH --time=180
 
