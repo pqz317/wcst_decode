@@ -3,7 +3,7 @@
 # Default values
 # partition="ckpt-all"
 partition="gpu-a100"
-trial_events="FeedbackOnsetLong"
+trial_event="FeedbackOnsetLong"
 modes="reward_int choice_int updates_beliefs"
 # Optional args passed to decoding script
 extra_args="$@"
