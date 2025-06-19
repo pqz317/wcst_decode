@@ -23,6 +23,7 @@ class ChoiceRewardModel:
 
     def __init__(self, choice_model, reward_model, mode):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        print(self.device)
         choice_model.model.to(self.device)
         reward_model.model.to(self.device)
         self.choice_model = choice_model

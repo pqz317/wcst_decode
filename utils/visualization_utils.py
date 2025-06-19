@@ -618,7 +618,7 @@ def plot_combined_cross_accs(args):
     # fig.tight_layout()
 
 
-def plot_pop_heatmap_by_time(all_data, value_col, time_col="Time", region_level="whole_pop", orders=None, event_labels=None):
+def plot_pop_heatmap_by_time(all_data, value_col, time_col="Time", region_level="whole_pop", orders=None, event_labels={}):
     """
     """
 

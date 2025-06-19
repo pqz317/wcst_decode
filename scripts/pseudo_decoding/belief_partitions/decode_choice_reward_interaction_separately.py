@@ -56,9 +56,11 @@ def choice_reward_decode(args):
     time_bins = np.arange(0, (trial_interval.post_interval + trial_interval.pre_interval) / 1000, trial_interval.interval_size / 1000)
     accs = pseudo_classifier_utils.evaluate_model_with_data(choice_reward_models, sess_datas, time_bins, condition_label_map=MODE_COND_LABEL_MAPS[args.mode])
 
-    save_file_name = belief_partitions_io.get_choice_reward_file_name(args)
-    save_dir = belief_partitions_io.get_dir_name(args)
-    np.save(os.path.join(save_dir, f"{save_file_name}_accs.npy"), accs)
+    save_args = copy.deepcopy(args)
+    save_args.mode = f"{args.mode}_separate"
+    save_file_name = belief_partitions_io.get_file_name(save_args)
+    save_dir = belief_partitions_io.get_dir_name(save_args)
+    np.save(os.path.join(save_dir, f"{save_file_name}_test_accs.npy"), accs)
 
 
 def main():
@@ -69,10 +71,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser = add_defaults_to_parser(BeliefPartitionConfigs(), parser)
     args = parser.parse_args()
-
-    process_args(args)
-    choice_reward_decode(args)
-
+    for feat_idx in range(12):
+        print(f"Calculating for feat {FEATURES[feat_idx]}")
+        args.feat_idx = feat_idx
+        process_args(args)
+        choice_reward_decode(args)
 
 if __name__ == "__main__":
     main()

@@ -32,9 +32,6 @@ def get_cross_time_file_name(args):
     model_event_str = f"_{args.model_trial_event}_model" if args.model_trial_event else ""
     return f"{args.feat}_{args.mode}_cross_time{model_event_str}"
 
-def get_choice_reward_file_name(args):
-    return f"{args.feat}_{args.mode}_choice_reward_separate"
-
 def get_ccgp_file_name(args):
     """
     Naming convention for preferred beliefs decoding files
@@ -96,6 +93,7 @@ def read_results(args, feats, num_shuffles=10):
         args.shuffle_idx = shuffle_idx
         dir = get_dir_name(args, make_dir=False)
         shuffle_res.append(load_df(args, feats, dir, shuffle=True))
+    args.shuffle_idx = None
     res = pd.concat(([res] + shuffle_res))
     return res  
 

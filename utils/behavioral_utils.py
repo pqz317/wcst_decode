@@ -907,7 +907,9 @@ def get_sub_for_session(session):
     Hacky way to get the subject from only a session
     Works because all fo BL sessions recorded during 2019
     """
-    return "SA" if int(session) < 20190101 else "BL"
+    # only want first 8 characters due to sessions like 201807250001
+    session = int(str(session)[:8])
+    return "SA" if session < 20190101 else "BL"
 
 
 def shuffle_beh_by_session_permute(beh, session, args):
