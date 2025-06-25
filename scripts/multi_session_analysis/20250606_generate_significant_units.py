@@ -30,6 +30,14 @@ REGIONS = ["all_regions", "inferior_temporal_cortex (ITC)", "medial_pallium (MPa
 
 
 def load_anova_res_for_event(args):
+    # These should just be set always, except for 
+    if args.sig_type == "choice_response":
+        args.conditions = ["Choice", "Response"]
+        args.beh_filters = {}
+    else: 
+        args.conditions = ["BeliefConf", "BeliefPartition"]
+        args.beh_filters = {"Response": "Correct", "Choice": "Chose"}
+
     if args.sig_type == "pref_conf":
         pref_res = io_utils.read_anova_good_units(args, args.sig_thresh, "BeliefPref", return_pos=True)
         conf_res = io_utils.read_anova_good_units(args, args.sig_thresh, "BeliefConf", return_pos=True)
@@ -40,6 +48,8 @@ def load_anova_res_for_event(args):
         return io_utils.read_anova_good_units(args, args.sig_thresh, "BeliefConf", return_pos=True)
     elif args.sig_type == "belief_partition":
         return io_utils.read_anova_good_units(args, args.sig_thresh, "BeliefPartition", return_pos=True)
+    elif args.sig_type == "choice_response":
+        return io_utils.read_anova_good_units(args, args.sig_thresh, "ChoiceResponse", return_pos=True)
     elif args.sig_type == "all":
         units = pd.read_pickle(UNITS_PATH.format(sub=args.subject))
         feat_sessions = pd.read_pickle(FEATS_PATH.format(sub=args.subject))
@@ -52,7 +62,7 @@ def load_anova_res_for_event(args):
 
 def find_sig_units_for_sub(args):
     event_reses = []
-    for event in ["StimOnset", "FeedbackOnsetLong"]:
+    for event in args.events:
         args.trial_event = event
         event_reses.append(load_anova_res_for_event(args))
     res = pd.concat(event_reses)
@@ -100,12 +110,8 @@ def main():
     parser.add_argument('--sig_thresh', default="95th", type=str)
     parser.add_argument('--filter_drift', default=True, type=lambda x: bool(strtobool(x)))
     parser.add_argument('--dry_run', default=True, type=lambda x: bool(strtobool(x)))
-
+    parser.add_argument('--events', default=["StimOnset", "FeedbackOnsetLong"], type=lambda x: x.split(","))
     args = parser.parse_args()
-
-    # These should just be set always
-    args.conditions = ["BeliefConf", "BeliefPartition"]
-    args.beh_filters = {"Response": "Correct", "Choice": "Chose"}
 
     all_units = []
     for sub in ["SA", "BL"]:

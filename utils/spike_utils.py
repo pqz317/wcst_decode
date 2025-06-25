@@ -315,6 +315,20 @@ def get_region_units(region_level, regions, units_path):
     regions_arr = regions.split(",")
     return all_units[all_units[region_level].isin(regions_arr)].PseudoUnitID.unique()
 
+def get_all_region_units(region_level, regions, subjects=["SA", "BL"], filter_drift=True):
+    """
+    Gets all pseudounitids associated with a region, from both subjects
+    optionally filters for drifting units
+    """
+    all_units = []
+    for sub in subjects: 
+        units_path = UNITS_PATH.format(sub=sub)
+        units = get_region_units(region_level, regions, units_path)
+        if filter_drift:
+            drift_units = pd.read_pickle(DRIFT_PATH.format(sub=sub))
+            units = units[~np.isin(units, drift_units.PseudoUnitID.unique())]
+        all_units.append(units)
+    return np.concatenate(all_units)
 
 def get_sig_units(args, units=None):
     """
