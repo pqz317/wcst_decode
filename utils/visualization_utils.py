@@ -23,6 +23,9 @@ from constants.behavioral_constants import *
 from constants.decoding_constants import *
 import copy
 
+from scipy.stats import ttest_ind
+import itertools
+
 REGION_TO_COLOR = {
     "Amygdala": "#00ff00",
     "Anterior Cingulate Gyrus": "#ff4500",
@@ -704,7 +707,7 @@ def plot_belief_partition_psth(unit_id, feat, args):
     return fig, (ax1, ax2, ax3)
 
 
-def plot_cosine_sim_between_conf_pref(args, include_shuffle=True):
+def plot_cosine_sim_between_conf_pref(args, include_shuffle=True, consider_norm=True):
     """
     Plots the distribution of cosine similarie
     """
@@ -717,6 +720,9 @@ def plot_cosine_sim_between_conf_pref(args, include_shuffle=True):
             args.mode = mode
             models = belief_partitions_io.read_models(args, FEATURES)
             models["weights"] = models.apply(lambda x: x.models.coef_[0, :] - x.models.coef_[1, :], axis=1)
+            if consider_norm:
+                models["weights"] = models.apply(lambda x: x.weights / np.sqrt(x.models.model.norm.running_var.detach().cpu().numpy() + 1e-5), axis=1)
+
             both_models.append(models)
         sim_res = classifier_utils.get_cross_cond_cosine_sim_of_weights(both_models[0], both_models[1])
         sns.lineplot(sim_res, x="Time", y="cosine_sim", linewidth=3, color="black", ax=axs[i])
@@ -728,3 +734,104 @@ def plot_cosine_sim_between_conf_pref(args, include_shuffle=True):
 
 
     fig.tight_layout()
+
+def format_plot(
+    axs,
+    linewidth=1,
+    ticklength=8,
+    ticklabelsize=12,
+    axislabelsize=13,
+    tickwidth=1,
+    rightspine=False,
+    leftspine=True,
+    topspine=False,
+    bottomspine=True,
+    ):
+    if type(axs) is not list and type(axs) is not np.array and type(axs) is not np.ndarray:
+        axs = [axs]
+    if type(axs) is np.ndarray:
+        axs = axs.flatten()
+    for ax in axs:
+        ax.spines['top'].set_visible(topspine)
+        ax.spines['right'].set_visible(rightspine)
+        ax.spines['bottom'].set_visible(bottomspine)
+        ax.spines['left'].set_visible(leftspine)
+        ax.spines['bottom'].set_linewidth(linewidth)
+        ax.spines['left'].set_linewidth(linewidth)
+        ax.tick_params(axis='both', length=ticklength, labelsize=ticklabelsize, width=tickwidth)
+        ax.xaxis.label.set_size(axislabelsize)
+        ax.yaxis.label.set_size(axislabelsize)
+
+def add_significance_bars(fig, ax, df, x, y, hue=None, pairs=None, test=ttest_ind, alpha_levels=[0.05, 0.01, 0.001]):
+    """
+    adds significance markers between specified pairs to an existing barplot.
+
+    Args:
+        df (pd.DataFrame): Input data.
+        x (str): Categorical variable for x-axis.
+        y (str): Numeric variable for y-axis.
+        hue (str, optional): Optional hue grouping.
+        pairs (list of tuple): List of pairs to compare, each a tuple of category labels.
+        test (function): Statistical test function taking two arrays.
+        alpha_levels (list): Significance thresholds for stars.
+
+    Returns:
+        fig, ax: Matplotlib figure and axis objects.
+    """
+
+    # If no pairs provided, compare all possible pairs
+    if pairs is None:
+        if hue:
+            categories = df[[x, hue]].drop_duplicates().values.tolist()
+            pairs = list(itertools.combinations(categories, 2))
+        else:
+            categories = df[x].unique()
+            pairs = list(itertools.combinations(categories, 2))
+    
+    # Function to get star markers
+    def pval_to_stars(p):
+        if p < alpha_levels[2]:
+            return '***'
+        elif p < alpha_levels[1]:
+            return '**'
+        elif p < alpha_levels[0]:
+            return '*'
+        else:
+            return 'ns'
+
+    # Calculate max height for annotation
+    if hue:
+        group_stats = df.groupby([x, hue])[y].agg(['mean', 'count', 'std']).reset_index()
+    else:
+        group_stats = df.groupby(x)[y].agg(['mean', 'count', 'std']).reset_index()
+
+    group_stats['se'] = group_stats['std'] / group_stats['count']**0.5
+    max_height = (group_stats['mean'] + group_stats['se']).max()
+
+
+    # Add significance markers
+    y_offset = max_height * 0.2
+    for i, pair in enumerate(pairs):
+        if hue:
+            (cat1, hue1), (cat2, hue2) = pair
+            data1 = df[(df[x] == cat1) & (df[hue] == hue1)][y]
+            data2 = df[(df[x] == cat2) & (df[hue] == hue2)][y]
+            xpos1 = list(df[[x, hue]].drop_duplicates().values.tolist()).index([cat1, hue1])
+            xpos2 = list(df[[x, hue]].drop_duplicates().values.tolist()).index([cat2, hue2])
+        else:
+            cat1, cat2 = pair
+            data1 = df[df[x] == cat1][y]
+            data2 = df[df[x] == cat2][y]
+            xpos1 = list(df[x].unique()).index(cat1)
+            xpos2 = list(df[x].unique()).index(cat2)
+
+        stat, pval = test(data1, data2)
+        stars = pval_to_stars(pval)
+
+        # Draw line and text
+        bar_y = max_height + y_offset * (i + 1.5)
+        ax.plot([xpos1, xpos1, xpos2, xpos2], [bar_y, bar_y + y_offset * 0.5, bar_y + y_offset * 0.5, bar_y], color='black')
+        ax.text((xpos1 + xpos2) / 2, bar_y + y_offset * 0.5, stars, ha='center', va='bottom')
+
+    fig.tight_layout()
+    return fig, ax

@@ -266,3 +266,39 @@ def get_contributions_for_all_time(args, region_level, sig_region_thresh=20, run
         all_conts.append(conts)
     all_conts = pd.concat(all_conts).reset_index()
     return all_conts
+
+def load_update_df(args, feats, dir, shuffle=False):
+    res = []
+    for feat in feats:
+        args.feat = feat
+        file_name = get_file_name(args)
+        try: 
+            full_path = os.path.join(dir, f"{file_name}_projections.pickle")
+            proj = pd.read_pickle(full_path)
+        except Exception as e:
+            if shuffle:
+                print(f"Warning, shuffle not found: {file_name}")
+                continue
+            else: 
+                raise e
+        shuffle_str = "_shuffle" if shuffle else ""
+        proj["mode"] = f"{args.mode}{shuffle_str}"
+        proj["feat"] = feat
+        res.append(proj)
+    return pd.concat(res)
+
+def read_update_projections(args, num_shuffles=3):
+    args.shuffle_idx = None
+    args.trial_interval = get_trial_interval(args.trial_event)
+    args.base_output_path = "/data/patrick_res/update_projections"
+    args.beh_filters = args.conditions 
+    dir = get_dir_name(args, make_dir=False)
+    res = load_update_df(args, FEATURES, dir)
+    shuffle_res = []
+    for shuffle_idx in range(num_shuffles):
+        args.shuffle_idx = shuffle_idx
+        dir = get_dir_name(args, make_dir=False)
+        shuffle_res.append(load_update_df(args, FEATURES, dir, shuffle=True))
+    args.shuffle_idx = None
+    res = pd.concat(([res] + shuffle_res))
+    return res

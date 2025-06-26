@@ -79,6 +79,10 @@ def get_proj_pseudo_for_session(session, args, num_pseudo=1000):
     weights = load_pref_vector(model_args)
     proj = pd.merge(fr_diffs, weights, on=["PseudoUnitID", "TimeIdx"])
 
+    if len(proj) == 0: 
+        # no projection to consider
+        return None
+
     def compute_dot(group):
         # currently using variance found from batch norm layer
         return (group.FiringRateDiff / group["std"] * group.weightsdiff).sum()
@@ -95,7 +99,9 @@ def get_proj_pseudo_for_session(session, args, num_pseudo=1000):
 def proj_all_sessions(args, sessions): 
     res = []
     for session in sessions:
-        res.append(get_proj_pseudo_for_session(session, args))
+        proj = get_proj_pseudo_for_session(session, args)
+        if proj is not None: 
+            res.append(get_proj_pseudo_for_session(session, args))
     res = pd.concat(res)
     summed_proj = res.groupby(["TimeIdx", "PseudoTrialNumber"]).proj.sum().reset_index(name="proj")
     return summed_proj
