@@ -1,6 +1,6 @@
 #!/bin/bash
 trial_events="StimOnset FeedbackOnsetLong"
-modes="reward choice chose_and_correct"
+modes="reward choice"
 
 # Optional args passed to decoding script
 extra_args="$@"
