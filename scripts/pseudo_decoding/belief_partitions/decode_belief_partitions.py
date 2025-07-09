@@ -26,7 +26,6 @@ import copy
 FEATS_PATH = "/data/patrick_res/sessions/{sub}/feats_at_least_3blocks.pickle"
 SESSIONS_PATH = "/data/patrick_res/sessions/{sub}/valid_sessions.pickle"
 UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/all_units.pickle"
-SESS_BEHAVIOR_PATH = "/data/patrick_res/behavior/SA/{sess_name}_object_features.csv"
 
 DATA_MODE = "FiringRate"
 

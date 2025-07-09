@@ -644,7 +644,41 @@ def get_prob_correct_by_block_pos(beh, max_block_pos):
     prob_correct = beh.groupby("TrialInBlock", group_keys=False).apply(calc_prob_correct).reset_index(name='ProbCorrect')
     return prob_correct
 
+def get_prob_choosing_rule_relative_to_rule_switch(beh, window):
+    """
+    In some window before/after a rule switch, get probability of choosing a card with that rule
+    """
+    beh = get_prev_rule(beh)
+    beh["ChoseLastRule"] = beh.apply(lambda row: row[FEATURE_TO_DIM[row["PrevRule"]]] == row["PrevRule"] if row["PrevRule"] else False, axis=1)
+    beh["ChoseCurrentRule"] = beh.apply(lambda row: row[FEATURE_TO_DIM[row["CurrentRule"]]] == row["CurrentRule"] if row["CurrentRule"] else False, axis=1)
+
+    beh['LastPos'] = beh.index.where(beh.TrialAfterRuleChange == 0)
+    beh['LastPos'] = beh['LastPos'].ffill()
+    beh['SinceLast'] = beh.index - beh['LastPos']
+
+    beh['NextPos'] = beh.index.where(beh.TrialAfterRuleChange == 0)
+    beh['NextPos'] = beh['NextPos'].bfill()
+    beh['UntilNext'] = beh['NextPos'] - beh.index
+
+    # filter edges
+    beh = beh[(~beh.SinceLast.isna()) & (~beh.UntilNext.isna())]
+
+    since_beh = beh[beh.SinceLast < window]
+    chose_last_probs = since_beh.groupby("SinceLast").apply(lambda x: len(x[x.ChoseLastRule]) / len(x)).reset_index(name="ChoiceProb")
+    chose_last_probs["Position"] = chose_last_probs["SinceLast"].astype(int)
+
+
+    until_beh = beh[beh.UntilNext < window]
+    chose_next_probs = until_beh.groupby("UntilNext").apply(lambda x: len(x[x.ChoseCurrentRule]) / len(x)).reset_index(name="ChoiceProb")
+    chose_next_probs["Position"] = (-1 * chose_next_probs["UntilNext"]).astype(int)
+
+    prob_pos =  pd.concat((chose_last_probs, chose_next_probs))
+    return prob_pos
+
+
 def get_prev_rule(beh):
+    if "PrevRule" in beh: 
+        return beh
     group_rules =  beh.groupby("BlockNumber", group_keys=True).apply(lambda group: pd.Series({"CurrentRule": group.CurrentRule.iloc[0]})).reset_index()
     group_rules["PrevRule"] = group_rules["CurrentRule"].shift()
     beh = pd.merge(beh, group_rules[["BlockNumber", "PrevRule"]], on="BlockNumber")

@@ -431,7 +431,7 @@ def visualize_ccpg_value(args, df, ax, hue_col="condition"):
 def visualize_preferred_beliefs(args, df, ax, hue_col="condition", show_shuffles=True):
     if not show_shuffles:
         df = df[~df.condition.str.contains("shuffle")]
-    sns.lineplot(df, x="Time", y="Accuracy", hue=hue_col, linewidth=3, ax=ax)
+    sns.lineplot(df, x="Time", y="Accuracy", hue=hue_col, linewidth=3, ax=ax, errorbar="se")
     # # add estimated chance
     ax.axhline(1/2, color='black', linestyle='dotted', label="Estimated Chance")
     if args.trial_event == "FeedbackOnset" or args.trial_event == "FeedbackOnsetLong":
@@ -762,6 +762,41 @@ def format_plot(
         ax.xaxis.label.set_size(axislabelsize)
         ax.yaxis.label.set_size(axislabelsize)
 
+
+def compute_bar_positions_from_df(df, x, y, hue=None, group_width=0.8):
+    """
+    Compute expected bar center positions and heights (mean + se) from a dataframe.
+
+    Returns:
+        dict: {(category, hue): (x_position, bar_height)}
+    """
+    bar_positions = {}
+
+    if hue:
+        cond_order = df[x].unique()
+        hue_order = df[hue].unique()
+        n_hues = len(hue_order)
+        bar_width = group_width / n_hues
+
+        for i, cond in enumerate(cond_order):
+            x_base = i
+            for j, h in enumerate(hue_order):
+                bar_center = (x_base - group_width / 2) + bar_width * (j + 0.5)
+                subset = df[(df[x] == cond) & (df[hue] == h)][y]
+                mean_val = subset.mean()
+                se_val = subset.std() / np.sqrt(subset.count())
+                bar_positions[(cond, h)] = (bar_center, mean_val + se_val)
+    else:
+        cond_order = df[x].unique()
+        for i, cond in enumerate(cond_order):
+            bar_center = i
+            subset = df[df[x] == cond][y]
+            mean_val = subset.mean()
+            se_val = subset.std() / np.sqrt(subset.count())
+            bar_positions[cond] = (bar_center, mean_val + se_val)
+
+    return bar_positions
+
 def add_significance_bars(fig, ax, df, x, y, hue=None, pairs=None, test=ttest_ind, alpha_levels=[0.05, 0.01, 0.001]):
     """
     adds significance markers between specified pairs to an existing barplot.
@@ -778,6 +813,7 @@ def add_significance_bars(fig, ax, df, x, y, hue=None, pairs=None, test=ttest_in
     Returns:
         fig, ax: Matplotlib figure and axis objects.
     """
+    bar_positions = compute_bar_positions_from_df(df, x, y, hue=hue)
 
     # If no pairs provided, compare all possible pairs
     if pairs is None:
@@ -816,14 +852,14 @@ def add_significance_bars(fig, ax, df, x, y, hue=None, pairs=None, test=ttest_in
             (cat1, hue1), (cat2, hue2) = pair
             data1 = df[(df[x] == cat1) & (df[hue] == hue1)][y]
             data2 = df[(df[x] == cat2) & (df[hue] == hue2)][y]
-            xpos1 = list(df[[x, hue]].drop_duplicates().values.tolist()).index([cat1, hue1])
-            xpos2 = list(df[[x, hue]].drop_duplicates().values.tolist()).index([cat2, hue2])
+            xpos1, height1 = bar_positions[(cat1, hue1)]
+            xpos2, height2 = bar_positions[(cat2, hue2)]
         else:
             cat1, cat2 = pair
             data1 = df[df[x] == cat1][y]
             data2 = df[df[x] == cat2][y]
-            xpos1 = list(df[x].unique()).index(cat1)
-            xpos2 = list(df[x].unique()).index(cat2)
+            xpos1, height1 = bar_positions[cat1]
+            xpos2, height2 = bar_positions[cat2]
 
         stat, pval = test(data1, data2)
         stars = pval_to_stars(pval)

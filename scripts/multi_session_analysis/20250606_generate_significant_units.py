@@ -31,7 +31,7 @@ REGIONS = ["all_regions", "inferior_temporal_cortex (ITC)", "medial_pallium (MPa
 
 def load_anova_res_for_event(args):
     # These should just be set always, except for 
-    if args.sig_type == "choice_response":
+    if args.sig_type in ["choice_response", "choice", "response"]:
         args.conditions = ["Choice", "Response"]
         args.beh_filters = {}
     else: 
@@ -50,6 +50,10 @@ def load_anova_res_for_event(args):
         return io_utils.read_anova_good_units(args, args.sig_thresh, "BeliefPartition", return_pos=True)
     elif args.sig_type == "choice_response":
         return io_utils.read_anova_good_units(args, args.sig_thresh, "ChoiceResponse", return_pos=True)
+    elif args.sig_type == "choice":
+        return io_utils.read_anova_good_units(args, args.sig_thresh, "Choice", return_pos=True)
+    elif args.sig_type == "response":
+        return io_utils.read_anova_good_units(args, args.sig_thresh, "Response", return_pos=True)
     elif args.sig_type == "all":
         units = pd.read_pickle(UNITS_PATH.format(sub=args.subject))
         feat_sessions = pd.read_pickle(FEATS_PATH.format(sub=args.subject))
