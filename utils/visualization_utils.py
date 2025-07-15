@@ -538,7 +538,7 @@ def plot_combined_accs(args, by_dim=False, modes=None):
     ax2.set_xlabel(f"Time Relative to Feedback Onset")
 
     fig.tight_layout()
-    # return fig, (ax1, ax2)
+    return fig, (ax1, ax2)
 
 def plot_combined_accs_by_attr(args, attr, values, num_shuffles=0):
     all_stim_res = []
@@ -599,7 +599,6 @@ def plot_combined_cross_accs(args):
     )
     all_res = pd.concat((cross_stim_res, stim_model_cross_fb_res, fb_model_cross_stim_res, cross_fb_res))
     all_max = all_res.groupby(["TestTime", "TrainTime", "TrainEvent", "TestEvent"]).Accuracy.mean().max()
-    print(all_max)
 
     all_decoder_res = pd.concat((stim_res, fb_res))
     shuffles = all_decoder_res[all_decoder_res["mode"] == f"{args.mode}_shuffle"]
@@ -619,7 +618,7 @@ def plot_combined_cross_accs(args):
     cbar = fig.colorbar(axs[1, 1].collections[0], cax=cbar_ax, orientation='vertical')
     cbar.set_label('Accuracy')
     # fig.tight_layout()
-
+    return fig, axs
 
 def plot_pop_heatmap_by_time(all_data, value_col, time_col="Time", region_level="whole_pop", orders=None, event_labels={}):
     """

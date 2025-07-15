@@ -136,18 +136,18 @@ def decode(args):
     output_dir = belief_partitions_io.get_dir_name(args)
 
     test_accs, models = train_decoder(sess_datas, args)
-    np.save(os.path.join(output_dir, f"{file_name}_test_accs.npy"), test_accs)
+
+    # only save splits for non-shuffle runs
+    # for everything else, save regardless of shuffle, non-shuffle. 
     if args.shuffle_idx is None: 
-        np.save(os.path.join(output_dir, f"{file_name}_models.npy"), models)
-
-        # save pseudo unit IDs
-        unit_ids = pd.DataFrame({"PseudoUnitIDs": np.concatenate(sess_datas.apply(lambda x: x.get_pseudo_unit_ids()).values)})
-        # unit_ids.to_pickle(os.path.join(output_dir, f"{file_name}_unit_ids.pickle"))
-        unit_ids.to_csv(os.path.join(output_dir, f"{file_name}_unit_ids.csv"))
-
         all_splits = pd.concat(sess_datas.apply(lambda x: x.get_splits_df()).values)
         all_splits.to_pickle(os.path.join(output_dir, f"{file_name}_splits.pickle"))
 
+    np.save(os.path.join(output_dir, f"{file_name}_test_accs.npy"), test_accs)
+    np.save(os.path.join(output_dir, f"{file_name}_models.npy"), models)
+    # save pseudo unit IDs
+    unit_ids = pd.DataFrame({"PseudoUnitIDs": np.concatenate(sess_datas.apply(lambda x: x.get_pseudo_unit_ids()).values)})
+    unit_ids.to_csv(os.path.join(output_dir, f"{file_name}_unit_ids.csv"))
 
 
 def process_args(args):

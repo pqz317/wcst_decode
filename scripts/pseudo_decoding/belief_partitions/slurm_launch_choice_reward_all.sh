@@ -5,6 +5,11 @@ partition="ckpt-all"
 
 trial_events="StimOnset FeedbackOnsetLong"
 modes="reward choice"
+
+declare -A mode_to_subpop
+mode_to_subpop["reward"] = "response_99th_window_filter_drift"
+mode_to_subpop["choice"] = "choice_99th_window_filter_drift"
+
 # Optional args passed to decoding script
 extra_args="$@"
 
@@ -36,10 +41,10 @@ for trial_event in $trial_events; do
     for mode in $modes; do
         # First job array: 12 jobs
         submit_job_array "0-11" "${trial_event}${mode}" \
-            "--mode $mode --trial_event $trial_event --feat_idx \$SLURM_ARRAY_TASK_ID --balance_cols Choice,Response --base_output_path /data/patrick_res/choice_reward"
+            "--mode $mode --trial_event $trial_event --sig_unit_level ${mode_to_subpop[$mode]} --feat_idx \$SLURM_ARRAY_TASK_ID --balance_cols Choice,Response --base_output_path /data/patrick_res/choice_reward"
 
         # Second job array: 120 jobs with shuffle indices
         submit_job_array "0-119" "sh${trial_event}${mode}" \
-            "--mode $mode --trial_event $trial_event --feat_idx \$((\$SLURM_ARRAY_TASK_ID % 12)) --shuffle_idx \$((\$SLURM_ARRAY_TASK_ID / 12)) --balance_cols Choice,Response --base_output_path /data/patrick_res/choice_reward"
+            "--mode $mode --trial_event $trial_event --sig_unit_level ${mode_to_subpop[$mode]} --feat_idx \$((\$SLURM_ARRAY_TASK_ID % 12)) --shuffle_idx \$((\$SLURM_ARRAY_TASK_ID / 12)) --balance_cols Choice,Response --base_output_path /data/patrick_res/choice_reward"
     done
 done

@@ -68,7 +68,7 @@ def load_df(args, feats, dir, shuffle=False):
             acc = np.load(full_path)
         except Exception as e:
             if shuffle:
-                print(f"Warning, shuffle not found: {file_name}")
+                # print(f"Warning, shuffle not found: {file_name}")
                 continue
             else: 
                 raise e
