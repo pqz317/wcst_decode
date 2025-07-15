@@ -7,8 +7,8 @@ trial_events="StimOnset FeedbackOnsetLong"
 modes="reward choice"
 
 declare -A mode_to_subpop
-mode_to_subpop["reward"] = "response_99th_window_filter_drift"
-mode_to_subpop["choice"] = "choice_99th_window_filter_drift"
+mode_to_subpop["reward"]="response_99th_window_filter_drift"
+mode_to_subpop["choice"]="choice_99th_window_filter_drift"
 
 # Optional args passed to decoding script
 extra_args="$@"
