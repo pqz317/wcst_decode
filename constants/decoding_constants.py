@@ -43,6 +43,14 @@ MODE_TO_CLASSES = {
     "updates_beliefs": ["Increases", "Decreases"],
 }
 
+MODE_TO_DIRECTION_LABELS = {
+    "pref": {"high": "High X", "low": "High Not X"},
+    "conf": {"high": "High", "low": "Low"},
+    "choice_int": {"high": "Chose", "low": "Not Chose"},
+    "choice": {"high": "Chose", "low": "Not Chose"},
+    "reward": {"high": "Correct", "low": "Incorrect"}
+}
+
 MODE_COND_LABEL_MAPS = {
     "conf": None,
     "pref": None,

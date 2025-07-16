@@ -267,6 +267,29 @@ def get_contributions_for_all_time(args, region_level, sig_region_thresh=20, run
     all_conts = pd.concat(all_conts).reset_index()
     return all_conts
 
+def get_weights(args):
+    high_idx = MODE_TO_CLASSES[args.mode].index(MODE_TO_DIRECTION_LABELS[args.mode]["high"])
+    low_idx = MODE_TO_CLASSES[args.mode].index(MODE_TO_DIRECTION_LABELS[args.mode]["low"])
+    models = read_models(args, [args.feat])
+    unit_ids = read_units(args, [args.feat])
+
+    models["weightsdiff"] = models.apply(lambda x: x.models.coef_[high_idx, :] - x.models.coef_[low_idx, :], axis=1)
+    models["batch_mean"] = models.apply(lambda x: x.models.model.norm.running_mean.detach().cpu().numpy(), axis=1)
+    # 1e-5 from torch batchnorm1d, numerical 
+    models["batch_std"] = models.apply(lambda x: np.sqrt(x.models.model.norm.running_var.detach().cpu().numpy() + 1e-5), axis=1)
+
+    def avg_and_label(x):
+        weights_diff_means = np.mean(np.vstack(x.weightsdiff.values), axis=0)
+        mean_means = np.mean(np.vstack(x.batch_mean.values), axis=0)
+        std_means = np.mean(np.vstack(x.batch_std.values), axis=0)
+        weights_diff_normed = weights_diff_means / std_means
+        pos = np.arange(len(weights_diff_means))
+        
+        return pd.DataFrame({"pos": pos, "weightsdiff": weights_diff_means, "weightsdiff_normed": weights_diff_normed, "mean": mean_means, "std": std_means})
+    weights = models.groupby(["Time", "feat"]).apply(avg_and_label).reset_index()
+    weights = pd.merge(weights, unit_ids, on=["feat", "pos"])
+    return weights
+
 def load_update_df(args, feats, dir, shuffle=False):
     res = []
     for feat in feats:

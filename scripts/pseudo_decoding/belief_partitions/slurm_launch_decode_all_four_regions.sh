@@ -1,7 +1,7 @@
 #!/bin/bash
 trial_events="StimOnset FeedbackOnsetLong"
 modes="pref conf"
-regions="amygdala_Amy basal_ganglia_BG inferior_temporal_cortex_ITC medial_pallium_MPal"
+regions="amygdala_Amy basal_ganglia_BG inferior_temporal_cortex_ITC medial_pallium_MPal lateral_prefrontal_cortex_lat_PFC"
 
 # Optional args passed to decoding script
 extra_args="$@"
