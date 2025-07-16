@@ -87,6 +87,7 @@ def process_args(args):
     args.feat_pair = pair_row.pair
     
     args.sessions = valid_sess[valid_sess.session_name.isin(pair_row.sessions)]
+    args.all_sessions = args.sessions
     args.trial_interval = get_trial_interval(args.trial_event)
 
     print(args.beh_filters)
