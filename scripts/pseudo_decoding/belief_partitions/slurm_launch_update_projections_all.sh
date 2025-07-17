@@ -55,11 +55,11 @@ for trial_event in $trial_events; do
         for condition in "${conditions[@]}"; do
             # First job array: 12 jobs
             submit_job_array "0-11" "${trial_event}${mode}" \
-                "--mode $mode --trial_event $trial_event --sig_unit_level ${mode_to_subpop[$mode]} --condition $condition --feat_idx \$SLURM_ARRAY_TASK_ID"
+                "--mode $mode --trial_event $trial_event --sig_unit_level ${mode_to_subpop[$mode]} --conditions $condition --feat_idx \$SLURM_ARRAY_TASK_ID"
 
             # Second job array: 36 jobs with shuffle indices
             submit_job_array "0-35" "sh${trial_event}${mode}" \
-                "--mode $mode --trial_event $trial_event --sig_unit_level ${mode_to_subpop[$mode]} --condition $condition --feat_idx \$((\$SLURM_ARRAY_TASK_ID % 12)) --shuffle_idx \$((\$SLURM_ARRAY_TASK_ID / 12))"
+                "--mode $mode --trial_event $trial_event --sig_unit_level ${mode_to_subpop[$mode]} --conditions $condition --feat_idx \$((\$SLURM_ARRAY_TASK_ID % 12)) --shuffle_idx \$((\$SLURM_ARRAY_TASK_ID / 12))"
         done
     done
 done
