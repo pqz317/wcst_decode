@@ -5,6 +5,19 @@ partition="ckpt-all"
 
 trial_events="StimOnset FeedbackOnsetLong"
 modes="pref conf"
+# conditions=(\
+#     '{\"Response\":\"Correct\"\,\"Choice\":\"Chose\"}' \
+#     '{\"Response\":\"Correct\"\,\"Choice\":\"Not Chose\"}' \
+#     '{\"Response\":\"Incorrect\"\,\"Choice\":\"Not Chose\"}' \
+#     '{\"Response\":\"Incorrect\"\,\"Choice\":\"Chose\"}' \
+# )
+conditions=(
+    '{"Response":"Correct", "Choice":"Chose"}'
+    '{"Response":"Correct", "Choice":"Not Chose"}'
+    '{"Response":"Incorrect", "Choice":"Not Chose"}'
+    '{"Response":"Incorrect", "Choice":"Chose"}'
+)
+
 
 declare -A mode_to_subpop
 mode_to_subpop["pref"]="pref_99th_window_filter_drift"
@@ -39,12 +52,14 @@ EOT
 # Loop over trial events and modes
 for trial_event in $trial_events; do
     for mode in $modes; do
-        # First job array: 12 jobs
-        submit_job_array "0-11" "${trial_event}${mode}" \
-            "--mode $mode --trial_event $trial_event --sig_unit_level ${mode_to_subpop[$mode]} --feat_idx \$SLURM_ARRAY_TASK_ID"
+        for condition in "${conditions[@]}"; do
+            # First job array: 12 jobs
+            submit_job_array "0-11" "${trial_event}${mode}" \
+                "--mode $mode --trial_event $trial_event --sig_unit_level ${mode_to_subpop[$mode]} --condition $condition --feat_idx \$SLURM_ARRAY_TASK_ID"
 
-        # Second job array: 36 jobs with shuffle indices
-        submit_job_array "0-35" "sh${trial_event}${mode}" \
-            "--mode $mode --trial_event $trial_event --sig_unit_level ${mode_to_subpop[$mode]} --feat_idx \$((\$SLURM_ARRAY_TASK_ID % 12)) --shuffle_idx \$((\$SLURM_ARRAY_TASK_ID / 12))"
+            # Second job array: 36 jobs with shuffle indices
+            submit_job_array "0-35" "sh${trial_event}${mode}" \
+                "--mode $mode --trial_event $trial_event --sig_unit_level ${mode_to_subpop[$mode]} --condition $condition --feat_idx \$((\$SLURM_ARRAY_TASK_ID % 12)) --shuffle_idx \$((\$SLURM_ARRAY_TASK_ID / 12))"
+        done
     done
 done
