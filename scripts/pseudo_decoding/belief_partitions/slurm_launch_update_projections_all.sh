@@ -5,18 +5,18 @@ partition="ckpt-all"
 
 trial_events="StimOnset FeedbackOnsetLong"
 modes="pref conf"
-# conditions=(\
-#     '{\"Response\":\"Correct\"\,\"Choice\":\"Chose\"}' \
-#     '{\"Response\":\"Correct\"\,\"Choice\":\"Not Chose\"}' \
-#     '{\"Response\":\"Incorrect\"\,\"Choice\":\"Not Chose\"}' \
-#     '{\"Response\":\"Incorrect\"\,\"Choice\":\"Chose\"}' \
-# )
-conditions=(
-    '{"Response":"Correct", "Choice":"Chose"}'
-    '{"Response":"Correct", "Choice":"Not Chose"}'
-    '{"Response":"Incorrect", "Choice":"Not Chose"}'
-    '{"Response":"Incorrect", "Choice":"Chose"}'
+conditions=(\
+    '{\"Response\":\"Correct\"\,\"Choice\":\"Chose\"}' \
+    '{\"Response\":\"Correct\"\,\"Choice\":\"Not Chose\"}' \
+    '{\"Response\":\"Incorrect\"\,\"Choice\":\"Not Chose\"}' \
+    '{\"Response\":\"Incorrect\"\,\"Choice\":\"Chose\"}' \
 )
+# conditions=(
+#     '{"Response":"Correct", "Choice":"Chose"}'
+#     '{"Response":"Correct", "Choice":"Not Chose"}'
+#     '{"Response":"Incorrect", "Choice":"Not Chose"}'
+#     '{"Response":"Incorrect", "Choice":"Chose"}'
+# )
 
 
 declare -A mode_to_subpop
