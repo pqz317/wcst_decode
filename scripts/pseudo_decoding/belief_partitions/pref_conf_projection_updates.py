@@ -99,12 +99,21 @@ def get_proj_pseudo_for_session(session, args, num_pseudo=1000):
 def proj_all_sessions(args, sessions): 
     res = []
     for session in sessions:
-        proj = get_proj_pseudo_for_session(session, args)
+        proj_args = copy.deepcopy(args)
+        proj_args.subject = behavioral_utils.get_sub_for_session(session)
+        proj = get_proj_pseudo_for_session(session, proj_args)
         if proj is not None: 
-            res.append(get_proj_pseudo_for_session(session, args))
+            res.append(proj)
     res = pd.concat(res)
     summed_proj = res.groupby(["TimeIdx", "PseudoTrialNumber"]).proj.sum().reset_index(name="proj")
     return summed_proj
+
+
+def get_feat_sessions_for_sub(args):
+    valid_sess = pd.read_pickle(SESSIONS_PATH.format(sub=args.subject))
+    feats = pd.read_pickle(FEATS_PATH.format(sub=args.subject))
+    feat_sessions = feats[feats.feat == args.feat].iloc[0].sessions
+    return valid_sess[valid_sess.session_name.isin(feat_sessions)]
 
 def main():
     """
@@ -117,15 +126,22 @@ def main():
 
     args = parser.parse_args()
     args.trial_interval = get_trial_interval(args.trial_event)
+    args.feat = FEATURES[args.feat_idx]
 
-    feats = pd.read_pickle(FEATS_PATH.format(sub=args.subject))
-    valid_sess = pd.read_pickle(SESSIONS_PATH.format(sub=args.subject))
-
-    row = feats.iloc[args.feat_idx]
-    args.feat = row.feat
-    args.all_sessions = valid_sess[valid_sess.session_name.isin(row.sessions)]
-
-    summed_proj = proj_all_sessions(args, row.sessions)
+    if args.subject == "both":
+        sa_args = copy.deepcopy(args)
+        sa_args.subject = "SA"
+        sa_sessions = get_feat_sessions_for_sub(sa_args)
+        
+        bl_args = copy.deepcopy(args)
+        bl_args.subject = "BL"
+        bl_sessions = get_feat_sessions_for_sub(bl_args)
+        valid_sess = pd.concat((sa_sessions, bl_sessions))
+    else: 
+        valid_sess = get_feat_sessions_for_sub(args)
+        args.all_sessions = valid_sess
+        
+    summed_proj = proj_all_sessions(args, valid_sess.session_name)
     save_args = copy.deepcopy(args)
     # hack, just leverage beh filters for the conditions here. 
     save_args.beh_filters = save_args.conditions

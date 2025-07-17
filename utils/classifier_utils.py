@@ -4,6 +4,10 @@ from trial_splitters.trial_splitter import TrialSplitter
 from models.wcst_dataset import WcstDataset
 import pandas as pd
 import copy
+import scripts.pseudo_decoding.belief_partitions.belief_partitions_io as belief_partitions_io
+from constants.behavioral_constants import *
+import itertools
+
 
 FEATURES = [
     'CIRCLE', 'SQUARE', 'STAR', 'TRIANGLE', 
@@ -411,3 +415,34 @@ def get_shuffled_cosine_sim_of_weights(weights, num_shuffle=1000, num_runs=8):
                         shuffs.append(cosine_sim(random_vector(dim), random_vector(dim)))
         res.append(np.mean(shuffs))
     return np.percentile(res, 0.5), np.percentile(res, 99.5)
+
+def compute_cosine_sim_between_pairs_of_feats(args, pairs=None, use_ccgp=False):
+    if pairs is None: 
+        pairs = list(itertools.combinations(FEATURES, 2))
+    res = []
+    for (feat_a, feat_b) in pairs:
+        if use_ccgp:
+            args.feat_pair = (feat_a, feat_b)
+        try: 
+            args_a = copy.deepcopy(args)
+            args_a.feat = feat_a
+            weights_a = belief_partitions_io.get_weights(args_a)
+
+            args_b = copy.deepcopy(args)
+            args_b.feat = feat_b
+            weights_b = belief_partitions_io.get_weights(args_b)    
+        except Exception as e: 
+            if args.shuffle_idx is None:
+                raise e
+            else: 
+                print("Can't find")
+                continue
+
+        merged = pd.merge(weights_a, weights_b, on=["Time", "PseudoUnitID"], suffixes=("_a", "_b"), how="outer").fillna(0)
+        if len(merged) == 0:
+            continue
+        sims = merged.groupby(["Time"]).apply(lambda x: cosine_sim(x.weightsdiff_a, x.weightsdiff_b)).reset_index(name="cosine_sim")
+        # sims = merged.groupby(["Time_choice", "Time_pref"]).apply(lambda x: classifier_utils.cosine_sim(x.weightsdiff_normed_choice, x.weightsdiff_normed_pref)).reset_index(name="cosine_sim")
+        sims["dim_type"] = "within_dim" if FEATURE_TO_DIM[feat_a] == FEATURE_TO_DIM[feat_b] else "across_dim"
+        res.append(sims)
+    return pd.concat(res)

@@ -22,8 +22,11 @@ def transform_np_acc_to_df(acc, args):
     return df
 
 def get_file_name(args):
-    shuffle_str = "" if args.shuffle_idx is None else f"_shuffle_{args.shuffle_idx}"
-    return f"{args.feat}_{args.mode}{shuffle_str}"
+    if "feat_pair" in args: 
+        return get_ccgp_file_name(args)
+    else: 
+        shuffle_str = "" if args.shuffle_idx is None else f"_shuffle_{args.shuffle_idx}"
+        return f"{args.feat}_{args.mode}{shuffle_str}"
 
 def get_cross_time_file_name(args):
     """
@@ -104,7 +107,10 @@ def read_units(args, feats):
     for feat in feats:
         args.feat = feat
         file_name = get_file_name(args)
-        df = pd.read_csv(os.path.join(dir, f"{file_name}_unit_ids.csv"))
+        if "feat_pair" in args: 
+            df = pd.read_csv(os.path.join(dir, f"{file_name}_feat_{feat}_unit_ids.csv"))
+        else: 
+            df = pd.read_csv(os.path.join(dir, f"{file_name}_unit_ids.csv"))
         # fixing a bug here...
         df = df.rename(columns={"PseudoUnitIDs": "PseudoUnitID"})
         df = df.sort_values(by="PseudoUnitID")
@@ -195,6 +201,7 @@ def read_ccgp_results(args, pairs, conds=["within_cond", "across_cond", "overall
     return res
 
 def get_ccgp_feat_model_for_pair(args, dir, feat, feat_pair):
+    args.trial_interval = get_trial_interval(args.trial_event)
     args.feat_pair = feat_pair
     file_name = get_ccgp_file_name(args)
     models = np.load(os.path.join(dir, f"{file_name}_feat_{feat}_models.npy"), allow_pickle=True)
@@ -270,7 +277,11 @@ def get_contributions_for_all_time(args, region_level, sig_region_thresh=20, run
 def get_weights(args):
     high_idx = MODE_TO_CLASSES[args.mode].index(MODE_TO_DIRECTION_LABELS[args.mode]["high"])
     low_idx = MODE_TO_CLASSES[args.mode].index(MODE_TO_DIRECTION_LABELS[args.mode]["low"])
-    models = read_models(args, [args.feat])
+
+    if "feat_pair" in args:
+        models = get_ccgp_feat_model_for_pair(args, get_dir_name(args, make_dir=False), args.feat, args.feat_pair)
+    else: 
+        models = read_models(args, [args.feat])
     unit_ids = read_units(args, [args.feat])
 
     models["weightsdiff"] = models.apply(lambda x: x.models.coef_[high_idx, :] - x.models.coef_[low_idx, :], axis=1)
