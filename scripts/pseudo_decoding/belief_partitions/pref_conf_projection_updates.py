@@ -139,8 +139,8 @@ def main():
         valid_sess = pd.concat((sa_sessions, bl_sessions))
     else: 
         valid_sess = get_feat_sessions_for_sub(args)
-        args.all_sessions = valid_sess
-        
+    
+    args.all_sessions = valid_sess
     summed_proj = proj_all_sessions(args, valid_sess.session_name)
     save_args = copy.deepcopy(args)
     # hack, just leverage beh filters for the conditions here. 
