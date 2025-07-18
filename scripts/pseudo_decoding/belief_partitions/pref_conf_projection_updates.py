@@ -56,16 +56,21 @@ def load_pref_vector(args):
     return weights
 
 def get_proj_pseudo_for_session(session, args, num_pseudo=1000):
-    beh = behavioral_utils.load_behavior_from_args(session, args)
+    # for grabbing behavior and firing rates, use subject-specific arguments
+    # for grabbing decoder weights, use general
+    sub_args = copy.deepcopy(args)
+    sub_args.subject = behavioral_utils.get_sub_for_session(session)
+
+    beh = behavioral_utils.load_behavior_from_args(session, sub_args)
     beh["NextTrialNumber"] = beh.shift(-1).TrialNumber
     beh = beh[~beh.NextTrialNumber.isna()]
     beh["NextTrialNumber"] = beh.NextTrialNumber.astype(int)
-    beh = behavioral_utils.get_feat_choice_label(beh, args.feat)
-    beh = behavioral_utils.get_belief_partitions(beh, args.feat, use_x=True)
+    beh = behavioral_utils.get_feat_choice_label(beh, sub_args.feat)
+    beh = behavioral_utils.get_belief_partitions(beh, sub_args.feat, use_x=True)
 
-    beh = behavioral_utils.filter_behavior(beh, args.conditions)
+    beh = behavioral_utils.filter_behavior(beh, sub_args.conditions)
 
-    frs = spike_utils.get_frs_from_args(args, session)
+    frs = spike_utils.get_frs_from_args(sub_args, session)
     frs["TimeIdx"] = (frs["Time"] * 10).round().astype(int)
     fr_w_next = pd.merge(frs, beh[["TrialNumber", "NextTrialNumber"]], on="TrialNumber")
     fr_w_next = pd.merge(fr_w_next, frs, left_on=["NextTrialNumber", "PseudoUnitID", "TimeIdx"], right_on=["TrialNumber", "PseudoUnitID", "TimeIdx"], suffixes=[None, "Next"])
@@ -99,9 +104,7 @@ def get_proj_pseudo_for_session(session, args, num_pseudo=1000):
 def proj_all_sessions(args, sessions): 
     res = []
     for session in sessions:
-        proj_args = copy.deepcopy(args)
-        proj_args.subject = behavioral_utils.get_sub_for_session(session)
-        proj = get_proj_pseudo_for_session(session, proj_args)
+        proj = get_proj_pseudo_for_session(session, args)
         if proj is not None: 
             res.append(proj)
     res = pd.concat(res)
