@@ -7,9 +7,9 @@ trial_events="StimOnset FeedbackOnsetLong"
 modes="pref conf"
 conditions=(\
     '{\"Response\":\"Correct\"\,\"Choice\":\"Chose\"}' \
-    '{\"Response\":\"Correct\"\,\"Choice\":\"Not\ Chose\"}' \
-    '{\"Response\":\"Incorrect\"\,\"Choice\":\"Not\ Chose\"}' \
     '{\"Response\":\"Incorrect\"\,\"Choice\":\"Chose\"}' \
+    '{\"Response\":\"Correct\"}' \
+    '{\"Response\":\"Incorrect\"}' \
 )
 # conditions=(
 #     '{"Response":"Correct", "Choice":"Chose"}'
