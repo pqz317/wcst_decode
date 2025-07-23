@@ -58,8 +58,12 @@ def get_sims(pair, args):
     feat2_res = pd.concat(pd.Series(pair.sessions).apply(lambda x: get_pseudo_frs_for_session(x, args)).values)
 
     merged = pd.merge(feat1_res, feat2_res, on=["PseudoUnitID", "PseudoTrialNumber", "TimeIdx"], suffixes=["_feat1", "_feat2"], how="outer").fillna(0)
-
-    sims = merged.groupby(["PseudoTrialNumber", "TimeIdx"]).apply(lambda x: classifier_utils.cosine_sim(x.FiringRate_feat1, x.FiringRate_feat2)).reset_index(name="cosine_sim")
+    if args.sim_type == "cosine_sim":
+        sims = merged.groupby(["PseudoTrialNumber", "TimeIdx"]).apply(lambda x: classifier_utils.cosine_sim(x.FiringRate_feat1, x.FiringRate_feat2)).reset_index(name="cosine_sim")
+    elif args.sim_type == "euclidean":
+        sims = merged.groupby(["PseudoTrialNumber", "TimeIdx"]).apply(lambda x: np.sqrt(np.sum((x.FiringRate_feat1 - x.FiringRate_feat2)**2))).reset_index(name="cosine_sim")
+    else: 
+        raise ValueError(f"invalid sim type {args.sim_type}")
     return sims
 
 def main():
@@ -69,7 +73,9 @@ def main():
     """
     parser = argparse.ArgumentParser()
     parser = add_defaults_to_parser(BeliefPartitionConfigs(), parser)
+    parser.add_argument(f'--sim_type', default="cosine_sim")
     args = parser.parse_args()
+
 
     pairs = pd.read_pickle(BOTH_PAIRS_PATH).reset_index(drop=True)
     pair_row = pairs.iloc[args.pair_idx]
@@ -81,7 +87,7 @@ def main():
     args.base_output_path = "/data/patrick_res/belief_similarities"
     file_name = belief_partitions_io.get_ccgp_file_name(args)
     output_dir = belief_partitions_io.get_dir_name(args)
-    sims.to_pickle(os.path.join(output_dir, f"{file_name}_sims.pickle"))
+    sims.to_pickle(os.path.join(output_dir, f"{file_name}_{args.sim_type}.pickle"))
     
 if __name__ == "__main__":
     main()
