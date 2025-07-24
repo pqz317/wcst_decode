@@ -41,6 +41,9 @@ def get_pseudo_frs_for_session(session, args, num_pseudo=100):
     frs["TimeIdx"] = (frs["Time"] * 10).round().astype(int)
 
     sub_frs = frs[frs.TrialNumber.isin(sub_beh.TrialNumber)]
+    if len(sub_frs) == 0:
+        print("No firing rates for session, returning None")
+        return None
 
     rng = np.random.default_rng()
     trial_nums = rng.choice(sub_frs.TrialNumber.unique(), num_pseudo)
@@ -52,10 +55,10 @@ def get_pseudo_frs_for_session(session, args, num_pseudo=100):
 def get_sims(pair, args):
     (feat1, feat2) = pair.pair
     args.feat = feat1
-    feat1_res = pd.concat(pd.Series(pair.sessions).apply(lambda x: get_pseudo_frs_for_session(x, args)).values)
+    feat1_res = pd.concat(pd.Series(pair.sessions).apply(lambda x: get_pseudo_frs_for_session(x, args)).dropna().values)
 
     args.feat = feat2
-    feat2_res = pd.concat(pd.Series(pair.sessions).apply(lambda x: get_pseudo_frs_for_session(x, args)).values)
+    feat2_res = pd.concat(pd.Series(pair.sessions).apply(lambda x: get_pseudo_frs_for_session(x, args)).dropna().values)
 
     merged = pd.merge(feat1_res, feat2_res, on=["PseudoUnitID", "PseudoTrialNumber", "TimeIdx"], suffixes=["_feat1", "_feat2"], how="outer").fillna(0)
     if args.sim_type == "cosine_sim":
