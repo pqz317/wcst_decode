@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Default values
-partition="ckpt-all"
+partition="gpu-a100"
 
 # Optional args passed to decoding script
 extra_args="$@"
@@ -18,7 +18,7 @@ submit_job_array () {
 #SBATCH -A walkerlab
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=16G
+#SBATCH --mem=2G
 #SBATCH --time=180
 
 module load singularity
