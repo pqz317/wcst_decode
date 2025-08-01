@@ -27,6 +27,7 @@ import copy
 from tqdm import tqdm
 
 SUB_REGION_LEVEL_REGIONS = [
+    ("both", None, None),
     ("both", "structure_level2_cleaned", "amygdala_Amy"),
     ("both", "structure_level2_cleaned", "basal_ganglia_BG"),
     ("both", "structure_level2_cleaned", "inferior_temporal_cortex_ITC"),
@@ -34,12 +35,13 @@ SUB_REGION_LEVEL_REGIONS = [
     ("both", "structure_level2_cleaned", "lateral_prefrontal_cortex_lat_PFC"),
     ("SA", None, None),
     ("BL", None, None),
-    ("both", None, None),
     ("SA", "drive", "Anterior"),
     ("SA", "drive", "Temporal"),
 ]
 
 DECODE_VARS = ["pref", "conf", "choice", "reward"]
+# DECODE_VARS = ["pref"]
+
 
 output_dir = "/data/patrick_res/figures/wcst_paper/decoding"
 
@@ -50,6 +52,8 @@ def plot_weights(args):
 
 
 def main():
+    plt.rcParams.update({'font.size': 14})
+
     for (sub, region_level, regions), decode_var in tqdm(list(itertools.product(SUB_REGION_LEVEL_REGIONS, DECODE_VARS))):
         args = argparse.Namespace(
             **BeliefPartitionConfigs()._asdict()
@@ -66,25 +70,21 @@ def main():
 
         if decode_var == "reward":
             args.sig_unit_level = "response_99th_window_filter_drift"
-
         else: 
             args.sig_unit_level = f"{decode_var}_99th_window_filter_drift"
-        try: 
-            fig_acc, _ = visualization_utils.plot_combined_accs(args)
-            fig_acc.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_accs.svg")
-            fig_acc.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_accs.png")
+        plt.rcParams.update({'font.size': 14})
+        # plt.rcParams.update({'font.size': 18})
+        fig_acc, _ = visualization_utils.plot_combined_accs(args)
+        fig_acc.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_accs.svg")
+        fig_acc.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_accs.png")
 
-        except Exception as e:
-            print(e)
+        fig_cross, _ = visualization_utils.plot_combined_cross_accs(args)
+        fig_cross.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_cross_time_accs.svg")
+        fig_cross.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_cross_time_accs.png")
 
-        try: 
-            fig_cross, _ = visualization_utils.plot_combined_cross_accs(args)
-            fig_cross.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_cross_time_accs.svg")
-            fig_cross.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_cross_time_accs.png")
-        except Exception as e:
-            print(e)
-        fig_weights, _ = plot_weights(args)
-        fig_weights.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_weights.svg")
-        fig_weights.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_weights.png")
+        # fig_weights, _ = plot_weights(args)
+        # fig_weights.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_weights.svg")
+        # fig_weights.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_weights.png")
+
 if __name__ == "__main__":
     main()

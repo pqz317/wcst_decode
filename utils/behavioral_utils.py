@@ -1024,6 +1024,6 @@ def get_label_by_mode(beh, mode):
         raise ValueError("invalid mode in args")
     return beh
 
-
-        
-                         
+def load_all_beh_for_sub(sub):
+    valid_sess = pd.read_pickle(SESSIONS_PATH.format(sub=sub))
+    return pd.concat(valid_sess.apply(lambda x: get_valid_belief_beh_for_sub_sess(sub, x.session_name), axis=1).values)

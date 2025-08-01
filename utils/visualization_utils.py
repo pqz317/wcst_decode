@@ -26,16 +26,52 @@ import copy
 from scipy.stats import ttest_ind
 import itertools
 
+# REGION_TO_COLOR = {
+#     "Amygdala": "#00ff00",
+#     "Anterior Cingulate Gyrus": "#ff4500",
+#     "Basal Ganglia": "#0000ff",
+#     "Claustrum": "#ffd700",
+#     "Hippocampus/MTL": "#00ffff",
+#     "Parietal Cortex": "#191970",
+#     "Prefrontal Cortex": "#bc8f8f",
+#     "Premotor Cortex": "#006400",
+#     "Visual Cortex": "#ff1493",
+# }
+
 REGION_TO_COLOR = {
-    "Amygdala": "#00ff00",
-    "Anterior Cingulate Gyrus": "#ff4500",
-    "Basal Ganglia": "#0000ff",
-    "Claustrum": "#ffd700",
-    "Hippocampus/MTL": "#00ffff",
-    "Parietal Cortex": "#191970",
-    "Prefrontal Cortex": "#bc8f8f",
-    "Premotor Cortex": "#006400",
-    "Visual Cortex": "#ff1493",
+    "AMY": "#30123b",
+    "BG": "#28bceb",
+    "ITC": "#a4fc3c",
+    "HPC": "#fb7e21",
+    "LPFC": "#7a0403",
+    "shuffle": "gray"
+}
+
+REGION_ORDER = ["AMY", "BG", "HPC", "ITC", "LPFC", "shuffle"]
+
+REGION_TO_DISPLAY_NAMES = {
+    "amygdala_Amy": "AMY",
+    "basal_ganglia_BG": "BG",
+    "inferior_temporal_cortex_ITC": "ITC",
+    "medial_pallium_MPal": "HPC",
+    "lateral_prefrontal_cortex_lat_PFC": "LPFC",
+    "shuffle": "shuffle"
+}
+
+MODE_TO_COLOR = {
+    "preference": "tab:blue",
+    "confidence": "tab:red",
+    "reward": "tab:green",
+    "feature selected": "tab:orange",
+    "shuffle": "gray"
+}
+
+MODE_TO_DISPLAY_NAMES = {
+    "pref": "preference",
+    "conf": "confidence",
+    "reward": "reward",
+    "choice": "feature selected",
+    "shuffle": "shuffle"
 }
 
 def visualize_accuracy_across_time_bins(
@@ -428,18 +464,22 @@ def visualize_ccpg_value(args, df, ax, hue_col="condition"):
     ax.set_xlabel(f"Time Relative to {args.trial_event}")
     ax.set_title(f"Subject {args.subject} CCGP of value, {args.regions} regions")
 
-def visualize_preferred_beliefs(args, df, ax, hue_col="condition", show_shuffles=True):
+def visualize_preferred_beliefs(args, df, ax, hue_col="condition", palette=None, show_shuffles=True, ylims=[0.48, 1]):
     if not show_shuffles:
         df = df[~df.condition.str.contains("shuffle")]
-    sns.lineplot(df, x="Time", y="Accuracy", hue=hue_col, linewidth=3, ax=ax, errorbar="se")
+    else: 
+        df["mode"] = df["mode"].apply(lambda x: "shuffle" if "shuffle" in x else x)
+    df["mode"] = df["mode"].map(MODE_TO_DISPLAY_NAMES)
+    sns.lineplot(df, x="Time", y="Accuracy", hue=hue_col, linewidth=3, ax=ax, palette=palette, errorbar="se")
     # # add estimated chance
-    ax.axhline(1/2, color='black', linestyle='dotted', label="Estimated Chance")
-    if args.trial_event == "FeedbackOnset" or args.trial_event == "FeedbackOnsetLong":
-        ax.axvspan(-0.8, 0, alpha=0.3, color='gray')
+    # ax.axhline(1/2, color='black', linestyle='dotted', label="Estimated Chance")
+    # if args.trial_event == "FeedbackOnset" or args.trial_event == "FeedbackOnsetLong":
+    #     ax.axvspan(-0.8, 0, alpha=0.3, color='gray')
+    if ylims: 
+        ax.set_ylim(ylims)
     ax.legend()
-    ax.set_ylabel("Decoder Accuracy")
+    ax.set_ylabel("Accuracy")
     ax.set_xlabel(f"Time Relative to {args.trial_event}")
-    ax.set_title(f"Subject {args.subject} preferred beliefs, {args.regions} regions")
 
 def visualize_unit_raster(subject, session, pseudo_unit_id, beh, trial_interval, ax):
     """
@@ -501,7 +541,6 @@ def visualize_cross_time(args, cross_res, decoder_res, ax, cbar=True, vmin=None,
     sns.heatmap(pivoted, ax=ax, vmin=vmin, vmax=vmax, cbar=cbar)
 
 
-
 def plot_combined_accs(args, by_dim=False, modes=None):
     if not modes: 
         stim_args = copy.deepcopy(args)
@@ -530,12 +569,27 @@ def plot_combined_accs(args, by_dim=False, modes=None):
         fb_res["mode"] = fb_res.apply(lambda x: FEATURE_TO_DIM[x.feat] + " " + x["mode"], axis=1)
         stim_res["mode"] = stim_res.apply(lambda x: FEATURE_TO_DIM[x.feat] + " " + x["mode"], axis=1)
     # fb_res = fb_res[fb_res.feat != "GREEN"]
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5), sharey='row', width_ratios=[stim_res.Time.nunique(), fb_res.Time.nunique()])
-    visualize_preferred_beliefs(stim_args, stim_res, ax1, hue_col="mode")
-    ax1.set_xlabel(f"Time Relative to Stim Onset")
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 9/3), sharey='row', width_ratios=[stim_res.Time.nunique(), fb_res.Time.nunique()])
+    visualize_preferred_beliefs(stim_args, stim_res, ax1, hue_col="mode", palette=MODE_TO_COLOR)
+    ax1.axvline(-.5, color='grey', linestyle='dotted', linewidth=3)
+    ax1.axvline(0, color='grey', linestyle='dotted', linewidth=3)
 
-    visualize_preferred_beliefs(fb_args, fb_res, ax2, hue_col="mode")
-    ax2.set_xlabel(f"Time Relative to Feedback Onset")
+    ax1.set_xlabel(f"Time to cards appear (s)")
+    stim_ticks = [-1, -.5, 0, .5, 1]
+    ax1.set_xticks(stim_ticks)
+    ax1.set_xticklabels(stim_ticks)
+
+    visualize_preferred_beliefs(fb_args, fb_res, ax2, hue_col="mode", palette=MODE_TO_COLOR)
+    ax2.axvline(-.8, color='grey', linestyle='dotted', linewidth=3)
+    ax2.axvline(0, color='grey', linestyle='dotted', linewidth=3)
+    ax2.set_xlabel(f"Time to feedback (s)")
+    fb_ticks = [-1.5, -1, -.5, 0, .5, 1, 1.5]
+    ax2.set_xticks(fb_ticks)
+    ax2.set_xticklabels(fb_ticks)
+    format_plot([ax1, ax2])
+    ax2.get_legend().remove()
+    for line in ax1.legend().get_lines():
+        line.set_linewidth(6)
 
     fig.tight_layout()
     return fig, (ax1, ax2)
@@ -550,7 +604,7 @@ def plot_combined_accs_by_attr(args, attr, values, num_shuffles=0):
         stim_res = belief_partitions_io.read_results(stim_args, FEATURES, num_shuffles=num_shuffles)
         stim_res[attr] = val
         if num_shuffles > 0: 
-            stim_res[attr] = stim_res[attr] + " " + stim_res["mode"]
+            stim_res[attr] = stim_res.apply(lambda x: "shuffle" if "shuffle" in x["mode"] else x[attr], axis=1)
         all_stim_res.append(stim_res)
 
         fb_args = copy.deepcopy(args)
@@ -558,20 +612,50 @@ def plot_combined_accs_by_attr(args, attr, values, num_shuffles=0):
         fb_res = belief_partitions_io.read_results(fb_args, FEATURES, num_shuffles=num_shuffles)
         fb_res[attr] = val
         if num_shuffles > 0: 
-            fb_res[attr] = fb_res[attr] + " " + fb_res["mode"]
+            fb_res[attr] = fb_res.apply(lambda x: "shuffle" if "shuffle" in x["mode"] else x[attr], axis=1)
         all_fb_res.append(fb_res)
     all_stim_res = pd.concat(all_stim_res)
     all_fb_res = pd.concat(all_fb_res)
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5), sharey='row', width_ratios=[all_stim_res.Time.nunique(), all_fb_res.Time.nunique()])
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 3), sharey='row', width_ratios=[all_stim_res.Time.nunique(), all_fb_res.Time.nunique()])
 
-    visualize_preferred_beliefs(stim_args, all_stim_res, ax1, hue_col=attr)
-    ax1.set_xlabel(f"Time Relative to Stim Onset")
-    ax1.set_title(f"{args.mode}")
-    visualize_preferred_beliefs(fb_args, all_fb_res, ax2, hue_col=attr)
-    ax2.set_xlabel(f"Time Relative to Feedback Onset")
-    ax2.set_title("")
+    all_stim_res[attr] = all_stim_res[attr].map(REGION_TO_DISPLAY_NAMES)
+
+    sns.lineplot(
+        all_stim_res, x="Time", y="Accuracy", 
+        hue=attr, hue_order=REGION_ORDER, 
+        linewidth=3, ax=ax1, 
+        palette=REGION_TO_COLOR, errorbar="se"
+    )
+
+
+    ax1.axvline(-.5, color='grey', linestyle='dotted', linewidth=3)
+    ax1.axvline(0, color='grey', linestyle='dotted', linewidth=3)
+
+    ax1.set_xlabel(f"Time to cards appear (s)")
+    stim_ticks = [-1, -.5, 0, .5, 1]
+    ax1.set_xticks(stim_ticks)
+    ax1.set_xticklabels(stim_ticks)
+
+    all_fb_res[attr] = all_fb_res[attr].map(REGION_TO_DISPLAY_NAMES)
+    sns.lineplot(
+        all_fb_res, x="Time", y="Accuracy", 
+        hue=attr, hue_order=REGION_ORDER, 
+        linewidth=3, ax=ax2, 
+        palette=REGION_TO_COLOR, errorbar="se"
+    )
+    ax2.axvline(-.8, color='grey', linestyle='dotted', linewidth=3)
+    ax2.axvline(0, color='grey', linestyle='dotted', linewidth=3)
+    ax2.set_xlabel(f"Time to feedback (s)")
+    fb_ticks = [-1.5, -1, -.5, 0, .5, 1, 1.5]
+    ax2.set_xticks(fb_ticks)
+    ax2.set_xticklabels(fb_ticks)
+    format_plot([ax1, ax2])
+    ax2.get_legend().remove()
+    for line in ax1.legend().get_lines():
+        line.set_linewidth(6)
 
     fig.tight_layout()
+    return fig, (ax1, ax2)
 
 
 def plot_combined_cross_accs(args):
@@ -610,13 +694,62 @@ def plot_combined_cross_accs(args):
     visualize_cross_time(args, fb_model_cross_stim_res, stim_res, axs[1, 0], cbar=False, vmin=all_min, vmax=all_max)
     visualize_cross_time(args, cross_fb_res, fb_res, axs[1, 1], cbar=False, vmin=all_min, vmax=all_max)
 
+
+    stim_ticks = [-.5, 0, .5, 1]
+    stim_tick_pos = [st * 10 + 10 - 0.5 for st in stim_ticks]
+    fb_ticks = [-1.5, -1, -.5, 0, .5, 1, 1.5]
+    fb_tick_pos = [ft * 10 + 18 - 0.5 for ft in fb_ticks]
+
+    cross_fix_pos, stim_on_pos = 4.5, 9.5
+    card_fix_pos, fb_pos = 9.5, 17.5
+    axs[0, 0].set_ylabel("Time to cards appear (s)")
+    axs[0, 0].set_xlabel("")
+    axs[0, 0].set_yticks(stim_tick_pos)
+    axs[0, 0].set_yticklabels(stim_ticks)
+    axs[0, 0].axvline(cross_fix_pos, color='white', linestyle='dotted', linewidth=3)
+    axs[0, 0].axvline(stim_on_pos, color='white', linestyle='dotted', linewidth=3)
+    axs[0, 0].axhline(cross_fix_pos, color='white', linestyle='dotted', linewidth=3)
+    axs[0, 0].axhline(stim_on_pos, color='white', linestyle='dotted', linewidth=3)
+
+    axs[0, 1].set_xlabel("")
+    axs[0, 1].set_ylabel("")
+    axs[0, 1].axhline(cross_fix_pos, color='white', linestyle='dotted', linewidth=3)
+    axs[0, 1].axhline(stim_on_pos, color='white', linestyle='dotted', linewidth=3)
+    axs[0, 1].axvline(card_fix_pos, color='white', linestyle='dotted', linewidth=3)
+    axs[0, 1].axvline(fb_pos, color='white', linestyle='dotted', linewidth=3)
+
+    axs[1, 0].set_xlabel("Time to cards appear (s)")
+    axs[1, 0].set_ylabel("Time to feedback (s)")
+    axs[1, 0].set_xticks(stim_tick_pos)
+    axs[1, 0].set_xticklabels(stim_ticks)
+    axs[1, 0].set_yticks(fb_tick_pos)
+    axs[1, 0].set_yticklabels(fb_ticks)
+    axs[1, 0].axvline(cross_fix_pos, color='white', linestyle='dotted', linewidth=3)
+    axs[1, 0].axvline(stim_on_pos, color='white', linestyle='dotted', linewidth=3)
+    axs[1, 0].axhline(card_fix_pos, color='white', linestyle='dotted', linewidth=3)
+    axs[1, 0].axhline(fb_pos, color='white', linestyle='dotted', linewidth=3)
+
+    axs[1, 1].set_xlabel("Time to feedback (s)")
+    axs[1, 1].set_ylabel("")
+    axs[1, 1].set_xticks(fb_tick_pos)
+    axs[1, 1].set_xticklabels(fb_ticks)
+    axs[1, 1].axvline(card_fix_pos, color='white', linestyle='dotted', linewidth=3)
+    axs[1, 1].axvline(fb_pos, color='white', linestyle='dotted', linewidth=3)
+    axs[1, 1].axhline(card_fix_pos, color='white', linestyle='dotted', linewidth=3)
+    axs[1, 1].axhline(fb_pos, color='white', linestyle='dotted', linewidth=3)
+    # axs[1, 1].set_yticks([])
+
+    fig.supylabel("Train time")
+    fig.supxlabel("Test time")
+    fig.tight_layout()
+
     # Adjust subplots to make space for colorbar
     fig.subplots_adjust(right=0.85)
-
     # Create a single colorbar to the right of ax2
     cbar_ax = fig.add_axes([0.87, 0.15, 0.03, 0.7])
     cbar = fig.colorbar(axs[1, 1].collections[0], cax=cbar_ax, orientation='vertical')
     cbar.set_label('Accuracy')
+
     # fig.tight_layout()
     return fig, axs
 
