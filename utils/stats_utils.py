@@ -44,6 +44,7 @@ def compute_p_for_decoding_by_time(res, args):
         p = compute_p_per_group(time_res, "Accuracy", "shuffle_type")
         p_res.append({"Time": time, "TimeIdx": time_idx, "p": p})
     p_res = pd.DataFrame(p_res)
+    return p_res
 
 def compute_p_for_cross_decoding_by_time(cross_res, shuffles, args): 
     n_time, offset = get_n_time_offset(args)
@@ -60,3 +61,4 @@ def compute_p_for_cross_decoding_by_time(cross_res, shuffles, args):
         p = compute_p_per_group(pd.concat((time_res, shuffle_time_res)), "Accuracy", "shuffle_type")
         p_res.append({"TrainTime": train_time, "TestTime": test_time, "TrainIdx": train_idx, "TestIdx": test_idx, "p": p})
     p_res = pd.DataFrame(p_res)
+    return p_res
