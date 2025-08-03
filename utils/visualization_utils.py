@@ -22,7 +22,7 @@ from scripts.anova_analysis.run_anova import load_data
 from constants.behavioral_constants import *
 from constants.decoding_constants import *
 import copy
-
+import os
 from scipy.stats import ttest_ind
 import itertools
 
@@ -73,6 +73,13 @@ MODE_TO_DISPLAY_NAMES = {
     "choice": "feature selected",
     "shuffle": "shuffle"
 }
+
+SIG_LEVELS = [
+    (0.001, 6),  # p < 0.001 → thickest
+    (0.01, 4),   # p < 0.01 → medium
+    (0.05, 2),   # p < 0.05 → thin
+]
+
 
 def visualize_accuracy_across_time_bins(
     accuracies, 
@@ -464,17 +471,23 @@ def visualize_ccpg_value(args, df, ax, hue_col="condition"):
     ax.set_xlabel(f"Time Relative to {args.trial_event}")
     ax.set_title(f"Subject {args.subject} CCGP of value, {args.regions} regions")
 
-def visualize_preferred_beliefs(args, df, ax, hue_col="condition", palette=None, show_shuffles=True, ylims=[0.48, 1]):
+def visualize_preferred_beliefs(args, df, ax, p_vals=None, hue_col="condition", palette=None, show_shuffles=True, ylims=[0.44, 1]):
     if not show_shuffles:
         df = df[~df.condition.str.contains("shuffle")]
     else: 
         df["mode"] = df["mode"].apply(lambda x: "shuffle" if "shuffle" in x else x)
     df["mode"] = df["mode"].map(MODE_TO_DISPLAY_NAMES)
-    sns.lineplot(df, x="Time", y="Accuracy", hue=hue_col, linewidth=3, ax=ax, palette=palette, errorbar="se")
-    # # add estimated chance
-    # ax.axhline(1/2, color='black', linestyle='dotted', label="Estimated Chance")
-    # if args.trial_event == "FeedbackOnset" or args.trial_event == "FeedbackOnsetLong":
-    #     ax.axvspan(-0.8, 0, alpha=0.3, color='gray')
+    acc_line = sns.lineplot(df, x="Time", y="Accuracy", hue=hue_col, linewidth=3, ax=ax, palette=palette, errorbar="se")
+    ax.axhline(y=0.5, linestyle="dotted", color="black")
+    if p_vals is not None: 
+        for thresh, lw in SIG_LEVELS:
+            sigs = p_vals[p_vals["p"] < thresh]
+            for _, row in sigs.iterrows():
+                # color = acc_line.lines[0].get_color()
+                ax.hlines(y=0.46, xmin=row.Time - 0.1, xmax=row.Time, linewidth=lw, color="black")
+
+        ax.set_ylim(bottom=ax.get_ylim()[0] - 0.2)
+
     if ylims: 
         ax.set_ylim(ylims)
     ax.legend()
@@ -541,7 +554,7 @@ def visualize_cross_time(args, cross_res, decoder_res, ax, cbar=True, vmin=None,
     sns.heatmap(pivoted, ax=ax, vmin=vmin, vmax=vmax, cbar=cbar)
 
 
-def plot_combined_accs(args, by_dim=False, modes=None):
+def plot_combined_accs(args, by_dim=False, modes=None, with_pvals=True):
     if not modes: 
         stim_args = copy.deepcopy(args)
         stim_args.trial_event = "StimOnset"
@@ -550,6 +563,11 @@ def plot_combined_accs(args, by_dim=False, modes=None):
         fb_args = copy.deepcopy(args)
         fb_args.trial_event = "FeedbackOnsetLong"
         fb_res = belief_partitions_io.read_results(fb_args, FEATURES)
+        if with_pvals:
+            stim_pvals = pd.read_pickle(os.path.join(belief_partitions_io.get_dir_name(stim_args), f"{args.mode}_pvals.pickle"))
+            fb_pvals = pd.read_pickle(os.path.join(belief_partitions_io.get_dir_name(fb_args), f"{args.mode}_pvals.pickle"))
+        else: 
+            stim_pvals, fb_pvals = None, None
     else: 
         stim_res = []
         fb_res = []
@@ -570,7 +588,7 @@ def plot_combined_accs(args, by_dim=False, modes=None):
         stim_res["mode"] = stim_res.apply(lambda x: FEATURE_TO_DIM[x.feat] + " " + x["mode"], axis=1)
     # fb_res = fb_res[fb_res.feat != "GREEN"]
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 9/3), sharey='row', width_ratios=[stim_res.Time.nunique(), fb_res.Time.nunique()])
-    visualize_preferred_beliefs(stim_args, stim_res, ax1, hue_col="mode", palette=MODE_TO_COLOR)
+    visualize_preferred_beliefs(stim_args, stim_res, ax1, p_vals=stim_pvals, hue_col="mode", palette=MODE_TO_COLOR)
     ax1.axvline(-.5, color='grey', linestyle='dotted', linewidth=3)
     ax1.axvline(0, color='grey', linestyle='dotted', linewidth=3)
 
@@ -579,7 +597,7 @@ def plot_combined_accs(args, by_dim=False, modes=None):
     ax1.set_xticks(stim_ticks)
     ax1.set_xticklabels(stim_ticks)
 
-    visualize_preferred_beliefs(fb_args, fb_res, ax2, hue_col="mode", palette=MODE_TO_COLOR)
+    visualize_preferred_beliefs(fb_args, fb_res, ax2, p_vals=fb_pvals, hue_col="mode", palette=MODE_TO_COLOR)
     ax2.axvline(-.8, color='grey', linestyle='dotted', linewidth=3)
     ax2.axvline(0, color='grey', linestyle='dotted', linewidth=3)
     ax2.set_xlabel(f"Time to feedback (s)")

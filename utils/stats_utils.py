@@ -35,7 +35,8 @@ def get_n_time_offset(args):
     return n_time, offset
 
 def compute_p_for_decoding_by_time(res, args): 
-    res["shuffle_type"] = res["mode"].map({"pref": "true", "pref_shuffle": "shuffle"})
+    # res["shuffle_type"] = res["mode"].map({"pref": "true", "pref_shuffle": "shuffle"})
+    res["shuffle_type"] = res["mode"].apply(lambda x: "shuffle" if "shuffle" in x else "true")
     n_time, offset = get_n_time_offset(args)
     p_res = []
     for time_idx in tqdm(range(n_time)):

@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=p_vals
-#SBATCH -p gpu-a100
+#SBATCH -p ckpt-all
 #SBATCH -A walkerlab
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
