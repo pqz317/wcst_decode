@@ -67,7 +67,7 @@ def plot_for_mode_region(mode, region):
         fig.savefig(f"/data/patrick_res/figures/wcst_paper/single_unit_psths/{mode}_{region}_{unit.PseudoUnitID}_{unit.feat}.svg")
         plt.close(fig)
 
-def main(args):
+def main():
     plt.rcParams.update({'font.size': 14})
     parser = argparse.ArgumentParser()
     parser.add_argument(f'--run_id', default=None, type=int)
@@ -80,9 +80,6 @@ def main(args):
     else:         
         for (mode, region) in mode_regions:
             plot_for_mode_region(mode, region)
-
-
-
 
 if __name__ == "__main__":
     main()
