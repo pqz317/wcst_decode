@@ -531,7 +531,7 @@ def read_anova_good_units(args, percentile_str="95th", cond="combined_fracvar", 
     good_res = pd.concat(good_res)
     if return_pos:
         unit_pos = pd.read_pickle(UNITS_PATH.format(sub=args.subject))
-        good_res = pd.merge(good_res, unit_pos[["PseudoUnitID", "drive", "structure_level2"]])
+        good_res = pd.merge(good_res, unit_pos[["PseudoUnitID", "drive", "structure_level2", "structure_level2_cleaned"]])
         good_res["whole_pop"] = "all_regions"
     good_res["trial_event"] = args.trial_event
     return good_res
