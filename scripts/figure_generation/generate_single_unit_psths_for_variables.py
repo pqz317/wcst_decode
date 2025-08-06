@@ -33,10 +33,10 @@ MODE_TO_COND = {
     "reward": "Response"
 }
 MODES = ["choice", "reward", "pref", "conf"]
-REGIONS = ["amygdala_Amy", "basal_ganglia_BG", "inferior_temporal_cortex_ITC", "medial_pallium_MPal", "lateral_prefrontal_cortex_lat_PFC"]
+# REGIONS = ["amygdala_Amy", "basal_ganglia_BG", "inferior_temporal_cortex_ITC", "medial_pallium_MPal", "lateral_prefrontal_cortex_lat_PFC"]
 
 # MODES = ["pref"]
-# REGIONS = ["lateral_prefrontal_cortex_lat_PFC"]
+REGIONS = ["anterior_cingulate_gyrus_ACgG"]
 
 def plot_for_mode_region(mode, region):
     args = argparse.Namespace(
@@ -78,7 +78,7 @@ def main():
         mode, region = mode_regions[args.run_id]
         plot_for_mode_region(mode, region)
     else:         
-        for (mode, region) in mode_regions:
+        for (mode, region) in tqdm(mode_regions):
             plot_for_mode_region(mode, region)
 
 if __name__ == "__main__":

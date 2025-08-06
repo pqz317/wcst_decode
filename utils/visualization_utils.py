@@ -82,6 +82,11 @@ SIG_LEVELS = [
     (0.05, 2),   # p < 0.05 → thin
 ]
 
+ANOVA_SIG_LEVELS = [
+    ("99th", 4),
+    ("95th", 2),
+]
+
 
 def visualize_accuracy_across_time_bins(
     accuracies, 
@@ -487,7 +492,6 @@ def visualize_preferred_beliefs(args, df, ax, p_vals=None, hue_col="condition", 
             for _, row in sigs.iterrows():
                 # color = acc_line.lines[0].get_color()
                 ax.hlines(y=0.46, xmin=row.Time - 0.1, xmax=row.Time, linewidth=lw, color="black")
-
         ax.set_ylim(bottom=ax.get_ylim()[0] - 0.2)
 
     if ylims: 
@@ -972,7 +976,7 @@ def plot_belief_partition_psth(unit_id, feat, args):
     return fig, (ax1, ax2, ax3)
 
 
-def plot_psth_both_events(mode, unit_id, feat, args):
+def plot_psth_both_events(mode, unit_id, feat, args, plot_pvals=False):
     fig, axs = plt.subplots(2, 2, figsize=(11, 10), sharey='row', sharex='col', width_ratios=[20, 33], height_ratios=[2, 3])
     args.feat = feat
     session = int(unit_id / 100)
@@ -987,6 +991,9 @@ def plot_psth_both_events(mode, unit_id, feat, args):
         beh = behavioral_utils.get_label_by_mode(beh, mode)
         frs = frs[frs.PseudoUnitID == unit_id]
         sns.lineplot(pd.merge(frs, beh, on="TrialNumber"), x="Time", y="FiringRate", errorbar="se", hue="condition", hue_order=order, palette=colors, ax=axs[0, i])
+        # if plot_pvals:
+        #     res = 
+
         subject = behavioral_utils.get_sub_for_session(session)
         sub_beh = beh.sample(500) if len(beh) > 500 else beh
         visualize_unit_raster(subject, session, unit_id, sub_beh, trial_interval, ax=axs[1, i], hue_order=order, palette=colors)

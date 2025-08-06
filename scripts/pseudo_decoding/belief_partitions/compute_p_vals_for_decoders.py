@@ -34,6 +34,7 @@ SUB_REGION_LEVEL_REGIONS = [
     ("both", "structure_level2_cleaned", "inferior_temporal_cortex_ITC"),
     ("both", "structure_level2_cleaned", "medial_pallium_MPal"),
     ("both", "structure_level2_cleaned", "lateral_prefrontal_cortex_lat_PFC"),
+    ("both", "structure_level2_cleaned", "anterior_cingulate_gyrus_ACgG"),
     ("SA", None, None),
     ("BL", None, None),
     ("SA", "drive", "Anterior"),
