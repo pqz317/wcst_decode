@@ -42,14 +42,15 @@ import utils.behavioral_utils as behavioral_utils
 
 REGION_TO_COLOR = {
     "AMY": "#30123b",
-    "BG": "#28bceb",
-    "ITC": "#a4fc3c",
-    "HPC": "#fb7e21",
-    "LPFC": "#7a0403",
+    "BG": "#3e9bfe",
+    "ITC": "#46f884",
+    "HPC": "#e1dd37",
+    "LPFC": "#f05b12",
+    "ACC": "#7a0403",
     "shuffle": "gray"
 }
 
-REGION_ORDER = ["AMY", "BG", "HPC", "ITC", "LPFC", "shuffle"]
+REGION_ORDER = ["AMY", "BG", "HPC", "ITC", "LPFC", "ACC", "shuffle"]
 
 REGION_TO_DISPLAY_NAMES = {
     "amygdala_Amy": "AMY",
@@ -57,6 +58,7 @@ REGION_TO_DISPLAY_NAMES = {
     "inferior_temporal_cortex_ITC": "ITC",
     "medial_pallium_MPal": "HPC",
     "lateral_prefrontal_cortex_lat_PFC": "LPFC",
+    "anterior_cingulate_gyrus_ACgG": "ACC",
     "shuffle": "shuffle"
 }
 
@@ -522,7 +524,7 @@ def visualize_unit_raster(subject, session, pseudo_unit_id, beh, trial_interval,
     sorted_beh = beh.sort_values(by=["condition", "TrialNumber"], ascending=False)
     sorted_beh["Y"] = range(len(sorted_beh))
     unit_spikes = pd.merge(unit_spikes, sorted_beh[["TrialNumber", "Y", "condition"]], on="TrialNumber")
-    sns.scatterplot(unit_spikes, x="X", y="Y", hue="condition", marker=".", edgecolor="none", linewidths=1, ax=ax, hue_order=hue_order, palette=palette)
+    sns.scatterplot(unit_spikes, x="X", y="Y", hue="condition", marker=".", edgecolor="none", s=20, ax=ax, hue_order=hue_order, palette=palette)
     # sns.scatterplot(unit_spikes, x="X", y="Y", hue="condition", marker="|", linewidths=1, s=100, ax=ax, hue_order=hue_order, palette=palette)
 
 
@@ -632,6 +634,7 @@ def plot_combined_accs_by_attr(args, attr, values, num_shuffles=0):
     all_stim_res = []
     all_fb_res = []
     for val in values:
+        print(val)
         setattr(args, attr, val)
         stim_args = copy.deepcopy(args)
         stim_args.trial_event = "StimOnset"
@@ -839,7 +842,7 @@ def plot_combined_cross_accs_no_diag(args, alpha=0.01):
     all_min = shuffle_means.ShuffleAccuracy.mean()
 
     cmap = plt.get_cmap('rocket').copy()
-    cmap.set_bad(color='lightgrey')  # grey for NaNs
+    cmap.set_bad(color='black')  # grey for NaNs
     visualize_cross_time_with_sig(args, cross_stim_res, stim_pvals, stim_ax, thresh=alpha, cmap=cmap, vmin=all_min, vmax=all_max)
     visualize_cross_time_with_sig(args, cross_fb_res, fb_pvals, fb_ax, thresh=alpha, cmap=cmap, vmin=all_min, vmax=all_max)
 
@@ -901,7 +904,7 @@ def plot_pop_heatmap_by_time(all_data, value_col, time_col="Time", region_level=
 
     fig, axs = plt.subplots(
         len(unit_counts), len(trial_events), 
-        figsize=(15, 15), 
+        figsize=(12, 17), 
         width_ratios=width_ratios,
         height_ratios=unit_counts, 
         sharex="col",
@@ -929,12 +932,33 @@ def plot_pop_heatmap_by_time(all_data, value_col, time_col="Time", region_level=
             ax.set_yticklabels("")
             ax.set_xlabel("")
             ax.set_ylabel("")
+        cross_fix_pos, stim_on_pos = 4.5, 9.5
+        card_fix_pos, fb_pos = 9.5, 17.5
         axs[regions_to_idx[region], 0].set_title(region)
-        
+        axs[regions_to_idx[region], 0].axvline(cross_fix_pos, color='grey', linestyle='dotted', linewidth=3)
+        axs[regions_to_idx[region], 0].axvline(stim_on_pos, color='grey', linestyle='dotted', linewidth=3)
+        axs[regions_to_idx[region], 1].axvline(card_fix_pos, color='grey', linestyle='dotted', linewidth=3)
+        axs[regions_to_idx[region], 1].axvline(fb_pos, color='grey', linestyle='dotted', linewidth=3)
     all_data.groupby(region_level).apply(plot_region)
 
-    for i, event in enumerate(trial_events):
-        axs[-1, i].set_xlabel(event_labels.get(event, f"Time to {event} (s)"))
+    # for i, event in enumerate(trial_events):
+    #     axs[-1, i].set_xlabel(event_labels.get(event, f"Time to {event} (s)"))
+    stim_ticks = [-.5, 0, .5, 1]
+    stim_tick_pos = [st * 10 + 10 - 0.5 for st in stim_ticks]
+    fb_ticks = [-1.5, -1, -.5, 0, .5, 1, 1.5]
+    fb_tick_pos = [ft * 10 + 18 - 0.5 for ft in fb_ticks]
+    
+    axs[-1, 0].set_xlabel("Time to card appear (s)")
+    axs[-1, 0].set_xticks(stim_tick_pos)
+    axs[-1, 0].set_xticklabels(stim_ticks)
+
+    fb_ticks = [-1.5, -1, -.5, 0, .5, 1, 1.5]
+    axs[-1, 1].set_xlabel("Time to feedback (s)")
+    axs[-1, 1].set_xticks(fb_tick_pos)
+    axs[-1, 1].set_xticklabels(fb_ticks)
+
+
+
     fig.tight_layout()
     # Adjust subplots to make space for colorbar
     fig.subplots_adjust(right=0.85)
@@ -977,7 +1001,7 @@ def plot_belief_partition_psth(unit_id, feat, args):
 
 
 def plot_psth_both_events(mode, unit_id, feat, args, plot_pvals=False):
-    fig, axs = plt.subplots(2, 2, figsize=(11, 10), sharey='row', sharex='col', width_ratios=[20, 33], height_ratios=[2, 3])
+    fig, axs = plt.subplots(2, 2, figsize=(9, 6), sharey='row', sharex='col', width_ratios=[20, 33], height_ratios=[1, 2])
     args.feat = feat
     session = int(unit_id / 100)
     order = (MODE_TO_DIRECTION_LABELS[mode]["high"], MODE_TO_DIRECTION_LABELS[mode]["low"])
@@ -990,7 +1014,15 @@ def plot_psth_both_events(mode, unit_id, feat, args, plot_pvals=False):
         beh, frs = load_data(session, args, return_merged=False, use_x=True)
         beh = behavioral_utils.get_label_by_mode(beh, mode)
         frs = frs[frs.PseudoUnitID == unit_id]
-        sns.lineplot(pd.merge(frs, beh, on="TrialNumber"), x="Time", y="FiringRate", errorbar="se", hue="condition", hue_order=order, palette=colors, ax=axs[0, i])
+        sns.lineplot(
+            pd.merge(frs, beh, on="TrialNumber"), 
+            x="Time", y="FiringRate", 
+            linewidth=3,
+            errorbar="se", 
+            hue="condition", hue_order=order, 
+            palette=colors, 
+            ax=axs[0, i]
+        )
         # if plot_pvals:
         #     res = 
 
@@ -1018,22 +1050,28 @@ def plot_psth_both_events(mode, unit_id, feat, args, plot_pvals=False):
     fb_ticks = [-1.5, -1, -.5, 0, .5, 1, 1.5]
     ax2.set_xticks(fb_ticks)
     ax2.set_xticklabels(fb_ticks)
-
-    format_plot(axs)
+    handles, labels = axs[0, 0].get_legend_handles_labels()
+    axs[0, 0].get_legend().remove()
     axs[0, 1].get_legend().remove()
     axs[1, 1].get_legend().remove()
     axs[1, 0].get_legend().remove()
 
-    handles, labels = axs[0, 0].get_legend_handles_labels()
     if mode == "choice":
         labels = [f"Selected card w. {feat}", f"Selected card w. no {feat}"]
     elif mode == "pref":
         labels = [f"Prefers {feat}", "Prefers other"]
-    legend = axs[0, 0].legend(handles, labels)
+    legend = fig.legend(
+        handles, labels,
+        loc='upper left',
+        bbox_to_anchor=(0.02, 0.98),
+        frameon=True,
+        borderaxespad=0.0
+    )
     for line in legend.get_lines():
         line.set_linewidth(6)
-
+    format_plot(axs)
     fig.tight_layout()
+    # fig.subplots_adjust()
     return fig, axs
 
 def plot_cosine_sim_between_conf_pref(args, include_shuffle=True, consider_norm=True):

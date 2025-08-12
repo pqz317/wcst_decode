@@ -33,10 +33,10 @@ MODE_TO_COND = {
     "reward": "Response"
 }
 MODES = ["choice", "reward", "pref", "conf"]
-# REGIONS = ["amygdala_Amy", "basal_ganglia_BG", "inferior_temporal_cortex_ITC", "medial_pallium_MPal", "lateral_prefrontal_cortex_lat_PFC"]
+REGIONS = ["amygdala_Amy", "basal_ganglia_BG", "inferior_temporal_cortex_ITC", "medial_pallium_MPal", "lateral_prefrontal_cortex_lat_PFC", "anterior_cingulate_gyrus_ACgG"]
 
 # MODES = ["pref"]
-REGIONS = ["anterior_cingulate_gyrus_ACgG"]
+# REGIONS = ["anterior_cingulate_gyrus_ACgG"]
 
 def plot_for_mode_region(mode, region):
     args = argparse.Namespace(

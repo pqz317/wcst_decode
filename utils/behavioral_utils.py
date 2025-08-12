@@ -1006,11 +1006,16 @@ def get_label_by_mode(beh, mode):
     """
     if mode == "conf":
         beh["condition"] = beh["BeliefConf"]
+    elif mode == "next_conf":
+        beh["condition"] = beh["NextBeliefConf"]
     elif mode == "policy":
         beh["condition"] = beh["BeliefPolicy"]
     elif mode == "pref":
         beh = beh[beh.BeliefPartition.isin(["High X", "High Not X"])].copy()
         beh["condition"] = beh["BeliefPartition"]
+    elif mode == "next_pref":
+        beh = beh[beh.NextBeliefPartition.isin(["High X", "High Not X"])].copy()
+        beh["condition"] = beh["NextBeliefPartition"]
     elif mode == "feat_belief":
         beh = beh[beh.BeliefPartition.isin(["Low", "High X"])]
         beh["condition"] = beh["BeliefPartition"]

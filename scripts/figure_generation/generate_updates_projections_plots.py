@@ -29,12 +29,13 @@ import seaborn as sns
 
 SUB_REGION_LEVEL_REGIONS = [
     # ("both", "structure_level2_cleaned", "amygdala_Amy"),
+    ("both", "structure_level2_cleaned", "anterior_cingulate_gyrus_ACgG"),
     # ("both", "structure_level2_cleaned", "basal_ganglia_BG"),
     # ("both", "structure_level2_cleaned", "inferior_temporal_cortex_ITC"),
     # ("both", "structure_level2_cleaned", "medial_pallium_MPal"),
     # ("both", "structure_level2_cleaned", "lateral_prefrontal_cortex_lat_PFC"),
     # ("both", None, None),
-    ("SA", None, None),
+    # ("SA", None, None),
 ]
 
 OUTPUT_DIR = "/data/patrick_res/figures/wcst_paper/update_projections"

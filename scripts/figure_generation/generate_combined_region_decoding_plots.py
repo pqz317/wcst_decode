@@ -25,12 +25,11 @@ import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 
 DECODE_VARS = ["pref", "conf", "choice", "reward"]
-REGIONS = ["medial_pallium_MPal", "inferior_temporal_cortex_ITC", "basal_ganglia_BG", "amygdala_Amy", "lateral_prefrontal_cortex_lat_PFC"]
+REGIONS = ["medial_pallium_MPal", "inferior_temporal_cortex_ITC", "basal_ganglia_BG", "amygdala_Amy", "lateral_prefrontal_cortex_lat_PFC", "anterior_cingulate_gyrus_ACgG"]
 OUTPUT_DIR = "/data/patrick_res/figures/wcst_paper/decoding_combined_region"
 
 
 def main():
-    regions = ["medial_pallium_MPal", "inferior_temporal_cortex_ITC", "basal_ganglia_BG", "amygdala_Amy", "lateral_prefrontal_cortex_lat_PFC"]
     for decode_var in DECODE_VARS:
         args = argparse.Namespace(
             **BeliefPartitionConfigs()._asdict()
@@ -47,7 +46,7 @@ def main():
             args.sig_unit_level = "response_99th_window_filter_drift"
         else: 
             args.sig_unit_level = f"{decode_var}_99th_window_filter_drift"
-        fig, axs = visualization_utils.plot_combined_accs_by_attr(args, attr="regions", values=regions, num_shuffles=10)
+        fig, axs = visualization_utils.plot_combined_accs_by_attr(args, attr="regions", values=REGIONS, num_shuffles=10)
         fig.savefig(f"{OUTPUT_DIR}/{decode_var}_accs.svg")
         fig.savefig(f"{OUTPUT_DIR}/{decode_var}_accs.png")
 

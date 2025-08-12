@@ -33,6 +33,8 @@ BOTH_SIG_UNITS_PATH = "/data/patrick_res/firing_rates/{level}_units.pickle"
 MODE_TO_CLASSES = {
     "conf": ["Low", "High"],
     "pref": ["High X", "High Not X"],
+    "next_conf": ["Low", "High"],
+    "next_pref": ["High X", "High Not X"],
     "feat_belief": ["Low", "High X"],
     "policy": ["X", "Not X"],
     "reward": ["Correct", "Incorrect"],
@@ -46,6 +48,8 @@ MODE_TO_CLASSES = {
 MODE_TO_DIRECTION_LABELS = {
     "pref": {"high": "High X", "low": "High Not X"},
     "conf": {"high": "High", "low": "Low"},
+    "next_pref": {"high": "High X", "low": "High Not X"},
+    "next_conf": {"high": "High", "low": "Low"},
     "choice_int": {"high": "Chose", "low": "Not Chose"},
     "choice": {"high": "Chose", "low": "Not Chose"},
     "reward": {"high": "Correct", "low": "Incorrect"}
@@ -53,7 +57,9 @@ MODE_TO_DIRECTION_LABELS = {
 
 MODE_COND_LABEL_MAPS = {
     "conf": None,
+    "next_conf": None,
     "pref": None,
+    "next_pref": None,
     "feat_belief": None,
     "policy": None,
     "reward": None,

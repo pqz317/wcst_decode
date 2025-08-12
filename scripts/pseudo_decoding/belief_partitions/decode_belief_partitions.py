@@ -39,8 +39,8 @@ def load_session_data(row, args, splits_df=None):
     beh = behavioral_utils.get_feat_choice_label(beh, args.feat)
     if args.balance_by_filters: 
         beh = behavioral_utils.balance_trials_by_condition(beh, list(args.beh_filters.keys()))
-    beh = behavioral_utils.filter_behavior(beh, args.beh_filters)
     beh = behavioral_utils.get_belief_partitions(beh, args.feat, use_x=True)
+    beh = behavioral_utils.filter_behavior(beh, args.beh_filters)
     beh = behavioral_utils.get_label_by_mode(beh, args.mode)
     
     beh = behavioral_utils.balance_trials_by_condition(beh, condition_columns=args.balance_cols if args.balance_cols else ["condition"])
