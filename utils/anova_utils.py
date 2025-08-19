@@ -95,14 +95,16 @@ def frac_var_explained_by_time(args, vars, units=None, trial_events=["StimOnset"
     - vars: variables to to compute frac variance for
     """
     all_res = []
-    for trial_event in trial_events:
-        for sub in subjects:
-            args.subject = sub
-            args.trial_event = trial_event
-            res = io_utils.read_anova_good_units(args, "all", "")
-            res["trial_event"] = trial_event
-            res["subject"] = sub
-            all_res.append(res)
+    for var in vars: 
+        for trial_event in trial_events:
+            for sub in subjects:
+                args.subject = sub
+                args.trial_event = trial_event
+                res = io_utils.read_anova_good_units(args, "all", var)
+                res["trial_event"] = trial_event
+                res["subject"] = sub
+                res["var"] = var
+                all_res.append(res)
     all_res = pd.concat(all_res)
     if units is not None: 
         all_res = all_res[all_res.PseudoUnitID.isin(units)]
@@ -118,7 +120,7 @@ def num_sig_units_by_time(args, vars, sig_thresh="95th", units=None, trial_event
             for sub in subjects:
                 args.subject = sub
                 args.trial_event = trial_event
-                res = io_utils.read_anova_good_units(args, sig_thresh, var)
+                res = io_utils.read_anova_good_units(args, "all", var)
                 res["trial_event"] = trial_event
                 res["subject"] = sub
                 res["var"] = var
@@ -126,9 +128,9 @@ def num_sig_units_by_time(args, vars, sig_thresh="95th", units=None, trial_event
     all_res = pd.concat(all_res)
     if units is not None: 
         all_res = all_res[all_res.PseudoUnitID.isin(units)]
-    else: 
-        units = all_res.PseudoUnitID.unique()
-    num_units = all_res.groupby(["WindowEndMilli", "feat", "trial_event", "var"]).PseudoUnitID.nunique().reset_index(name="num_units")
+    units = all_res.PseudoUnitID.unique()
+    sig_res = all_res[all_res.p == sig_thresh]
+    num_units = sig_res.groupby(["WindowEndMilli", "feat", "trial_event", "var"]).PseudoUnitID.nunique().reset_index(name="num_units")
     num_units["frac_units_sig"] = num_units["num_units"] / len(units)
     return num_units
 

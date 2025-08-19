@@ -52,18 +52,23 @@ def plot_for_mode_region(mode, region):
     args.sig_thresh = "99th"
 
     all_good_units = []
+    res = []
     for trial_event in ["StimOnset", "FeedbackOnsetLong"]:
         args.trial_event = trial_event
         event_res = io_utils.read_anova_good_units(args, args.sig_thresh, MODE_TO_COND[mode], return_pos=True)
         region_res = event_res[event_res.structure_level2_cleaned == region]
+        res.append(region_res)
         col_name = f"x_{MODE_TO_COND[mode]}_comb_time_fracvar"
         summed = region_res.groupby(["PseudoUnitID", "feat"])[col_name].sum().reset_index()
         region_top = summed.sort_values(col_name, ascending=False).drop_duplicates('PseudoUnitID').head(5)
         all_good_units.append(region_top)
     all_good_units = pd.concat(all_good_units).drop_duplicates("PseudoUnitID")
+    res = pd.concat(res)
+    res["Time"] = res.WindowEndMilli / 1000 - 0.25 # the middle of the 500ms window 
+
     for i, unit in all_good_units.iterrows():
-        fig, axs = visualization_utils.plot_psth_both_events(mode, int(unit.PseudoUnitID), unit.feat, args)
-        fig.savefig(f"/data/patrick_res/figures/wcst_paper/single_unit_psths/{mode}_{region}_{unit.PseudoUnitID}_{unit.feat}.png")
+        fig, axs = visualization_utils.plot_psth_both_events(mode, int(unit.PseudoUnitID), unit.feat, args, pval_res=res)
+        fig.savefig(f"/data/patrick_res/figures/wcst_paper/single_unit_psths/{mode}_{region}_{unit.PseudoUnitID}_{unit.feat}.png", dpi=300)
         fig.savefig(f"/data/patrick_res/figures/wcst_paper/single_unit_psths/{mode}_{region}_{unit.PseudoUnitID}_{unit.feat}.svg")
         plt.close(fig)
 

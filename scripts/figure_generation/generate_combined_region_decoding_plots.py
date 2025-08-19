@@ -46,7 +46,14 @@ def main():
             args.sig_unit_level = "response_99th_window_filter_drift"
         else: 
             args.sig_unit_level = f"{decode_var}_99th_window_filter_drift"
-        fig, axs = visualization_utils.plot_combined_accs_by_attr(args, attr="regions", values=REGIONS, num_shuffles=10)
+        fig, axs = visualization_utils.plot_combined_accs_by_attr(
+            args, 
+            attr="regions", 
+            values=REGIONS, 
+            num_shuffles=10, 
+            hue_color=visualization_utils.REGION_ORDER,
+            palette=visualization_utils.REGION_TO_COLOR,
+            display_names=visualization_utils.REGION_TO_DISPLAY_NAMES)
         fig.savefig(f"{OUTPUT_DIR}/{decode_var}_accs.svg")
         fig.savefig(f"{OUTPUT_DIR}/{decode_var}_accs.png")
 

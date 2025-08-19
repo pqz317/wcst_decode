@@ -309,9 +309,9 @@ def get_avg_fr_per_interval(frs):
     return frs.groupby(["UnitID", "TrialNumber"]).mean().reset_index()
 
 def get_region_units(region_level, regions, units_path):
-    if region_level is None: 
-        return None
     all_units = pd.read_pickle(units_path)
+    if region_level is None or regions is None: 
+        return all_units.PseudoUnitID.unique()
     regions_arr = regions.split(",")
     return all_units[all_units[region_level].isin(regions_arr)].PseudoUnitID.unique()
 

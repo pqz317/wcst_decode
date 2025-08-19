@@ -74,19 +74,18 @@ def main():
         else: 
             args.sig_unit_level = f"{decode_var}_99th_window_filter_drift"
         plt.rcParams.update({'font.size': 14})
-        # plt.rcParams.update({'font.size': 18})
-        # fig_acc, _ = visualization_utils.plot_combined_accs(args)
-        # fig_acc.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_accs.svg")
-        # fig_acc.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_accs.png")
+        fig_acc, _ = visualization_utils.plot_combined_accs(args)
+        fig_acc.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_accs.svg")
+        fig_acc.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_accs.png")
 
-        # fig_cross, _ = visualization_utils.plot_combined_cross_accs(args)
-        # fig_cross.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_cross_time_accs.svg")
-        # fig_cross.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_cross_time_accs.png")
-        # for alpha in [None, 0.05, 0.01, 0.001]:
-        #     fig_cross_no_diag, _ = visualization_utils.plot_combined_cross_accs_no_diag(args, alpha=alpha)
-        #     fig_cross_no_diag.suptitle(f"Greying out non-significant cells with p < {alpha}")
-        #     fig_cross_no_diag.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_cross_time_no_diag_accs_alpha_{alpha}.svg")
-        #     fig_cross_no_diag.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_cross_time_no_diag_accs_alpha_{alpha}.png")
+        fig_cross, _ = visualization_utils.plot_combined_cross_accs(args)
+        fig_cross.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_cross_time_accs.svg")
+        fig_cross.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_cross_time_accs.png")
+        for alpha in [None, 0.05, 0.01, 0.001]:
+            fig_cross_no_diag, _ = visualization_utils.plot_combined_cross_accs_no_diag(args, alpha=alpha)
+            fig_cross_no_diag.suptitle(f"Greying out non-significant cells with p < {alpha}")
+            fig_cross_no_diag.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_cross_time_no_diag_accs_alpha_{alpha}.svg")
+            fig_cross_no_diag.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_cross_time_no_diag_accs_alpha_{alpha}.png")
 
         fig_weights, _ = plot_weights(args)
         fig_weights.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_weights.svg")

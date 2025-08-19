@@ -74,15 +74,20 @@ def main():
 
     res = belief_partitions_io.read_results(args, FEATURES)
     shuffles = res[res["mode"] == f"{args.mode}_shuffle"]
-    cross_res = belief_partitions_io.read_cross_time_results(args, FEATURES)
+    # cross_res = belief_partitions_io.read_cross_time_results(args, FEATURES)
 
-    p_vals = stats_utils.compute_p_for_decoding_by_time(res, args)
-    cross_p_vals = stats_utils.compute_p_for_cross_decoding_by_time(cross_res, shuffles, args)
+    # p_vals = stats_utils.compute_p_for_decoding_by_time(res, args)
+
+    # cross_p_vals = stats_utils.compute_p_for_cross_decoding_by_time(cross_res, shuffles, args)
+
+    args.model_trial_event = "StimOnset" if args.trial_event == "FeedbackOnsetLong" else "FeedbackOnsetLong"
+    cross_event_res = belief_partitions_io.read_cross_time_results(args, FEATURES)
+    cross_event_p_vals = stats_utils.compute_p_for_cross_decoding_by_time(cross_event_res, shuffles, args)
 
     out_dir = belief_partitions_io.get_dir_name(args)
-    p_vals.to_pickle(os.path.join(out_dir, f"{args.mode}_pvals.pickle"))
-    cross_p_vals.to_pickle(os.path.join(out_dir, f"{args.mode}_cross_p_vals.pickle"))
-
+    # p_vals.to_pickle(os.path.join(out_dir, f"{args.mode}_pvals.pickle"))
+    # cross_p_vals.to_pickle(os.path.join(out_dir, f"{args.mode}_cross_p_vals.pickle"))
+    cross_event_p_vals.to_pickle(os.path.join(out_dir, f"{args.mode}_{args.model_trial_event}_model_cross_p_vals.pickle"))
 
 if __name__ == "__main__":
     main()

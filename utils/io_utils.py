@@ -502,7 +502,16 @@ def read_selected_features_cross_time(args, feats, cond, avg=False):
         return df.groupby(["TrainTime", "TestTime"]).Accuracy.mean().reset_index(name="Accuracy")
     else: 
         return df
-    
+
+def get_sig_levels(row, cond):
+    col_name = f"x_{cond}_comb_time_fracvar"
+    if row[col_name] > row[f"{cond}_99th"]:
+        return "99th"
+    elif row[col_name] > row[f"{cond}_95th"]:
+        return "95th"
+    else:
+        return "insignificant"
+
 
 def read_anova_good_units(args, percentile_str="95th", cond="combined_fracvar", return_pos=True, read_shuffle=True):
     args.trial_interval = get_trial_interval(args.trial_event)
@@ -516,6 +525,8 @@ def read_anova_good_units(args, percentile_str="95th", cond="combined_fracvar", 
                 res = pd.merge(res, shuffle_stats, on="PseudoUnitID")
             else: 
                 res = pd.merge(res, shuffle_stats, on=["PseudoUnitID", "WindowStartMilli"], how="outer")
+            res["p"] = res.apply(lambda x: get_sig_levels(x, cond), axis=1)
+
         # HACK: this is for backwards compatability, previously only interested in one col
         # named "combined" at a time. 
         if cond != "combined_fracvar":
@@ -525,7 +536,8 @@ def read_anova_good_units(args, percentile_str="95th", cond="combined_fracvar", 
             cond_col = cond
             percentile_col = percentile_str
         if percentile_str != "all":
-            good_res.append(res[res[cond_col] > res[percentile_col]])
+            good_units = res[res[cond_col] > res[percentile_col]].PseudoUnitID.unique()
+            good_res.append(res[res.PseudoUnitID.isin(good_units)])
         else:
             good_res.append(res)
     good_res = pd.concat(good_res)

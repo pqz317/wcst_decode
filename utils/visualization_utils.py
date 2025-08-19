@@ -26,6 +26,7 @@ from scipy.stats import ttest_ind
 import itertools
 import matplotlib.gridspec as gridspec
 import utils.behavioral_utils as behavioral_utils
+from matplotlib.colors import ListedColormap, BoundaryNorm
 
 
 # REGION_TO_COLOR = {
@@ -63,6 +64,9 @@ REGION_TO_DISPLAY_NAMES = {
 }
 
 MODE_TO_COLOR = {
+    "Color": "#1B9E77",
+    "Shape": "#D95F02",
+    "Pattern": "#7570B3",
     "preference": "tab:blue",
     "confidence": "tab:red",
     "reward": "tab:green",
@@ -71,6 +75,9 @@ MODE_TO_COLOR = {
 }
 
 MODE_TO_DISPLAY_NAMES = {
+    "Color": "Color",
+    "Shape": "Shape",
+    "Pattern": "Pattern",
     "pref": "preference",
     "conf": "confidence",
     "reward": "reward",
@@ -563,13 +570,20 @@ def visualize_cross_time(args, cross_res, decoder_res, ax, cbar=True, vmin=None,
     pivoted = cross_res.pivot(index="TrainTime", columns="TestTime", values="Accuracy")
     sns.heatmap(pivoted, ax=ax, vmin=vmin, vmax=vmax, cbar=cbar)
 
-def visualize_cross_time_with_sig(args, cross_res, p_vals, ax, cmap, vmin=None, vmax=None, thresh=None):
+def visualize_cross_time_with_sig(args, cross_res, ax, vmin, vmax, p_vals=None, sig_thresh=None):
+    """
+    Plots nans as white, non-significant cells as black
+    Adjusts colormap accordingly
+    """
     pivoted = cross_res.pivot(index="TrainTime", columns="TestTime", values="Accuracy")
-    mask = p_vals.pivot(index="TrainTime", columns="TestTime", values="p")
-    if thresh is not None:
-        mask[mask >= thresh] = np.nan
-    mask = mask.isna()
-    sns.heatmap(pivoted, ax=ax, mask=mask, cmap=cmap, cbar=False, vmin=vmin, vmax=vmax)
+    if sig_thresh is not None:
+        sig_mask = p_vals.pivot(index="TrainTime", columns="TestTime", values="p")
+        sig_mask = sig_mask >= sig_thresh
+        pivoted[sig_mask] = -1
+    cmap = ListedColormap(['black'] + sns.color_palette("rocket", 256).as_hex())
+    boundaries = [-1, vmin] + list(np.linspace(vmin, vmax, 256))
+    norm = BoundaryNorm(boundaries, cmap.N)
+    sns.heatmap(pivoted, ax=ax, cmap=cmap, norm=norm, cbar=False, vmin=vmin, vmax=vmax)
 
 
 def plot_combined_accs(args, by_dim=False, modes=None, with_pvals=True):
@@ -602,8 +616,8 @@ def plot_combined_accs(args, by_dim=False, modes=None, with_pvals=True):
         stim_res = pd.concat(stim_res)
         fb_res = pd.concat(fb_res)
     if by_dim: 
-        fb_res["mode"] = fb_res.apply(lambda x: FEATURE_TO_DIM[x.feat] + " " + x["mode"], axis=1)
-        stim_res["mode"] = stim_res.apply(lambda x: FEATURE_TO_DIM[x.feat] + " " + x["mode"], axis=1)
+        fb_res["mode"] = fb_res.apply(lambda x: "shuffle" if "shuffle" in x["mode"] else FEATURE_TO_DIM[x.feat], axis=1)
+        stim_res["mode"] = stim_res.apply(lambda x: "shuffle" if "shuffle" in x["mode"] else FEATURE_TO_DIM[x.feat], axis=1)
     # fb_res = fb_res[fb_res.feat != "GREEN"]
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 9/3), sharey='row', width_ratios=[stim_res.Time.nunique(), fb_res.Time.nunique()])
     visualize_preferred_beliefs(stim_args, stim_res, ax1, p_vals=stim_pvals, hue_col="mode", palette=MODE_TO_COLOR)
@@ -630,7 +644,7 @@ def plot_combined_accs(args, by_dim=False, modes=None, with_pvals=True):
     fig.tight_layout()
     return fig, (ax1, ax2)
 
-def plot_combined_accs_by_attr(args, attr, values, num_shuffles=0):
+def plot_combined_accs_by_attr(args, attr, values, num_shuffles=0, hue_order=None, palette=None, display_names=None):
     all_stim_res = []
     all_fb_res = []
     for val in values:
@@ -654,14 +668,14 @@ def plot_combined_accs_by_attr(args, attr, values, num_shuffles=0):
     all_stim_res = pd.concat(all_stim_res)
     all_fb_res = pd.concat(all_fb_res)
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 3), sharey='row', width_ratios=[all_stim_res.Time.nunique(), all_fb_res.Time.nunique()])
-
-    all_stim_res[attr] = all_stim_res[attr].map(REGION_TO_DISPLAY_NAMES)
+    if display_names:
+        all_stim_res[attr] = all_stim_res[attr].map(display_names)
 
     sns.lineplot(
         all_stim_res, x="Time", y="Accuracy", 
-        hue=attr, hue_order=REGION_ORDER, 
+        hue=attr, hue_order=hue_order, 
         linewidth=3, ax=ax1, 
-        palette=REGION_TO_COLOR, errorbar="se"
+        palette=palette, errorbar="se"
     )
 
 
@@ -672,13 +686,13 @@ def plot_combined_accs_by_attr(args, attr, values, num_shuffles=0):
     stim_ticks = [-1, -.5, 0, .5, 1]
     ax1.set_xticks(stim_ticks)
     ax1.set_xticklabels(stim_ticks)
-
-    all_fb_res[attr] = all_fb_res[attr].map(REGION_TO_DISPLAY_NAMES)
+    if display_names:
+        all_fb_res[attr] = all_fb_res[attr].map(display_names)
     sns.lineplot(
         all_fb_res, x="Time", y="Accuracy", 
-        hue=attr, hue_order=REGION_ORDER, 
+        hue=attr, hue_order=hue_order, 
         linewidth=3, ax=ax2, 
-        palette=REGION_TO_COLOR, errorbar="se"
+        palette=palette, errorbar="se"
     )
     ax2.axvline(-.8, color='grey', linestyle='dotted', linewidth=3)
     ax2.axvline(0, color='grey', linestyle='dotted', linewidth=3)
@@ -695,12 +709,19 @@ def plot_combined_accs_by_attr(args, attr, values, num_shuffles=0):
     return fig, (ax1, ax2)
 
 
-def plot_combined_cross_accs(args):
+def plot_combined_cross_accs(args, ignore_overlap=False):
     args.trial_event = "StimOnset"
     stim_res = belief_partitions_io.read_results(args, FEATURES)
     cross_stim_res = belief_partitions_io.read_cross_time_results(args, FEATURES, avg=True)
     args.model_trial_event = "FeedbackOnsetLong"
     fb_model_cross_stim_res = belief_partitions_io.read_cross_time_results(args, FEATURES, avg=True)
+    if ignore_overlap:
+        fb_model_cross_stim_res.loc[
+            (fb_model_cross_stim_res.TrainTime < -0.8) | 
+            (fb_model_cross_stim_res.TestTime >=0), 
+            "Accuracy"
+        ] = 0
+
     args.model_trial_event = None
 
 
@@ -710,6 +731,18 @@ def plot_combined_cross_accs(args):
     args.model_trial_event = "StimOnset"
     stim_model_cross_fb_res = belief_partitions_io.read_cross_time_results(args, FEATURES, avg=True)
     args.model_trial_event = None
+
+    if ignore_overlap:
+        fb_model_cross_stim_res.loc[
+            (fb_model_cross_stim_res.TrainTime < -0.8) | 
+            (fb_model_cross_stim_res.TestTime >=0), 
+            "Accuracy"
+        ] = np.nan
+        stim_model_cross_fb_res.loc[
+            (stim_model_cross_fb_res.TrainTime >= 0) | 
+            (stim_model_cross_fb_res.TestTime < -0.8), 
+            "Accuracy"
+        ] = np.nan
 
     fig, axs = plt.subplots(
         2, 2, figsize=(11, 10),                            
@@ -726,10 +759,10 @@ def plot_combined_cross_accs(args):
     shuffle_means = shuffles.groupby(["Time"]).Accuracy.mean().reset_index(name="ShuffleAccuracy")
     all_min = shuffle_means.ShuffleAccuracy.mean()
 
-    visualize_cross_time(args, cross_stim_res, stim_res, axs[0, 0], cbar=False, vmin=all_min, vmax=all_max)
-    visualize_cross_time(args, stim_model_cross_fb_res, fb_res, axs[0, 1], cbar=False, vmin=all_min, vmax=all_max)
-    visualize_cross_time(args, fb_model_cross_stim_res, stim_res, axs[1, 0], cbar=False, vmin=all_min, vmax=all_max)
-    visualize_cross_time(args, cross_fb_res, fb_res, axs[1, 1], cbar=False, vmin=all_min, vmax=all_max)
+    visualize_cross_time_with_sig(args, cross_stim_res, axs[0, 0], vmin=all_min, vmax=all_max)
+    visualize_cross_time_with_sig(args, stim_model_cross_fb_res, axs[0, 1], vmin=all_min, vmax=all_max)
+    visualize_cross_time_with_sig(args, fb_model_cross_stim_res, axs[1, 0], vmin=all_min, vmax=all_max)
+    visualize_cross_time_with_sig(args, cross_fb_res, axs[1, 1], vmin=all_min, vmax=all_max)
 
 
     stim_ticks = [-.5, 0, .5, 1]
@@ -786,6 +819,127 @@ def plot_combined_cross_accs(args):
     cbar_ax = fig.add_axes([0.87, 0.15, 0.03, 0.7])
     cbar = fig.colorbar(axs[1, 1].collections[0], cax=cbar_ax, orientation='vertical')
     cbar.set_label('Accuracy')
+
+    # fig.tight_layout()
+    return fig, axs
+
+
+def plot_combined_cross_accs_trunc(args, alpha=0.01):
+    args.trial_event = "StimOnset"
+    stim_res = belief_partitions_io.read_results(args, FEATURES)
+    cross_stim_res = belief_partitions_io.read_cross_time_results(args, FEATURES, avg=True)
+    args.model_trial_event = "FeedbackOnsetLong"
+    fb_stim_res = belief_partitions_io.read_cross_time_results(args, FEATURES, avg=True)
+    # filter for training on fb period, testing before cards appear
+    fb_stim_res = fb_stim_res[(fb_stim_res.TrainTime >= -0.8) & (fb_stim_res.TestTime < 0)]
+    args.model_trial_event = None
+
+
+    args.trial_event = "FeedbackOnsetLong"
+    fb_res = belief_partitions_io.read_results(args, FEATURES)
+    cross_fb_res = belief_partitions_io.read_cross_time_results(args, FEATURES, avg=True)
+    args.model_trial_event = "StimOnset"
+    stim_fb_res = belief_partitions_io.read_cross_time_results(args, FEATURES, avg=True)
+    print(stim_fb_res.TrainTime.unique())
+    print(stim_fb_res.TestTime.unique())
+    # filter for training before cards appear, testing after fb
+    stim_fb_res = stim_fb_res[(stim_fb_res.TrainTime < 0) & (stim_fb_res.TestTime >= -0.8)]
+    stim_fb_res.loc[(stim_fb_res.TrainTime < 0) & (stim_fb_res.TestTime >= -0.8), "Accuracy"]
+    print(len(stim_fb_res))
+    args.model_trial_event = None
+
+    layout = [
+        ["ss", "ss", "n0", "sf"],
+        ["ss", "ss", "n1", "n1"],
+        ["n2", "n3", "ff", "ff"],
+        ["fs", "n3", "ff", "ff"],
+    ]
+    # mosaic + some buffer for colorbar
+    fig, axs = plt.subplot_mosaic(
+        layout,
+        figsize=(10, 10),
+        width_ratios=(10, 8, 8, 23),
+        height_ratios=(10, 8, 8, 23),
+        constrained_layout=True
+    )
+    for i in range(4):
+        axs[f"n{i}"].axis("off")
+    # axs['fs'].sharex(axs['ss']) 
+    # axs['sf'].sharex(axs['ff']) 
+    # axs['fs'].sharey(axs['ff']) 
+    # axs['sf'].sharey(axs['ss']) 
+
+    all_res = pd.concat((cross_stim_res, stim_fb_res, fb_stim_res, cross_fb_res))
+    all_max = all_res.groupby(["TestTime", "TrainTime", "TrainEvent", "TestEvent"]).Accuracy.mean().max()
+
+    all_decoder_res = pd.concat((stim_res, fb_res))
+    shuffles = all_decoder_res[all_decoder_res["mode"] == f"{args.mode}_shuffle"]
+    shuffle_means = shuffles.groupby(["Time"]).Accuracy.mean().reset_index(name="ShuffleAccuracy")
+    all_min = shuffle_means.ShuffleAccuracy.mean()
+
+    visualize_cross_time_with_sig(args, cross_stim_res, axs["ss"], vmin=all_min, vmax=all_max)
+    visualize_cross_time_with_sig(args, stim_fb_res, axs["sf"], vmin=all_min, vmax=all_max)
+    visualize_cross_time_with_sig(args, fb_stim_res, axs["fs"], vmin=all_min, vmax=all_max)
+    visualize_cross_time_with_sig(args, cross_fb_res, axs["ff"], vmin=all_min, vmax=all_max)
+
+
+    stim_ticks = [-.5, 0, .5, 1]
+    stim_tick_pos = [st * 10 + 10 - 0.5 for st in stim_ticks]
+    fb_ticks = [-1.5, -1, -.5, 0, .5, 1, 1.5]
+    fb_tick_pos = [ft * 10 + 18 - 0.5 for ft in fb_ticks]
+
+    cross_fix_pos, stim_on_pos = 4.5, 9.5
+    card_fix_pos, fb_pos = 9.5, 17.5
+    axs["ss"].set_ylabel("Time to cards appear (s)")
+    axs["ss"].set_xlabel("")
+    axs["ss"].set_yticks(stim_tick_pos)
+    axs["ss"].set_yticklabels(stim_ticks)
+    axs["ss"].axvline(cross_fix_pos, color='white', linestyle='dotted', linewidth=3)
+    axs["ss"].axvline(stim_on_pos, color='white', linestyle='dotted', linewidth=3)
+    axs["ss"].axhline(cross_fix_pos, color='white', linestyle='dotted', linewidth=3)
+    axs["ss"].axhline(stim_on_pos, color='white', linestyle='dotted', linewidth=3)
+    axs["ss"].set_xticks([])
+
+
+    axs["sf"].set_xlabel("")
+    axs["sf"].set_ylabel("")
+    axs["sf"].set_xticks([])
+    axs["sf"].set_yticks([])
+
+    # axs["sf"].axhline(cross_fix_pos, color='white', linestyle='dotted', linewidth=3)
+    # axs["sf"].axhline(stim_on_pos, color='white', linestyle='dotted', linewidth=3)
+    # axs["sf"].axvline(card_fix_pos, color='white', linestyle='dotted', linewidth=3)
+    # axs["sf"].axvline(fb_pos, color='white', linestyle='dotted', linewidth=3)
+
+    # axs["fs"].set_xlabel("Time to cards appear (s)")
+    # axs["fs"].set_ylabel("Time to feedback (s)")
+    # axs["fs"].set_xticks(stim_tick_pos)
+    # axs["fs"].set_xticklabels(stim_ticks)
+    # axs["fs"].set_yticks(fb_tick_pos)
+    # axs["fs"].set_yticklabels(fb_ticks)
+    # axs["fs"].axvline(cross_fix_pos, color='white', linestyle='dotted', linewidth=3)
+    # axs["fs"].axvline(stim_on_pos, color='white', linestyle='dotted', linewidth=3)
+    # axs["fs"].axhline(card_fix_pos, color='white', linestyle='dotted', linewidth=3)
+    # axs["fs"].axhline(fb_pos, color='white', linestyle='dotted', linewidth=3)
+
+    axs["ff"].set_xlabel("Time to feedback (s)")
+    axs["ff"].set_ylabel("")
+    axs["ff"].set_xticks(fb_tick_pos)
+    axs["ff"].set_xticklabels(fb_ticks)
+    axs["ff"].axvline(card_fix_pos, color='white', linestyle='dotted', linewidth=3)
+    axs["ff"].axvline(fb_pos, color='white', linestyle='dotted', linewidth=3)
+    axs["ff"].axhline(card_fix_pos, color='white', linestyle='dotted', linewidth=3)
+    axs["ff"].axhline(fb_pos, color='white', linestyle='dotted', linewidth=3)
+    axs["ff"].set_yticks([])
+
+    # fig.supylabel("Train time")
+    # fig.supxlabel("Test time")
+
+    # # Adjust subplots to make space for colorbar
+    # fig.subplots_adjust(right=0.85)
+    # # Create a single colorbar to the right of ax2
+    # cbar_ax = fig.add_axes([0.87, 0.15, 0.03, 0.7])
+    # fig.colorbar(axs["ff"].collections[0], ax=axs["ff"], orientation='vertical', location='right', label='Accuracy')
 
     # fig.tight_layout()
     return fig, axs
@@ -1000,7 +1154,7 @@ def plot_belief_partition_psth(unit_id, feat, args):
     return fig, (ax1, ax2, ax3)
 
 
-def plot_psth_both_events(mode, unit_id, feat, args, plot_pvals=False):
+def plot_psth_both_events(mode, unit_id, feat, args, pval_res=None):
     fig, axs = plt.subplots(2, 2, figsize=(9, 6), sharey='row', sharex='col', width_ratios=[20, 33], height_ratios=[1, 2])
     args.feat = feat
     session = int(unit_id / 100)
@@ -1023,12 +1177,23 @@ def plot_psth_both_events(mode, unit_id, feat, args, plot_pvals=False):
             palette=colors, 
             ax=axs[0, i]
         )
-        # if plot_pvals:
-        #     res = 
-
         subject = behavioral_utils.get_sub_for_session(session)
         sub_beh = beh.sample(500) if len(beh) > 500 else beh
         visualize_unit_raster(subject, session, unit_id, sub_beh, trial_interval, ax=axs[1, i], hue_order=order, palette=colors)
+
+    #add significance bars after both event have already been plotted
+    if pval_res is not None:
+        _, ymax_left = axs[0, i].get_ylim()
+        _, ymax_right = axs[0, i].get_ylim()
+        ybar = max((ymax_left, ymax_right)) * 1.05
+        for i, trial_event in enumerate(["StimOnset", "FeedbackOnsetLong"]):
+            res = pval_res[(pval_res.trial_event == trial_event) & (pval_res.PseudoUnitID == unit_id)]
+            for thresh_str, lw in ANOVA_SIG_LEVELS:
+                sigs = res[res["p"] == thresh_str]
+                for _, row in sigs.iterrows():
+                    # color = acc_line.lines[0].get_color()
+                    axs[0, i].plot([row.Time - 0.05, row.Time + 0.05], [ybar, ybar], linewidth=lw, color='black')
+                    # axs[0, i].hlines(y=-2, xmin=row.Time - 0.25, xmax=row.Time + 0.25, linewidth=lw, color="black")
 
     for row_idx in range(2):
         (ax1, ax2) = axs[row_idx, :]
@@ -1063,7 +1228,7 @@ def plot_psth_both_events(mode, unit_id, feat, args, plot_pvals=False):
     legend = fig.legend(
         handles, labels,
         loc='upper left',
-        bbox_to_anchor=(0.02, 0.98),
+        bbox_to_anchor=(0.37, 0.7),
         frameon=True,
         borderaxespad=0.0
     )
