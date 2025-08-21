@@ -578,7 +578,7 @@ def visualize_cross_time_with_sig(args, cross_res, ax, vmin, vmax, p_vals=None, 
     pivoted = cross_res.pivot(index="TrainTime", columns="TestTime", values="Accuracy")
     if sig_thresh is not None:
         sig_mask = p_vals.pivot(index="TrainTime", columns="TestTime", values="p")
-        sig_mask = sig_mask >= sig_thresh
+        sig_mask = (~pivoted.isna()) & (sig_mask >= sig_thresh)
         pivoted[sig_mask] = -1
     cmap = ListedColormap(['black'] + sns.color_palette("rocket", 256).as_hex())
     boundaries = [-1, vmin] + list(np.linspace(vmin, vmax, 256))
@@ -709,28 +709,25 @@ def plot_combined_accs_by_attr(args, attr, values, num_shuffles=0, hue_order=Non
     return fig, (ax1, ax2)
 
 
-def plot_combined_cross_accs(args, ignore_overlap=False):
-    args.trial_event = "StimOnset"
-    stim_res = belief_partitions_io.read_results(args, FEATURES)
-    cross_stim_res = belief_partitions_io.read_cross_time_results(args, FEATURES, avg=True)
-    args.model_trial_event = "FeedbackOnsetLong"
-    fb_model_cross_stim_res = belief_partitions_io.read_cross_time_results(args, FEATURES, avg=True)
-    if ignore_overlap:
-        fb_model_cross_stim_res.loc[
-            (fb_model_cross_stim_res.TrainTime < -0.8) | 
-            (fb_model_cross_stim_res.TestTime >=0), 
-            "Accuracy"
-        ] = 0
+def plot_combined_cross_accs(args, ignore_overlap=False, alpha=0.01):
+    stim_args = copy.deepcopy(args)
+    stim_args.trial_event = "StimOnset"
+    stim_res = belief_partitions_io.read_results(stim_args, FEATURES)
+    cross_stim_res = belief_partitions_io.read_cross_time_results(stim_args, FEATURES, avg=True)
+    stim_args.model_trial_event = "FeedbackOnsetLong"
+    fb_model_cross_stim_res = belief_partitions_io.read_cross_time_results(stim_args, FEATURES, avg=True)
+    fb_args = copy.deepcopy(args)
+    fb_args.trial_event = "FeedbackOnsetLong"
+    fb_res = belief_partitions_io.read_results(fb_args, FEATURES)
+    cross_fb_res = belief_partitions_io.read_cross_time_results(fb_args, FEATURES, avg=True)
+    fb_args.model_trial_event = "StimOnset"
+    stim_model_cross_fb_res = belief_partitions_io.read_cross_time_results(fb_args, FEATURES, avg=True)
 
-    args.model_trial_event = None
+    stim_pvals = pd.read_pickle(os.path.join(belief_partitions_io.get_dir_name(stim_args), f"{stim_args.mode}_cross_p_vals.pickle"))
+    fb_model_stim_pvals = pd.read_pickle(os.path.join(belief_partitions_io.get_dir_name(stim_args), f"{stim_args.mode}_FeedbackOnsetLong_model_cross_p_vals.pickle"))
+    fb_pvals = pd.read_pickle(os.path.join(belief_partitions_io.get_dir_name(fb_args), f"{fb_args.mode}_cross_p_vals.pickle"))
+    stim_model_fb_pvals = pd.read_pickle(os.path.join(belief_partitions_io.get_dir_name(fb_args), f"{fb_args.mode}_StimOnset_model_cross_p_vals.pickle"))
 
-
-    args.trial_event = "FeedbackOnsetLong"
-    fb_res = belief_partitions_io.read_results(args, FEATURES)
-    cross_fb_res = belief_partitions_io.read_cross_time_results(args, FEATURES, avg=True)
-    args.model_trial_event = "StimOnset"
-    stim_model_cross_fb_res = belief_partitions_io.read_cross_time_results(args, FEATURES, avg=True)
-    args.model_trial_event = None
 
     if ignore_overlap:
         fb_model_cross_stim_res.loc[
@@ -759,10 +756,10 @@ def plot_combined_cross_accs(args, ignore_overlap=False):
     shuffle_means = shuffles.groupby(["Time"]).Accuracy.mean().reset_index(name="ShuffleAccuracy")
     all_min = shuffle_means.ShuffleAccuracy.mean()
 
-    visualize_cross_time_with_sig(args, cross_stim_res, axs[0, 0], vmin=all_min, vmax=all_max)
-    visualize_cross_time_with_sig(args, stim_model_cross_fb_res, axs[0, 1], vmin=all_min, vmax=all_max)
-    visualize_cross_time_with_sig(args, fb_model_cross_stim_res, axs[1, 0], vmin=all_min, vmax=all_max)
-    visualize_cross_time_with_sig(args, cross_fb_res, axs[1, 1], vmin=all_min, vmax=all_max)
+    visualize_cross_time_with_sig(args, cross_stim_res, axs[0, 0], vmin=all_min, vmax=all_max, p_vals=stim_pvals, sig_thresh=alpha)
+    visualize_cross_time_with_sig(args, stim_model_cross_fb_res, axs[0, 1], vmin=all_min, vmax=all_max, p_vals=stim_model_fb_pvals, sig_thresh=alpha)
+    visualize_cross_time_with_sig(args, fb_model_cross_stim_res, axs[1, 0], vmin=all_min, vmax=all_max, p_vals=fb_model_stim_pvals, sig_thresh=alpha)
+    visualize_cross_time_with_sig(args, cross_fb_res, axs[1, 1], vmin=all_min, vmax=all_max, p_vals=fb_pvals, sig_thresh=alpha)
 
 
     stim_ticks = [-.5, 0, .5, 1]
@@ -995,11 +992,8 @@ def plot_combined_cross_accs_no_diag(args, alpha=0.01):
     shuffle_means = shuffles.groupby(["Time"]).Accuracy.mean().reset_index(name="ShuffleAccuracy")
     all_min = shuffle_means.ShuffleAccuracy.mean()
 
-    cmap = plt.get_cmap('rocket').copy()
-    cmap.set_bad(color='black')  # grey for NaNs
-    visualize_cross_time_with_sig(args, cross_stim_res, stim_pvals, stim_ax, thresh=alpha, cmap=cmap, vmin=all_min, vmax=all_max)
-    visualize_cross_time_with_sig(args, cross_fb_res, fb_pvals, fb_ax, thresh=alpha, cmap=cmap, vmin=all_min, vmax=all_max)
-
+    visualize_cross_time_with_sig(args, cross_stim_res, stim_ax, vmin=all_min, vmax=all_max, p_vals=stim_pvals, sig_thresh=alpha)
+    visualize_cross_time_with_sig(args, cross_fb_res, fb_ax, vmin=all_min, vmax=all_max, p_vals=fb_pvals, sig_thresh=alpha)
 
     stim_ticks = [-.5, 0, .5, 1]
     stim_tick_pos = [st * 10 + 10 - 0.5 for st in stim_ticks]

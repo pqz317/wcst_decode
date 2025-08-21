@@ -1,4 +1,6 @@
 #!/bin/bash
+# launch with sbatch --array=0-87 wcst_decode/scripts/pseudo_decoding/belief_partitions/slurm_launch_compute_p_vals.slurm
+
 #SBATCH --job-name=p_vals
 #SBATCH -p ckpt-all
 #SBATCH -A walkerlab
@@ -6,6 +8,7 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=2G
 #SBATCH --time=180
+
 
 module load singularity
 singularity exec --writable-tmpfs --nv \

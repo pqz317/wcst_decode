@@ -22,10 +22,12 @@ from scripts.pseudo_decoding.belief_partitions.belief_partition_configs import B
 import scripts.pseudo_decoding.belief_partitions.belief_partitions_io as belief_partitions_io
 import copy
 import json
+from distutils.util import strtobool
+
 
 BOTH_PAIRS_PATH = "/data/patrick_res/sessions/both/pairs_at_least_3blocks_10sess.pickle"
 
-def get_pseudo_frs_for_session(session, args, num_pseudo=100):
+def get_pseudo_frs_for_session(session, args, cond, num_pseudo=100):
     # for grabbing behavior and firing rates, use subject-specific arguments
     # for grabbing decoder weights, use general
     sub_args = copy.deepcopy(args)
@@ -35,7 +37,7 @@ def get_pseudo_frs_for_session(session, args, num_pseudo=100):
     beh = behavioral_utils.get_feat_choice_label(beh, sub_args.feat)
     beh = behavioral_utils.get_belief_partitions(beh, sub_args.feat, use_x=True)
 
-    sub_beh = beh[beh.BeliefPartition == "High X"]
+    sub_beh = beh[beh.BeliefPartition == cond]
 
     frs = spike_utils.get_frs_from_args(sub_args, session)
     frs["TimeIdx"] = (frs["Time"] * 10).round().astype(int)
@@ -55,12 +57,20 @@ def get_pseudo_frs_for_session(session, args, num_pseudo=100):
 def get_sims(pair, args):
     (feat1, feat2) = pair.pair
     args.feat = feat1
-    feat1_res = pd.concat(pd.Series(pair.sessions).apply(lambda x: get_pseudo_frs_for_session(x, args)).dropna().values)
+    feat1_res = pd.concat(pd.Series(pair.sessions).apply(lambda x: get_pseudo_frs_for_session(x, args, "High X")).dropna().values)
 
     args.feat = feat2
-    feat2_res = pd.concat(pd.Series(pair.sessions).apply(lambda x: get_pseudo_frs_for_session(x, args)).dropna().values)
-
+    feat2_res = pd.concat(pd.Series(pair.sessions).apply(lambda x: get_pseudo_frs_for_session(x, args, "High X")).dropna().values)
     merged = pd.merge(feat1_res, feat2_res, on=["PseudoUnitID", "PseudoTrialNumber", "TimeIdx"], suffixes=["_feat1", "_feat2"], how="outer").fillna(0)
+
+    if args.relative_to_low:
+        low_res = pd.concat(pd.Series(pair.sessions).apply(lambda x: get_pseudo_frs_for_session(x, args, "Low")).dropna().values)
+        merged = pd.merge(merged, low_res, on=["PseudoUnitID", "PseudoTrialNumber", "TimeIdx"], how="outer").fillna(0)
+
+        merged["FiringRate_feat1"] = merged["FiringRate_feat1"] - merged["FiringRate"]
+        merged["FiringRate_feat2"] = merged["FiringRate_feat2"] - merged["FiringRate"]
+
+
     if args.sim_type == "cosine_sim":
         sims = merged.groupby(["PseudoTrialNumber", "TimeIdx"]).apply(lambda x: classifier_utils.cosine_sim(x.FiringRate_feat1, x.FiringRate_feat2)).reset_index(name="cosine_sim")
     elif args.sim_type == "euclidean":
@@ -77,6 +87,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser = add_defaults_to_parser(BeliefPartitionConfigs(), parser)
     parser.add_argument(f'--sim_type', default="cosine_sim")
+    parser.add_argument(f'--relative_to_low', default=False, type=lambda x: bool(strtobool(x)))
     args = parser.parse_args()
 
 
@@ -90,7 +101,8 @@ def main():
     args.base_output_path = "/data/patrick_res/belief_similarities"
     file_name = belief_partitions_io.get_ccgp_file_name(args)
     output_dir = belief_partitions_io.get_dir_name(args)
-    sims.to_pickle(os.path.join(output_dir, f"{file_name}_{args.sim_type}.pickle"))
+    low_str = "_to_low" if args.relative_to_low else ""
+    sims.to_pickle(os.path.join(output_dir, f"{file_name}_{args.sim_type}{low_str}.pickle"))
     
 if __name__ == "__main__":
     main()
