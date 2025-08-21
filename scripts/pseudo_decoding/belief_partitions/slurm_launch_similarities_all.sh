@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Default values
-partition="gpu-a100"
+partition="ckpt-all"
 
 # Optional args passed to decoding script
 extra_args="$@"
