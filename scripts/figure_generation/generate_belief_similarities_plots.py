@@ -26,12 +26,12 @@ from tqdm import tqdm
 import seaborn as sns
 
 SUB_REGION_LEVEL_REGIONS = [
-    # ("both", "structure_level2_cleaned", "amygdala_Amy"),
-    # ("both", "structure_level2_cleaned", "basal_ganglia_BG"),
-    # ("both", "structure_level2_cleaned", "inferior_temporal_cortex_ITC"),
-    # ("both", "structure_level2_cleaned", "medial_pallium_MPal"),
-    # ("both", "structure_level2_cleaned", "lateral_prefrontal_cortex_lat_PFC"),
-    # ("both", "structure_level2_cleaned", "anterior_cingulate_gyrus_ACgG"),
+    ("both", "structure_level2_cleaned", "amygdala_Amy"),
+    ("both", "structure_level2_cleaned", "basal_ganglia_BG"),
+    ("both", "structure_level2_cleaned", "inferior_temporal_cortex_ITC"),
+    ("both", "structure_level2_cleaned", "medial_pallium_MPal"),
+    ("both", "structure_level2_cleaned", "lateral_prefrontal_cortex_lat_PFC"),
+    ("both", "structure_level2_cleaned", "anterior_cingulate_gyrus_ACgG"),
     ("both", None, None),
 ]
 
@@ -51,7 +51,8 @@ def get_trial_averaged_res(args, pairs):
         args.feat_pair = pair.pair
         out_dir = belief_partitions_io.get_dir_name(args, make_dir=False)
         file_name = belief_partitions_io.get_ccgp_file_name(args)
-        res = pd.read_pickle(os.path.join(out_dir, f"{file_name}_{args.sim_type}.pickle"))
+        low_str = "_to_low" if args.relative_to_low else ""
+        res = pd.read_pickle(os.path.join(out_dir, f"{file_name}_{args.sim_type}{low_str}.pickle"))
         res["dim_type"] = pair.dim_type
         res["pair_str"] = "_".join(pair.pair)
         all_res.append(res)
@@ -83,16 +84,17 @@ def load_data(args, pairs):
 
 def main():
     plt.rcParams.update({'font.size': 16})
+    parser = argparse.ArgumentParser()
+    parser = add_defaults_to_parser(BeliefPartitionConfigs(), parser)
+    parser.add_argument(f'--sim_type', default="cosine_sim")
+    parser.add_argument(f'--relative_to_low', default=False, type=lambda x: bool(strtobool(x)))
+    args = parser.parse_args()
+
     pairs = pd.read_pickle(BOTH_PAIRS_PATH).reset_index(drop=True)
     for (sub, region_level, regions) in tqdm(SUB_REGION_LEVEL_REGIONS):
         pairs = pd.read_pickle(BOTH_PAIRS_PATH).reset_index(drop=True)
-        args = argparse.Namespace(
-            **BeliefPartitionConfigs()._asdict()
-        )
         args.subject = "both"
         args.base_output_path = "/data/patrick_res/belief_similarities"
-        args.sim_type = "euclidean"
-
         args.region_level = region_level
         args.regions = regions
 
@@ -118,8 +120,9 @@ def main():
         fig.tight_layout()
 
         output_dir = "/data/patrick_res/figures/wcst_paper/belief_similarities"
-        fig.savefig(f"{output_dir}/{sub}_{regions}_{args.sim_type}.svg")
-        fig.savefig(f"{output_dir}/{sub}_{regions}_{args.sim_type}.png")
+        low_str = "_to_low" if args.relative_to_low else ""
+        fig.savefig(f"{output_dir}/{sub}_{regions}_{args.sim_type}{low_str}.svg")
+        fig.savefig(f"{output_dir}/{sub}_{regions}_{args.sim_type}{low_str}.png")
     
 if __name__ == "__main__":
     main()

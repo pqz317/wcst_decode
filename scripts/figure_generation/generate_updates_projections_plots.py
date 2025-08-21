@@ -29,12 +29,12 @@ import seaborn as sns
 
 SUB_REGION_LEVEL_REGIONS = [
     # ("both", "structure_level2_cleaned", "amygdala_Amy"),
-    ("both", "structure_level2_cleaned", "anterior_cingulate_gyrus_ACgG"),
+    # ("both", "structure_level2_cleaned", "anterior_cingulate_gyrus_ACgG"),
     # ("both", "structure_level2_cleaned", "basal_ganglia_BG"),
     # ("both", "structure_level2_cleaned", "inferior_temporal_cortex_ITC"),
     # ("both", "structure_level2_cleaned", "medial_pallium_MPal"),
     # ("both", "structure_level2_cleaned", "lateral_prefrontal_cortex_lat_PFC"),
-    # ("both", None, None),
+    ("both", None, None),
     # ("SA", None, None),
 ]
 
@@ -51,9 +51,10 @@ conditions_maps = {
 
 names_to_intervals = {
     "cross fixation": [(-1, 0, "StimOnset")],
-    "decision": [(0, 1.1, "StimOnset"), (-1.8, -0.8, "FeedbackOnsetLong")],
-    "card fixation": [(-0.8, 0, "FeedbackOnsetLong")],
-    "feedback": [(0, 1.6, "FeedbackOnsetLong")],
+    # "decision": [(0, 1.1, "StimOnset"), (-1.8, -0.8, "FeedbackOnsetLong")],
+    # "card fixation": [(-0.8, 0, "FeedbackOnsetLong")],
+    # "feedback": [(0, 1.6, "FeedbackOnsetLong")],
+    "all":[(-1.1, 1.1, "StimOnset"), (-1.8, -1.6, "FeedbackOnsetLong")]
 }
 
 def read_all_cond_data(args):
@@ -84,7 +85,7 @@ def plot_by_time(data):
     return fig, axs
 
 def plot_by_intervals(data):
-    fig, axs = plt.subplots(4, 1, figsize=(8, 20))
+    fig, axs = plt.subplots(len(names_to_intervals), 1, figsize=(8, len(names_to_intervals) * 5), )
     for i, (interval_name, intervals) in enumerate(names_to_intervals.items()):
         sub_data = []
         for (pre, post, trial_event) in intervals:
