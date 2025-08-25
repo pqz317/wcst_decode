@@ -842,11 +842,11 @@ def shift_beliefs(beh):
     return beh
 
 def get_belief_value_labels(beh):
-    med = beh.BeliefStateValue.median()
-    beh["BeliefStateValueBin"] = beh.apply(lambda x: 0 if x.BeliefStateValue < med else 1, axis=1)
+    # med = beh.BeliefStateValue.median()
+    # beh["BeliefStateValueBin"] = beh.apply(lambda x: 0 if x.BeliefStateValue < med else 1, axis=1)
     beh["PreferredBelief"] = beh[[f"{feat}Prob" for feat in FEATURES]].idxmax(axis=1).apply(lambda x: x[:-4])
     beh["PreferredBeliefProb"] = beh.apply(lambda x: x[f"{x.PreferredBelief}Prob"], axis=1)
-    beh["BeliefStateValueLabel"] = beh.apply(lambda x: f"High {x.PreferredBelief}" if x.BeliefStateValueBin == 1 else "Low", axis=1)
+    # beh["BeliefStateValueLabel"] = beh.apply(lambda x: f"High {x.PreferredBelief}" if x.BeliefStateValueBin == 1 else "Low", axis=1)
     beh["PreferredChosen"] = beh.apply(lambda x: x[FEATURE_TO_DIM[x.PreferredBelief]] == x.PreferredBelief, axis=1)
     return beh
 

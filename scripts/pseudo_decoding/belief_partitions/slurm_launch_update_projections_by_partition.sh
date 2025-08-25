@@ -4,7 +4,7 @@
 partition="ckpt-all"
 
 trial_events="StimOnset FeedbackOnsetLong"
-modes="pref"
+modes="conf"
 conditions=(\
     '{\"Response\":\"Correct\"\,\"Choice\":\"Chose\"\,\"BeliefPartition\":\"Low\"}' \
     '{\"Response\":\"Correct\"\,\"Choice\":\"Chose\"\,\"BeliefPartition\":\"High\ X\"}' \
@@ -17,6 +17,8 @@ conditions=(\
 
 declare -A mode_to_subpop
 mode_to_subpop["pref"]="pref_99th_window_filter_drift"
+mode_to_subpop["conf"]="conf_99th_window_filter_drift"
+
 
 # Optional args passed to decoding script
 extra_args="$@"

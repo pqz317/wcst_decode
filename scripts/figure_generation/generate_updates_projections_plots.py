@@ -28,12 +28,12 @@ from tqdm import tqdm
 import seaborn as sns
 
 SUB_REGION_LEVEL_REGIONS = [
-    # ("both", "structure_level2_cleaned", "amygdala_Amy"),
-    # ("both", "structure_level2_cleaned", "anterior_cingulate_gyrus_ACgG"),
-    # ("both", "structure_level2_cleaned", "basal_ganglia_BG"),
-    # ("both", "structure_level2_cleaned", "inferior_temporal_cortex_ITC"),
-    # ("both", "structure_level2_cleaned", "medial_pallium_MPal"),
-    # ("both", "structure_level2_cleaned", "lateral_prefrontal_cortex_lat_PFC"),
+    ("both", "structure_level2_cleaned", "amygdala_Amy"),
+    ("both", "structure_level2_cleaned", "anterior_cingulate_gyrus_ACgG"),
+    ("both", "structure_level2_cleaned", "basal_ganglia_BG"),
+    ("both", "structure_level2_cleaned", "inferior_temporal_cortex_ITC"),
+    ("both", "structure_level2_cleaned", "medial_pallium_MPal"),
+    ("both", "structure_level2_cleaned", "lateral_prefrontal_cortex_lat_PFC"),
     ("both", None, None),
     # ("SA", None, None),
 ]
@@ -54,7 +54,7 @@ names_to_intervals = {
     # "decision": [(0, 1.1, "StimOnset"), (-1.8, -0.8, "FeedbackOnsetLong")],
     # "card fixation": [(-0.8, 0, "FeedbackOnsetLong")],
     # "feedback": [(0, 1.6, "FeedbackOnsetLong")],
-    "all":[(-1.1, 1.1, "StimOnset"), (-1.8, -1.6, "FeedbackOnsetLong")]
+    "all":[(-1.1, 1.1, "StimOnset"), (-1.8, 1.6, "FeedbackOnsetLong")]
 }
 
 def read_all_cond_data(args):
@@ -85,7 +85,7 @@ def plot_by_time(data):
     return fig, axs
 
 def plot_by_intervals(data):
-    fig, axs = plt.subplots(len(names_to_intervals), 1, figsize=(8, len(names_to_intervals) * 5), )
+    fig, axs = plt.subplots(len(names_to_intervals), 1, figsize=(8, len(names_to_intervals) * 5), squeeze=False)
     for i, (interval_name, intervals) in enumerate(names_to_intervals.items()):
         sub_data = []
         for (pre, post, trial_event) in intervals:
@@ -93,15 +93,15 @@ def plot_by_intervals(data):
         sub_data = pd.concat(sub_data)
         sub_data = sub_data.sort_values(by="cond", key=lambda x: x.map(order.index))
 
-        sns.barplot(sub_data, x="cond", y="proj", errorbar="se", ax=axs[i])
-        visualization_utils.add_significance_bars(fig, axs[i], sub_data, "cond", "proj", pairs=[
+        sns.barplot(sub_data, x="cond", y="proj", errorbar="se", ax=axs[i, 0])
+        visualization_utils.add_significance_bars(fig, axs[i, 0], sub_data, "cond", "proj", pairs=[
             ("chose X / correct", "shuffle"),
             ("chose X / incorrect", "shuffle"),
             ("correct", "shuffle"),
             ("incorrect", "shuffle"),
         ])
-        axs[i].set_ylabel("Change in projection along preference of X")
-        axs[i].set_title(interval_name)
+        axs[i, 0].set_ylabel("Change in projection along preference of X")
+        axs[i, 0].set_title(interval_name)
     visualization_utils.format_plot(axs)
     fig.tight_layout()
     return fig, axs
@@ -112,9 +112,9 @@ def plot_for_mode(args, mode):
     args.sig_unit_level = f"{mode}_99th_window_filter_drift"
     data = read_all_cond_data(args)
 
-    fig_by_time, _ = plot_by_time(data)
-    fig_by_time.savefig(f"{OUTPUT_DIR}/{args.subject}_{args.regions}_{args.mode}_by_time.svg")
-    fig_by_time.savefig(f"{OUTPUT_DIR}/{args.subject}_{args.regions}_{args.mode}_by_time.png")
+    # fig_by_time, _ = plot_by_time(data)
+    # fig_by_time.savefig(f"{OUTPUT_DIR}/{args.subject}_{args.regions}_{args.mode}_by_time.svg")
+    # fig_by_time.savefig(f"{OUTPUT_DIR}/{args.subject}_{args.regions}_{args.mode}_by_time.png")
 
     fig_by_intervals, _ = plot_by_intervals(data)
     fig_by_intervals.savefig(f"{OUTPUT_DIR}/{args.subject}_{args.regions}_{args.mode}_by_intervals.svg")
