@@ -875,6 +875,24 @@ def get_belief_partitions(beh, feat, use_x=False, thresh=BELIEF_PARTITION_THRESH
     beh[["NextBeliefConf", "NextBeliefPolicy", "NextBeliefPartition"]] = beh[["BeliefConf", "BeliefPolicy", "BeliefPartition"]].shift(-1)
     beh = beh[~beh.NextBeliefConf.isna()]
     return beh
+
+def get_belief_partitions_of_pair(beh, feat_pair, thresh=BELIEF_PARTITION_THRESH):
+    """
+    Labels belief partitions for a pair of features Low, High X, High Y, omits the rest of trials
+    Adds BeliefConf, BeliefPartition columns
+    """
+    feat_x, feat_y = feat_pair
+    def label_trial(row):
+        if row.PreferredBeliefProb <= thresh: 
+            return pd.Series(["Low", "Low"])
+        elif row.PreferredBelief == feat_x: 
+            return pd.Series(["High", f"High {feat_x}"])
+        elif row.PreferredBelief == feat_y: 
+            return pd.Series(["High", f"High {feat_y}"])
+        else: 
+            return pd.Series([None, None])
+    beh[["BeliefConf", "BeliefPartition"]] = beh.apply(label_trial, axis=1)
+    return beh[~beh["BeliefPartition"].isna()]
     
 
 def get_good_pairs_across_sessions(all_beh, block_thresh):
@@ -931,9 +949,13 @@ def get_valid_belief_beh_for_sub_sess(sub, session):
 def filter_behavior(beh, filters):
     """
     filters behavior based on dict of filters, keys of colums values of values
+    if values is a list, use isin..
     """
     for col, val in filters.items():
-        beh = beh[beh[col] == val]
+        if type(val) is list: 
+            beh = beh[beh[col].isin(val)]
+        else: 
+            beh = beh[beh[col] == val]
     return beh
 
 def get_sub_for_session(session):

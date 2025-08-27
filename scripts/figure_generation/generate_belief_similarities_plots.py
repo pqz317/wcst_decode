@@ -76,10 +76,10 @@ def load_data(args, pairs):
     diffs["shuffle_type"] = "true"
     shuff_diffs["shuffle_type"] = "shuffle"
     all_diffs = pd.concat((diffs, shuff_diffs))
-    all_diffs["Time"] = all_diffs["TimeIdx"] / 10 + 0.1
+    all_diffs["Time"] = all_diffs["TimeIdx"] / 10
 
     # time points of interest
-    all_diffs = all_diffs[all_diffs.TimeIdx <= 0]
+    all_diffs = all_diffs[all_diffs.Time < 0]
     return all_diffs
 
 def main():

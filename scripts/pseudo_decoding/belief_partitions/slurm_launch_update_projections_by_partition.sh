@@ -4,7 +4,7 @@
 partition="ckpt-all"
 
 trial_events="StimOnset FeedbackOnsetLong"
-modes="conf"
+modes="pref conf"
 conditions=(\
     '{\"Response\":\"Correct\"\,\"Choice\":\"Chose\"\,\"BeliefPartition\":\"Low\"}' \
     '{\"Response\":\"Correct\"\,\"Choice\":\"Chose\"\,\"BeliefPartition\":\"High\ X\"}' \
