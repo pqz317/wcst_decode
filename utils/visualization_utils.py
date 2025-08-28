@@ -1388,6 +1388,7 @@ def add_significance_bars(fig, ax, df, x, y, hue=None, pairs=None, test=ttest_in
             xpos2, height2 = bar_positions[cat2]
 
         stat, pval = test(data1, data2)
+        print(pval)
         stars = pval_to_stars(pval)
 
         # Draw line and text

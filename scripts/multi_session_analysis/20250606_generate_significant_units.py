@@ -42,6 +42,11 @@ def load_anova_res_for_event(args):
         pref_res = io_utils.read_anova_good_units(args, args.sig_thresh, "BeliefPref", return_pos=True)
         conf_res = io_utils.read_anova_good_units(args, args.sig_thresh, "BeliefConf", return_pos=True)
         return pd.concat([pref_res, conf_res])
+    if args.sig_type == "pref_only":
+        pref_res = io_utils.read_anova_good_units(args, args.sig_thresh, "BeliefPref", return_pos=True)
+        conf_res = io_utils.read_anova_good_units(args, args.sig_thresh, "BeliefConf", return_pos=True)
+        return pref_res[~pref_res.PseudoUnitID.isin(conf_res.PseudoUnitID.unique())]
+
     elif args.sig_type == "pref":
         return io_utils.read_anova_good_units(args, args.sig_thresh, "BeliefPref", return_pos=True)
     elif args.sig_type == "conf":

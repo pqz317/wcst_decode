@@ -24,7 +24,11 @@ Do analysis a feature at a time, looking for sessions where that feature appears
 def load_data(session, args, return_merged=True, use_x=False):
     feat = args.feat
     beh = behavioral_utils.load_behavior_from_args(session, args)
-    beh = behavioral_utils.get_belief_partitions(beh, feat, use_x=use_x)
+    if "feat_pair" in args:
+        beh = behavioral_utils.get_belief_partitions_of_pair(beh, args.feat_pair)
+    else: 
+        feat = args.feat
+        beh = behavioral_utils.get_belief_partitions(beh, feat, use_x=use_x)
     beh["Choice"] = beh.apply(lambda x: "Chose" if x[FEATURE_TO_DIM[feat]] == feat else "Not Chose", axis=1)
     beh["FeatPreferred"] = beh["PreferredBelief"].apply(lambda x: "Preferred" if x == feat else "Not Preferred")
     beh = behavioral_utils.filter_behavior(beh, args.beh_filters)

@@ -30,6 +30,10 @@ FEATS_PATH = "/data/patrick_res/sessions/{sub}/feats_at_least_3blocks.pickle"
 SIG_UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/{event}_{level}_units.pickle"
 BOTH_SIG_UNITS_PATH = "/data/patrick_res/firing_rates/{level}_units.pickle"
 
+# regions of interest
+REGIONS_OF_INTEREST = ["amygdala_Amy", "basal_ganglia_BG", "inferior_temporal_cortex_ITC", "medial_pallium_MPal", "lateral_prefrontal_cortex_lat_PFC", "anterior_cingulate_gyrus_ACgG"]
+
+
 MODE_TO_CLASSES = {
     "conf": ["Low", "High"],
     "pref": ["High X", "High Not X"],
@@ -48,6 +52,7 @@ MODE_TO_CLASSES = {
 MODE_TO_DIRECTION_LABELS = {
     "pref": {"high": "High X", "low": "High Not X"},
     "conf": {"high": "High", "low": "Low"},
+    "feat_belief": {"high": "High X", "low": "Low"},
     "next_pref": {"high": "High X", "low": "High Not X"},
     "next_conf": {"high": "High", "low": "Low"},
     "choice_int": {"high": "Chose", "low": "Not Chose"},

@@ -35,9 +35,9 @@ EOT
 for trial_event in $trial_events; do
     # First job array: 28 jobs
     submit_job_array "0-27" "${trial_event}" \
-        "--trial_event $trial_event --mode feat_belief --sig_unit_level pref_conf_99th_window_filter_drift --pair_idx \$SLURM_ARRAY_TASK_ID --base_output_path /data/patrick_res/ccgp_conf"
+        "--trial_event $trial_event --mode feat_belief --pair_idx \$SLURM_ARRAY_TASK_ID --base_output_path /data/patrick_res/ccgp_conf"
 
     # Second job array: 280 jobs with shuffle indices
     submit_job_array "0-279" "sh${trial_event}" \
-        "--trial_event $trial_event --mode feat_belief --sig_unit_level pref_conf_99th_window_filter_drift --pair_idx \$((\$SLURM_ARRAY_TASK_ID % 28)) --shuffle_idx \$((\$SLURM_ARRAY_TASK_ID / 28)) --base_output_path /data/patrick_res/ccgp_conf"
+        "--trial_event $trial_event --mode feat_belief --pair_idx \$((\$SLURM_ARRAY_TASK_ID % 28)) --shuffle_idx \$((\$SLURM_ARRAY_TASK_ID / 28)) --base_output_path /data/patrick_res/ccgp_conf"
 done
