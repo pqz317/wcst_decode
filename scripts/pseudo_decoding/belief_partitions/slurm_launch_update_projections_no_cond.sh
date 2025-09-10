@@ -20,8 +20,8 @@ conditions=(\
 
 
 declare -A mode_to_subpop
-mode_to_subpop["pref"]="pref_no_cond_99th_window_filter_drift"
-mode_to_subpop["conf"]="conf_no_cond_99th_window_filter_drift"
+mode_to_subpop["pref"]="pref_99th_no_cond_window_filter_drift"
+mode_to_subpop["conf"]="conf_99th_no_cond_window_filter_drift"
 
 # Optional args passed to decoding script
 extra_args="$@"
