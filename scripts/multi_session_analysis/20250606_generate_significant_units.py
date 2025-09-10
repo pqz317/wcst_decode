@@ -36,7 +36,8 @@ def load_anova_res_for_event(args):
         args.beh_filters = {}
     else: 
         args.conditions = ["BeliefConf", "BeliefPartition"]
-        args.beh_filters = {"Response": "Correct", "Choice": "Chose"}
+        if not args.no_cond: 
+            args.beh_filters = {"Response": "Correct", "Choice": "Chose"}
 
     if args.sig_type == "pref_conf":
         pref_res = io_utils.read_anova_good_units(args, args.sig_thresh, "BeliefPref", return_pos=True)
@@ -108,7 +109,8 @@ def get_sig_level_str(args):
     window_str = "window" if args.window_size else None
     filter_str = "filter_drift" if args.filter_drift else None
     thresh_str = args.sig_thresh if args.sig_type != "all" else None
-    parts = [args.sig_type, thresh_str, window_str, filter_str]
+    no_cond_str = "no_cond" if args.no_cond else None
+    parts = [args.sig_type, thresh_str, no_cond_str, window_str, filter_str]
     return "_".join(x for x in parts if x)
 
 def main():
@@ -118,6 +120,7 @@ def main():
     parser.add_argument('--sig_type', default="pref_conf", type=str)
     parser.add_argument('--sig_thresh', default="95th", type=str)
     parser.add_argument('--filter_drift', default=True, type=lambda x: bool(strtobool(x)))
+    parser.add_argument('--no_cond', default=False, type=lambda x: bool(strtobool(x)))
     parser.add_argument('--dry_run', default=True, type=lambda x: bool(strtobool(x)))
     parser.add_argument('--events', default=["StimOnset", "FeedbackOnsetLong"], type=lambda x: x.split(","))
     args = parser.parse_args()

@@ -12,6 +12,7 @@ from itertools import accumulate
 import matplotlib.patches as patches
 from scipy import stats
 import utils.classifier_utils as classifier_utils
+import utils.stats_utils as stats_utils
 from spike_tools import (
     general as spike_general,
 )
@@ -83,6 +84,20 @@ MODE_TO_DISPLAY_NAMES = {
     "reward": "reward",
     "choice": "feature selected",
     "shuffle": "shuffle"
+}
+
+CCGP_COND_TO_DISPLAY_NAMES = {
+    "within_cond": "within cond.",
+    "within_cond_shuffle": "within cond. shuffle",
+    "across_cond": "across cond.",
+    "across_cond_shuffle": "across cond. shuffle",
+}
+
+CCGP_COND_TO_COLOR = {
+    "within cond.": "#1b9e77",
+    "within cond. shuffle": "#b3e2cd",
+    "across cond.": "#d95f02",
+    "across cond. shuffle": "#fdcdac"
 }
 
 SIG_LEVELS = [
@@ -475,17 +490,56 @@ def plot_accs_seaborn(datas, labels, pre_interval, interval_size, ax):
     res = pd.concat(dfs)
     sns.lineplot(res, x="Time", y="Accuracy", hue="label", linewidth=3, ax=ax)
 
+def plot_sig_bars(p_vals, y_loc, ax, color="black"):
+    """
+    Plot significance bars for any time-series data, given sig levels with time
+    """
+    for thresh, lw in SIG_LEVELS:
+        sigs = p_vals[p_vals["p"] < thresh]
+        for _, row in sigs.iterrows():
+            # color = acc_line.lines[0].get_color()
+            ax.hlines(y=y_loc, xmin=row.Time - 0.1, xmax=row.Time, linewidth=lw, color=color)
 
-def visualize_ccpg_value(args, df, ax, hue_col="condition"):
-    sns.lineplot(df, x="Time", y="Accuracy", hue=hue_col, linewidth=3, errorbar="se", ax=ax)
-    # # add estimated chance
-    ax.axhline(1/2, color='black', linestyle='dotted', label="Estimated Chance")
-    if args.trial_event == "FeedbackOnset":
-        ax.axvspan(-0.8, 0, alpha=0.3, color='gray')
-    ax.legend()
-    ax.set_ylabel("Decoder Accuracy")
-    ax.set_xlabel(f"Time Relative to {args.trial_event}")
-    ax.set_title(f"Subject {args.subject} CCGP of value, {args.regions} regions")
+
+def visualize_bars_time(args, df, y_col="Accuracy", hue_col="condition", display_map=CCGP_COND_TO_DISPLAY_NAMES, color_map=CCGP_COND_TO_COLOR, y_lims=(None, None), sig_pairs=[]):
+    """
+    plots a bar plot and a time plot for data aligned to cards appearing,
+    useful for CCGP and neural acivity similariies plots
+    sig_pairs: a list of tuples of (var1, var2, color)
+    """
+    # needed to keep consistent for potential significance plotting
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5), width_ratios=(4, 6), sharey=True)
+    if display_map is not None:
+        df[hue_col] = df[hue_col].map(display_map)
+    df = df.sort_values(by=hue_col, key=lambda x: x.map(list(color_map.keys()).index))
+    sns.barplot(df, x=hue_col, y=y_col, palette=color_map, order=list(color_map.keys()), ax=ax1, errorbar="se")
+    sns.lineplot(df, x="Time", y=y_col, hue=hue_col, linewidth=3, errorbar="se", palette=color_map, ax=ax2)
+    ax1.set_ylim(y_lims)
+
+    interval = (ax2.get_ylim()[1] - ax2.get_ylim()[0]) / 10
+    for (var1, var2, color) in sig_pairs:
+        p_by_time = df.groupby(["TimeIdx"]).apply(
+            lambda x: stats_utils.compute_p_per_group(x, val_col=y_col, label_col=hue_col, label_a=var1, label_b=var2)
+        ).reset_index(name="p")
+        p_by_time["Time"] = p_by_time.TimeIdx / 10 + 0.05 # hack, to make it seem not as offset
+        prev_y_min = ax2.get_ylim()[0]
+        ax2.set_ylim(bottom=prev_y_min - interval)
+        plot_sig_bars(p_by_time, prev_y_min - interval / 2, ax2, color)
+        add_significance_bars(fig, ax1, df, x=hue_col, y=y_col, pairs=[(var1, var2)], test=stats_utils.permutation_test_wrapper)
+    ax1.set_xlabel("")
+    ax1.set_xticklabels(ax1.get_xticklabels(), rotation=45)
+
+    ax2.set_xlabel("Time to cards appear (s)")
+    ax2.axvline(-.5, color='grey', linestyle='dotted', linewidth=3)
+
+    for line in ax2.legend().get_lines():
+        line.set_linewidth(6)
+
+    format_plot([ax1, ax2])
+    fig.tight_layout()
+    return fig, (ax1, ax2)
+
 
 def visualize_preferred_beliefs(args, df, ax, p_vals=None, hue_col="condition", palette=None, show_shuffles=True, ylims=[0.44, 1]):
     if not show_shuffles:
@@ -496,11 +550,7 @@ def visualize_preferred_beliefs(args, df, ax, p_vals=None, hue_col="condition", 
     acc_line = sns.lineplot(df, x="Time", y="Accuracy", hue=hue_col, linewidth=3, ax=ax, palette=palette, errorbar="se")
     ax.axhline(y=0.5, linestyle="dotted", color="black")
     if p_vals is not None: 
-        for thresh, lw in SIG_LEVELS:
-            sigs = p_vals[p_vals["p"] < thresh]
-            for _, row in sigs.iterrows():
-                # color = acc_line.lines[0].get_color()
-                ax.hlines(y=0.46, xmin=row.Time - 0.1, xmax=row.Time, linewidth=lw, color="black")
+        plot_sig_bars(p_vals, 0.46, ax)
         ax.set_ylim(bottom=ax.get_ylim()[0] - 0.2)
 
     if ylims: 
@@ -1369,10 +1419,10 @@ def add_significance_bars(fig, ax, df, x, y, hue=None, pairs=None, test=ttest_in
 
     group_stats['se'] = group_stats['std'] / group_stats['count']**0.5
     max_height = (group_stats['mean'] + group_stats['se']).max()
-
+    max_height = 0 if max_height < 0 else max_height
 
     # Add significance markers
-    y_offset = max_height * 0.2
+    y_offset = max_height * 0.05
     for i, pair in enumerate(pairs):
         if hue:
             (cat1, hue1), (cat2, hue2) = pair
@@ -1388,13 +1438,12 @@ def add_significance_bars(fig, ax, df, x, y, hue=None, pairs=None, test=ttest_in
             xpos2, height2 = bar_positions[cat2]
 
         stat, pval = test(data1, data2)
-        print(pval)
         stars = pval_to_stars(pval)
 
         # Draw line and text
-        bar_y = max_height + y_offset * (i + 1.5)
-        ax.plot([xpos1, xpos1, xpos2, xpos2], [bar_y, bar_y + y_offset * 0.5, bar_y + y_offset * 0.5, bar_y], color='black')
-        ax.text((xpos1 + xpos2) / 2, bar_y + y_offset * 0.5, stars, ha='center', va='bottom')
+        bar_y = max_height + y_offset
+        ax.plot([xpos1, xpos1, xpos2, xpos2], [bar_y, bar_y + y_offset * 0.1, bar_y + y_offset * 0.1, bar_y], color='black')
+        ax.text((xpos1 + xpos2) / 2, bar_y + y_offset * 0.1, stars, ha='center', va='bottom')
 
     fig.tight_layout()
     return fig, ax

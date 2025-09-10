@@ -26,49 +26,31 @@ import scripts.pseudo_decoding.belief_partitions.belief_partitions_io as belief_
 import scipy
 import argparse
 import copy
-from tqdm import tqdm
 
-OUTPUT_DIR = "/data/patrick_res/figures/wcst_paper/belief_similarities"
+OUTPUT_DIR = "/data/patrick_res/figures/wcst_paper/ccgp"
+
 
 def main():
     pairs = pd.read_pickle(PAIRS_PATH).reset_index(drop=True)
     regions = [None] + REGIONS_OF_INTEREST
-    # regions = ["anterior_cingulate_gyrus_ACgG"]
-    # regions = ["lateral_prefrontal_cortex_lat_PFC"]
-    for region in tqdm(regions):
+    for region in regions:
         args = argparse.Namespace(
             **BeliefPartitionConfigs()._asdict()
         )
         args.regions = region
         args.region_level = None if region is None else "structure_level2_cleaned"
         args.subject = "both"
-        args.base_output_path = "/data/patrick_res/belief_similarities"
-        # TODO: remove
+        args.mode = "feat_belief"
+        args.base_output_path = "/data/patrick_res/ccgp_conf"
         args.sig_unit_level = "pref_conf_99th_window_filter_drift"
-        args.relative_to_low = True
-        args.sim_type = "cosine_sim"
 
-        all_data = belief_partitions_io.read_all_similarities(args, pairs)
-        # print("done reading...")
-        all_data = all_data[all_data.Time <= 0]
-
-        color_map = {
-            "true": "tab:blue",
-            "shuffle": "grey",
-        }
-        min = all_data.groupby(["TimeIdx", "type"]).cosine_sim.mean().min()
-        sig_pairs = [("true", "shuffle", "black")]
-
-        fig, (ax1, ax2) = visualization_utils.visualize_bars_time(
-            args, all_data, y_col="cosine_sim", hue_col="type", 
-            display_map=None, color_map=color_map, 
-            y_lims=(min, None),
-            sig_pairs=sig_pairs
-        )
-
-        ax1.set_ylabel("Cosine Sim")
-        fig.savefig(f"{OUTPUT_DIR}/{region}_sim.svg")
-        fig.savefig(f"{OUTPUT_DIR}/{region}_sim.png", dpi=300)
+        res = belief_partitions_io.read_ccgp_results(args, pairs, conds=["within_cond", "across_cond"])
+        res = res[res.Time <= 0]
+        sig_pairs = [("within cond.", "within cond. shuffle", "#1b9e77"), ("across cond.", "across cond. shuffle", "#d95f02")]
+        fig, (ax1, ax2) = visualization_utils.visualize_bars_time(args, res, y_lims=(0.5, None), sig_pairs=sig_pairs)
+        ax1.set_ylabel("Accuracy")
+        fig.savefig(f"{OUTPUT_DIR}/{region}_belief_ccgp.svg")
+        fig.savefig(f"{OUTPUT_DIR}/{region}_belief_ccgp.png", dpi=300)
 
 
 

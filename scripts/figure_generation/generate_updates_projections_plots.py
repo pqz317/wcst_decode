@@ -28,12 +28,12 @@ from tqdm import tqdm
 import seaborn as sns
 
 SUB_REGION_LEVEL_REGIONS = [
-    ("both", "structure_level2_cleaned", "amygdala_Amy"),
-    ("both", "structure_level2_cleaned", "anterior_cingulate_gyrus_ACgG"),
-    ("both", "structure_level2_cleaned", "basal_ganglia_BG"),
-    ("both", "structure_level2_cleaned", "inferior_temporal_cortex_ITC"),
-    ("both", "structure_level2_cleaned", "medial_pallium_MPal"),
-    ("both", "structure_level2_cleaned", "lateral_prefrontal_cortex_lat_PFC"),
+    # ("both", "structure_level2_cleaned", "amygdala_Amy"),
+    # ("both", "structure_level2_cleaned", "anterior_cingulate_gyrus_ACgG"),
+    # ("both", "structure_level2_cleaned", "basal_ganglia_BG"),
+    # ("both", "structure_level2_cleaned", "inferior_temporal_cortex_ITC"),
+    # ("both", "structure_level2_cleaned", "medial_pallium_MPal"),
+    # ("both", "structure_level2_cleaned", "lateral_prefrontal_cortex_lat_PFC"),
     ("both", None, None),
     # ("SA", None, None),
 ]
@@ -54,7 +54,8 @@ names_to_intervals = {
     # "decision": [(0, 1.1, "StimOnset"), (-1.8, -0.8, "FeedbackOnsetLong")],
     # "card fixation": [(-0.8, 0, "FeedbackOnsetLong")],
     # "feedback": [(0, 1.6, "FeedbackOnsetLong")],
-    "all":[(-1.1, 1.1, "StimOnset"), (-1.8, 1.6, "FeedbackOnsetLong")]
+    "all":[(-1.1, 1.1, "StimOnset"), (-1.8, 1.6, "FeedbackOnsetLong")],
+    "excl_fb":[(-1.1, 1.1, "StimOnset"), (-1.8, 0, "FeedbackOnsetLong")],
 }
 
 def read_all_cond_data(args):

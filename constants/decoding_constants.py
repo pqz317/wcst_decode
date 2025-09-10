@@ -25,10 +25,12 @@ SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sub}/{sess_name}_{fr_type}_{
 UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/all_units.pickle"
 DRIFT_PATH = "/data/patrick_res/firing_rates/{sub}/drifting_units.pickle"
 FEATS_PATH = "/data/patrick_res/sessions/{sub}/feats_at_least_3blocks.pickle"
+PAIRS_PATH = "/data/patrick_res/sessions/both/pairs_at_least_3blocks_10sess.pickle"
 
 # TODO: make this backwards compatible
 SIG_UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/{event}_{level}_units.pickle"
 BOTH_SIG_UNITS_PATH = "/data/patrick_res/firing_rates/{level}_units.pickle"
+
 
 # regions of interest
 REGIONS_OF_INTEREST = ["amygdala_Amy", "basal_ganglia_BG", "inferior_temporal_cortex_ITC", "medial_pallium_MPal", "lateral_prefrontal_cortex_lat_PFC", "anterior_cingulate_gyrus_ACgG"]

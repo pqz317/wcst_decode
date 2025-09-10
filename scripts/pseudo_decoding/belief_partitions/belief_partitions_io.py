@@ -164,23 +164,25 @@ def load_ccgp_df(args, pairs, dir, conds, shuffle=False):
     res = []
     for i, row in pairs.iterrows():
         # NOTE: hack, need to run 18 runs instead of 17.
-        if i < 17:
-            args.feat_pair = row.pair
-            file_name = get_ccgp_file_name(args)
-            for cond in conds: 
-                try: 
-                    full_path = os.path.join(dir, f"{file_name}_{cond}_accs.npy")
-                    acc = np.load(full_path)
-                except Exception as e:
-                    if shuffle:
-                        print(f"Warning, shuffle not found: {full_path}")
-                        continue
-                    else: 
-                        raise e
-                df = transform_np_acc_to_df(acc, args)
-                # df["pair"] = feat1, feat2
-                df["condition"] = cond if not shuffle else f"{cond}_shuffle"
-                res.append(df)
+        args.feat_pair = row.pair
+        file_name = get_ccgp_file_name(args)
+        for cond in conds: 
+            try: 
+                full_path = os.path.join(dir, f"{file_name}_{cond}_accs.npy")
+                acc = np.load(full_path)
+            except Exception as e:
+                if shuffle:
+                    print(f"Warning, shuffle not found: {full_path}")
+                    continue
+                else: 
+                    raise e
+            df = transform_np_acc_to_df(acc, args)
+            # df["pair"] = feat1, feat2
+            df["dim_type"] = row.dim_type
+            df["pair_str"] = "_".join(row.pair)
+            df["condition"] = cond if not shuffle else f"{cond}_shuffle"
+            
+            res.append(df)
     return pd.concat(res)
 
 def read_ccgp_results(args, pairs, conds=["within_cond", "across_cond", "overall"], num_shuffles=10):
@@ -198,6 +200,7 @@ def read_ccgp_results(args, pairs, conds=["within_cond", "across_cond", "overall
         shuffle_res.append(load_ccgp_df(args, pairs, dir, conds, shuffle=True))
     args.shuffle_idx = None
     res = pd.concat(([res] + shuffle_res))
+    res["TimeIdx"] = (res.Time * 10).astype(int)
     return res
 
 def get_ccgp_feat_model_for_pair(args, dir, feat, feat_pair):
@@ -337,3 +340,37 @@ def read_update_projections(args, num_shuffles=3):
     args.shuffle_idx = None
     res = pd.concat(([res] + shuffle_res))
     return res
+
+
+def read_similarities(args, pairs):
+    all_res = []
+    for i, pair in pairs.iterrows():
+        args.feat_pair = pair.pair
+        out_dir = get_dir_name(args, make_dir=False)
+        file_name = get_ccgp_file_name(args)
+        low_str = "_to_low" if args.relative_to_low else ""
+        res = pd.read_pickle(os.path.join(out_dir, f"{file_name}_{args.sim_type}{low_str}.pickle"))
+        res["dim_type"] = pair.dim_type
+        res["pair_str"] = "_".join(pair.pair)
+        all_res.append(res)
+    all_res = pd.concat(all_res)
+    all_res["Time"] = all_res["TimeIdx"] / 10
+    return all_res
+
+def read_all_similarities(args, pairs, num_shuffles=10):
+    args = copy.deepcopy(args)
+    true_res = read_similarities(args, pairs)
+    true_res["type"] = "true"
+
+    all_shuffles = []
+    for i in range(num_shuffles):
+        args.shuffle_idx = i
+        shuf_res = read_similarities(args, pairs)
+        shuf_res["PseudoTrialNumber"] = shuf_res.PseudoTrialNumber * num_shuffles + i
+        all_shuffles.append(shuf_res)
+    all_shuffles = pd.concat(all_shuffles)
+    all_shuffles["type"] = "shuffle"
+    all_res = pd.concat((true_res, all_shuffles))
+    # still actually dont know why I need this, but plotting for ACC doesn't work without...
+    all_res = all_res.reset_index(drop=True)
+    return all_res

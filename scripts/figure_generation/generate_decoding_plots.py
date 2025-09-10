@@ -74,9 +74,9 @@ def main():
         else: 
             args.sig_unit_level = f"{decode_var}_99th_window_filter_drift"
         plt.rcParams.update({'font.size': 14})
-        # fig_acc, _ = visualization_utils.plot_combined_accs(args)
-        # fig_acc.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_accs.svg")
-        # fig_acc.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_accs.png")
+        fig_acc, _ = visualization_utils.plot_combined_accs(args)
+        fig_acc.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_accs.svg")
+        fig_acc.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_accs.png")
 
         fig_cross, _ = visualization_utils.plot_combined_cross_accs(args, ignore_overlap=True, alpha=CROSS_ALPHA)
         fig_cross.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_cross_time_accs_alpha_{CROSS_ALPHA}.svg")

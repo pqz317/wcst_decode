@@ -9,22 +9,36 @@ from tqdm import tqdm
 import itertools
 import copy
 
-def diff_per_group(group, val_col, shuffle_label_col):
-    true_mean = group[group[shuffle_label_col] == "true"][val_col].mean()
-    shuffle_mean = group[group[shuffle_label_col] == "shuffle"][val_col].mean()
-    return true_mean - shuffle_mean
+def diff_per_group(group, val_col, label_col, label_a="true", label_b="shuffle"):
+    a_mean = group[group[label_col] == label_a][val_col].mean()
+    b_mean = group[group[label_col] == label_b][val_col].mean()
+    return a_mean - b_mean
 
-# re-write this to do shuffles per-group
-def compute_p_per_group(data, val_col, shuffle_label_col, num_permutes=1000, seed=42):
-    true_diff = diff_per_group(data, val_col, shuffle_label_col)
+def compute_p_per_group(data, val_col, label_col, num_permutes=1000, seed=42, label_a="true", label_b="shuffle"):
+    """
+    Computes a one-sided permutation test, provides p value for label_a > label_b 
+    """
+    true_diff = diff_per_group(data, val_col, label_col, label_a, label_b)
     all_shuffles = []
     rng = np.random.default_rng(seed=seed)
     for i in tqdm(np.arange(num_permutes)):
         shuffle_data = data.copy()
-        shuffle_data[shuffle_label_col] = rng.permutation(data[shuffle_label_col].values)
-        shuffle_diff = diff_per_group(shuffle_data, val_col, shuffle_label_col)
+        shuffle_data[label_col] = rng.permutation(data[label_col].values)
+        shuffle_diff = diff_per_group(shuffle_data, val_col, label_col, label_a, label_b)
         all_shuffles.append(shuffle_diff)
     return np.mean(true_diff <= np.array(all_shuffles))
+
+def permutation_test_wrapper(data1, data2):
+    """
+    wrapper for permutation test, used for adding significance markers to bar plots
+    calls compute_p_per_group under the hood
+    """
+    df1 = pd.DataFrame({"label": "a", "vals": data1})
+    df2 = pd.DataFrame({"label": "b", "vals": data2})
+    df = pd.concat((df1, df2))
+    p = compute_p_per_group(df, val_col="vals", label_col="label", label_a="a", label_b="b")
+    return (None, p)
+
 
 def get_n_time_offset(trial_event):
     if trial_event == "StimOnset":
