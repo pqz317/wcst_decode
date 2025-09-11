@@ -14,10 +14,7 @@ from numba import njit
 def perm_test(values, mask_a, num_permutes, rng, one_sided=True):
 
     # Boolean mask for observed groups
-    print(values[mask_a])
-    print(values[~mask_a])
     true_diff = values[mask_a].mean() - values[~mask_a].mean()
-    print(true_diff)
 
     # Permutation differences
     diffs = np.empty(num_permutes)

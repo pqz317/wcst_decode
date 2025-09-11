@@ -1,5 +1,5 @@
 #!/bin/bash
-# launch with sbatch --array=0-19 /src/wcst_decode/scripts/pseudo_decoding/p_val_computations/slurm_launch_compute_p_vals_for_updates_projections.slurm
+# launch with sbatch --array=0-19 wcst_decode/scripts/pseudo_decoding/p_val_computations/slurm_launch_compute_p_vals_for_updates_projections.slurm
 
 #SBATCH --job-name=p_vals
 #SBATCH -p ckpt-all

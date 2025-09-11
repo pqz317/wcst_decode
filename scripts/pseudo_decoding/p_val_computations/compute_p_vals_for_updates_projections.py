@@ -61,7 +61,7 @@ def main():
 
     combos = list(itertools.product(REGIONS, AXIS_VARS, CONDITION_MAPS.keys()))
     region, axis_var, cond = combos[args.combo_id]
-    print(f"computing p vals for combo id {combos[args.combo_id]}, {combos[args.combo_id]}")
+    print(f"computing p vals for combo id {combos[args.combo_id]}")
     args = argparse.Namespace(
         **BeliefPartitionConfigs()._asdict()
     )
@@ -81,7 +81,10 @@ def main():
 
     args.beh_filters = args.conditions 
     dir = belief_partitions_io.get_dir_name(args)
-    with open(os.path.join(dir, f"{axis_var}_p_val.txt"), 'w') as f:
+    file_name = os.path.join(dir, f"{axis_var}_p_val.txt")
+    print(f"got p of {p}")
+    print(f"storing pval in path {file_name}")
+    with open(file_name, 'w') as f:
         f.write(str(p))
     
 if __name__ == "__main__":
