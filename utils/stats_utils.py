@@ -8,36 +8,61 @@ import numpy as np
 from tqdm import tqdm
 import itertools
 import copy
+from numba import njit
 
-def diff_per_group(group, val_col, label_col, label_a="true", label_b="shuffle"):
-    a_mean = group[group[label_col] == label_a][val_col].mean()
-    b_mean = group[group[label_col] == label_b][val_col].mean()
-    return a_mean - b_mean
+@njit
+def perm_test(values, mask_a, num_permutes, rng, one_sided=True):
 
-def compute_p_per_group(data, val_col, label_col, num_permutes=1000, seed=42, label_a="true", label_b="shuffle"):
-    """
-    Computes a one-sided permutation test, provides p value for label_a > label_b 
-    """
-    true_diff = diff_per_group(data, val_col, label_col, label_a, label_b)
-    all_shuffles = []
-    rng = np.random.default_rng(seed=seed)
-    for i in tqdm(np.arange(num_permutes)):
-        shuffle_data = data.copy()
-        shuffle_data[label_col] = rng.permutation(data[label_col].values)
-        shuffle_diff = diff_per_group(shuffle_data, val_col, label_col, label_a, label_b)
-        all_shuffles.append(shuffle_diff)
-    return np.mean(true_diff <= np.array(all_shuffles))
+    # Boolean mask for observed groups
+    print(values[mask_a])
+    print(values[~mask_a])
+    true_diff = values[mask_a].mean() - values[~mask_a].mean()
+    print(true_diff)
 
-def permutation_test_wrapper(data1, data2):
+    # Permutation differences
+    diffs = np.empty(num_permutes)
+    for i in range(num_permutes):
+        permuted_a = rng.permutation(mask_a)
+        diffs[i] = values[permuted_a].mean() - values[~permuted_a].mean()
+
+    # Compute p-value
+    if one_sided:
+        p_val = np.mean(diffs >= true_diff)
+    else:
+        p_val = np.mean(np.abs(diffs) >= np.abs(true_diff))
+    return p_val
+
+
+def compute_p_per_group(data, val_col, label_col, num_permutes=1000, seed=42, label_a="true", label_b="shuffle", test_type="one_side"):
     """
-    wrapper for permutation test, used for adding significance markers to bar plots
-    calls compute_p_per_group under the hood
+    Computes a one-sided permutation test, 
+    if one-side: provides p value for label_a > label_b 
+    If two-side: p(|label_a - label_b| >= |obs|).
     """
-    df1 = pd.DataFrame({"label": "a", "vals": data1})
-    df2 = pd.DataFrame({"label": "b", "vals": data2})
-    df = pd.concat((df1, df2))
-    p = compute_p_per_group(df, val_col="vals", label_col="label", label_a="a", label_b="b")
-    return (None, p)
+    rng = np.random.default_rng(seed)
+
+    # ensure we just have a, b, rows
+    sub_data = data[data[label_col].isin([label_a, label_b])]
+
+    values = sub_data[val_col].values.astype(np.float64)
+    mask_a = sub_data[label_col].values == label_a
+
+    one_sided = (test_type == "one_side")
+    return perm_test(values, mask_a, num_permutes, rng, one_sided)
+    
+def get_permutation_test_func(test_type="one_side"):
+    def permutation_test_wrapper(data1, data2):
+        """
+        wrapper for permutation test, used for adding significance markers to bar plots
+        calls compute_p_per_group under the hood
+        """
+        df1 = pd.DataFrame({"label": "a", "vals": data1})
+        df2 = pd.DataFrame({"label": "b", "vals": data2})
+        df = pd.concat((df1, df2))
+        p = compute_p_per_group(df, val_col="vals", label_col="label", label_a="a", label_b="b", test_type=test_type)
+        return (None, p)
+    return permutation_test_wrapper
+
 
 
 def get_n_time_offset(trial_event):
