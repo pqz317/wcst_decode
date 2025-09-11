@@ -79,7 +79,7 @@ def main():
     print("computing p")
     p = stats_utils.compute_p_per_group(res, "proj", "cond", label_a=cond, label_b="shuffle", test_type="two_sided")
 
-    args.beh_filters = args.conditions 
+    args.beh_filters = CONDITION_MAPS[cond]
     dir = belief_partitions_io.get_dir_name(args)
     file_name = os.path.join(dir, f"{axis_var}_p_val.txt")
     print(f"got p of {p}")
