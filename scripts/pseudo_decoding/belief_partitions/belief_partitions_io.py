@@ -325,7 +325,7 @@ def load_update_df(args, feats, dir, shuffle=False):
         res.append(proj)
     return pd.concat(res)
 
-def read_update_projections(args, num_shuffles=3):
+def read_update_projections(args, num_shuffles=10):
     args.shuffle_idx = None
     args.trial_interval = get_trial_interval(args.trial_event)
     args.base_output_path = "/data/patrick_res/update_projections"

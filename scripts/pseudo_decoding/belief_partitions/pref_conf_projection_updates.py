@@ -104,7 +104,9 @@ def get_proj_pseudo_for_session(session, args, num_pseudo=100):
 def proj_all_sessions(args, sessions): 
     res = []
     for session in sessions:
-        proj = get_proj_pseudo_for_session(session, args)
+        # don't need that many trials if shuffling, going to aggregate anyways
+        num_pseudo = 1000 if args.shuffle_idx is None else 100
+        proj = get_proj_pseudo_for_session(session, args, num_pseudo=num_pseudo)
         if proj is not None: 
             res.append(proj)
     res = pd.concat(res)
