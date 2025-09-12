@@ -6,11 +6,11 @@ partition="ckpt-all"
 trial_event="StimOnset"
 modes="pref conf"
 conditions=(\
-    '{\"Response\":\"Correct\"\,\"Choice\":\"Chose\"}' \
-    '{\"Response\":\"Incorrect\"\,\"Choice\":\"Chose\"}' \
-    '{\"Response\":\"Correct\"}' \
-    '{\"Response\":\"Incorrect\"}' \
-    '{\"Response\":\"Correct\"\,\"Choice\":\"Chose\"\,\"BeliefPartition\":\"Low\"}' \
+    # '{\"Response\":\"Correct\"\,\"Choice\":\"Chose\"}' \
+    # '{\"Response\":\"Incorrect\"\,\"Choice\":\"Chose\"}' \
+    # '{\"Response\":\"Correct\"}' \
+    # '{\"Response\":\"Incorrect\"}' \
+    # '{\"Response\":\"Correct\"\,\"Choice\":\"Chose\"\,\"BeliefPartition\":\"Low\"}' \
     '{\"Response\":\"Correct\"\,\"Choice\":\"Chose\"\,\"BeliefPartition\":\"High\ X\"}' \
     '{\"Response\":\"Correct\"\,\"Choice\":\"Chose\"\,\"BeliefPartition\":\"High\ Not\ X\"}' \
     '{\"Response\":\"Incorrect\"\,\"Choice\":\"Chose\"\,\"BeliefPartition\":\"Low\"}' \
@@ -56,8 +56,8 @@ for mode in $modes; do
         submit_job_array "0-11" "${trial_event}${mode}" \
             "--mode $mode --trial_event $trial_event --sig_unit_level ${mode_to_subpop[$mode]} --conditions $condition --feat_idx \$SLURM_ARRAY_TASK_ID"
 
-        # Second job array: 36 jobs with shuffle indices
-        submit_job_array "0-35" "sh${trial_event}${mode}" \
+        # Second job array: 120 jobs with shuffle indices
+        submit_job_array "0-119" "sh${trial_event}${mode}" \
             "--mode $mode --trial_event $trial_event --sig_unit_level ${mode_to_subpop[$mode]} --conditions $condition --feat_idx \$((\$SLURM_ARRAY_TASK_ID % 12)) --shuffle_idx \$((\$SLURM_ARRAY_TASK_ID / 12))"
     done
 done

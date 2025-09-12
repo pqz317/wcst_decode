@@ -46,8 +46,9 @@ def read_all_cond_data(args):
     # for i, event in enumerate(["StimOnset", "FeedbackOnsetLong"]):
     all_conds = []
     for cond_name in CONDITION_MAPS:
-        args.conditions = CONDITION_MAPS[cond_name]
-        res = belief_partitions_io.read_update_projections(args)
+        cond_args = copy.deepcopy(args)
+        cond_args.conditions = CONDITION_MAPS[cond_name]
+        res = belief_partitions_io.read_update_projections(cond_args)
         res["cond"] = res.apply(lambda x: f"shuffle" if "shuffle" in x["mode"] else cond_name, axis=1)
         all_conds.append(res)
     all_conds = pd.concat(all_conds)

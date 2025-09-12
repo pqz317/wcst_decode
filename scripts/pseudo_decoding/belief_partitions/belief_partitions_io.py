@@ -341,6 +341,26 @@ def read_update_projections(args, num_shuffles=3):
     res = pd.concat(([res] + shuffle_res))
     return res
 
+def read_update_projections_pvals(args, cond_map, axis_vars=["pref", "conf"]):
+    args.base_output_path = "/data/patrick_res/update_projections"
+    res = []
+    for cond in cond_map:
+        for axis_var in axis_vars: 
+            args.beh_filters = cond_map[cond] 
+            args.mode = axis_var
+            args.sig_unit_level = f"{args.mode}_99th_no_cond_window_filter_drift"
+            dir = get_dir_name(args, make_dir=False)
+            file_name = os.path.join(dir, f"{axis_var}_p_val.txt")
+            p = None
+            with open(file_name, 'r') as f:
+                p = float(f.readline())
+            res.append({
+                "cond": cond,
+                "var": axis_var,
+                "p": p
+            })
+    return pd.DataFrame(res)
+
 
 def read_similarities(args, pairs):
     all_res = []

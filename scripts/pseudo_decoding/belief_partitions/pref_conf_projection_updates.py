@@ -55,7 +55,7 @@ def load_pref_vector(args):
     weights["TimeIdx"] = ((weights["Time"] - 0.1) * 10).round().astype(int)
     return weights
 
-def get_proj_pseudo_for_session(session, args, num_pseudo=1000):
+def get_proj_pseudo_for_session(session, args, num_pseudo=100):
     # for grabbing behavior and firing rates, use subject-specific arguments
     # for grabbing decoder weights, use general
     sub_args = copy.deepcopy(args)
