@@ -10,8 +10,9 @@ import os
 import argparse
 from distutils.util import strtobool
 
+
 SESSIONS_PATH = "/data/patrick_res/sessions/{sub}/valid_sessions.pickle"
-OUTPUT_PATH = "/data/patrick_res/firing_rates/{sub}/all_units.pickle"
+OUTPUT_PATH = "/data/patrick_res/firing_rates/{sub}/all_units_corrected.pickle"
 
 def get_units_for_session(row, args):
     sess_name = row.session_name
@@ -26,10 +27,16 @@ def get_units_for_session(row, args):
 def generate_all_units(args):
     sessions = pd.read_pickle(args.sessions_path.format(sub=args.subject))
     get_manual_regions = args.subject == "SA"  # only get manual regions for SA
-    all_units = spike_utils.get_unit_positions(sessions, args.subject, get_manual_regions, fr_path=None)
+    # all_units = spike_utils.get_unit_positions(sessions, args.subject, get_manual_regions, fr_path=None)
+    all_units = spike_utils.get_unit_positions(
+        sessions, args.subject, get_manual_regions, fr_path=None, 
+        sess_info_path="/data/rawdata/sub-{subject}/sess-{session}/session_info_corrected/sub-{subject}_sess-{session}_sessioninfomodified.json"
+    )
 
     print(f"{len(all_units)} units total")
     print(f"across {all_units.session.nunique()} sessions")
+    print("unit region stats:")
+    print(all_units.groupby("structure_level2_cleaned").PseudoUnitID.nunique().to_csv())
 
     output_path = args.output_path.format(sub=args.subject)
     print(f"saving to {output_path}")

@@ -26,7 +26,7 @@ from tqdm import tqdm
 import seaborn as sns
 
 BOTH_PAIRS_PATH = "/data/patrick_res/sessions/both/pairs_at_least_3blocks_10sess.pickle"
-OUTPUT_DIR = "/data/patrick_res/figures/wcst_paper/belief_similarities"
+OUTPUT_DIR = "/data/patrick_res/figures/wcst_paper/belief_similarities_explore_subpops_frs"
 
 def main():
     plt.rcParams.update({'font.size': 16})
@@ -42,7 +42,8 @@ def main():
         args.subject = "both"
         args.base_output_path = "/data/patrick_res/belief_similarities"
         # TODO: remove
-        args.sig_unit_level = "pref_conf_99th_window_filter_drift"
+        # args.sig_unit_level = "pref_conf_99th_no_cond_window_filter_drift"
+        # args.sig_unit_level = "pref_conf_99th_window_filter_drift"
         args.region_level = None if region is None else "structure_level2_cleaned"
         args.regions = region
 
@@ -68,8 +69,8 @@ def main():
         )
         ax1.set_ylabel("sim(within dim.) - sim(across dim.)")
 
-        fig.savefig(f"{OUTPUT_DIR}/{region}_sim_diff_by_dim.svg")
-        fig.savefig(f"{OUTPUT_DIR}/{region}_sim_diff_by_dim.png", dpi=300)
+        fig.savefig(f"{OUTPUT_DIR}/{region}_{args.sig_unit_level}_sim_diff_by_dim.svg")
+        fig.savefig(f"{OUTPUT_DIR}/{region}_{args.sig_unit_level}sim_diff_by_dim.png", dpi=300)
     
 if __name__ == "__main__":
     main()

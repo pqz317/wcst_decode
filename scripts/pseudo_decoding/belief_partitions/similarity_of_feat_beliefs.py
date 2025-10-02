@@ -47,7 +47,7 @@ def get_pseudo_frs_for_session(session, args, cond, num_pseudo=100):
         print("No firing rates for session, returning None")
         return None
 
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(seed=args.train_test_seed)
     trial_nums = rng.choice(sub_frs.TrialNumber.unique(), num_pseudo)
     pseudo_trials = pd.DataFrame({"TrialNumber": trial_nums, "PseudoTrialNumber": list(range(num_pseudo))})
     pseudo_frs = pd.merge(sub_frs, pseudo_trials, on="TrialNumber")

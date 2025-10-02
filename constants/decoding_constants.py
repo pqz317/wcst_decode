@@ -23,6 +23,7 @@ INTERVAL_SIZE = 100
 
 SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sub}/{sess_name}_{fr_type}_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/all_units.pickle"
+BL_CORRECTED_UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/all_units_correct.pickle"
 DRIFT_PATH = "/data/patrick_res/firing_rates/{sub}/drifting_units.pickle"
 FEATS_PATH = "/data/patrick_res/sessions/{sub}/feats_at_least_3blocks.pickle"
 PAIRS_PATH = "/data/patrick_res/sessions/both/pairs_at_least_3blocks_10sess.pickle"
@@ -34,7 +35,7 @@ BOTH_SIG_UNITS_PATH = "/data/patrick_res/firing_rates/{level}_units.pickle"
 
 # regions of interest
 REGIONS_OF_INTEREST = ["amygdala_Amy", "basal_ganglia_BG", "inferior_temporal_cortex_ITC", "medial_pallium_MPal", "lateral_prefrontal_cortex_lat_PFC", "anterior_cingulate_gyrus_ACgG"]
-
+BAD_REGIONS = ["unknown", "cerebellum_Cb", "preoptic_complex_POC", "somatosensory_cortex_SI/SII", "diagonal_subpallium_DSP"]
 
 MODE_TO_CLASSES = {
     "conf": ["Low", "High"],

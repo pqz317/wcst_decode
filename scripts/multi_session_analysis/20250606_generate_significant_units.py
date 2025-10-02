@@ -26,7 +26,6 @@ For each option, report number of units this would give per region/feature.
 """
 
 DRIFT_PATH = "/data/patrick_res/firing_rates/{sub}/drifting_units.pickle"
-REGIONS = ["all_regions", "inferior_temporal_cortex (ITC)", "medial_pallium (MPal)", "basal_ganglia (BG)", "amygdala (Amy)"]
 
 
 def load_anova_res_for_event(args):
@@ -76,7 +75,7 @@ def find_sig_units_for_sub(args):
         args.trial_event = event
         event_reses.append(load_anova_res_for_event(args))
     res = pd.concat(event_reses)
-    res = res.groupby(["feat", "structure_level2"]).PseudoUnitID.unique().reset_index().explode("PseudoUnitID")
+    res = res.groupby(["feat", "structure_level2", "structure_level2_cleaned"]).PseudoUnitID.unique().reset_index().explode("PseudoUnitID")
     res["session"] = (res.PseudoUnitID / 100).astype(int)
     return res
 
@@ -84,9 +83,12 @@ def filter_drift(units, args):
     drift_units = pd.read_pickle(DRIFT_PATH.format(sub=args.subject))
     return units[~units.PseudoUnitID.isin(drift_units.PseudoUnitID)]
 
+def filter_bad_regions(units):
+    return units[~units.structure_level2_cleaned.isin(BAD_REGIONS)]
+
 def get_sub_stats(units, region):
     if region != "all_regions":
-        units = units[units.structure_level2 == region]
+        units = units[units.structure_level2_cleaned == region]
     per_feat_sig = units.groupby("feat").PseudoUnitID.nunique().reindex(FEATURES, fill_value=0).reset_index(name="num_units_sig")
     per_feat_sess = units.groupby("feat").session.nunique().reindex(FEATURES, fill_value=0).reset_index(name="num_sessions_sig")
 
@@ -96,7 +98,7 @@ def get_sub_stats(units, region):
 
 def report_region_stats(all_units):
     sa_units, bl_units = all_units
-    for region in REGIONS:
+    for region in REGIONS_OF_INTEREST:
         sa_stats = get_sub_stats(sa_units, region)
         bl_stats = get_sub_stats(bl_units, region)
         stats = pd.merge(sa_stats, bl_stats, on="feat", how="outer", suffixes=["_sa", "_bl"])
@@ -120,6 +122,7 @@ def main():
     parser.add_argument('--sig_type', default="pref_conf", type=str)
     parser.add_argument('--sig_thresh', default="95th", type=str)
     parser.add_argument('--filter_drift', default=True, type=lambda x: bool(strtobool(x)))
+    parser.add_argument('--filter_bad_regions', default=True, type=lambda x: bool(strtobool(x)))
     parser.add_argument('--no_cond', default=False, type=lambda x: bool(strtobool(x)))
     parser.add_argument('--dry_run', default=True, type=lambda x: bool(strtobool(x)))
     parser.add_argument('--events', default=["StimOnset", "FeedbackOnsetLong"], type=lambda x: x.split(","))
@@ -131,7 +134,9 @@ def main():
         sub_units = find_sig_units_for_sub(args)
         if args.filter_drift:
             sub_units = filter_drift(sub_units, args)
-
+        if args.filter_bad_regions:
+            sub_units = filter_bad_regions(sub_units)
+        print(len(sub_units))
         sig_level_str = get_sig_level_str(args)
         print(f"Saving units with sig level {sig_level_str}")
         if not args.dry_run:

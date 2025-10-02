@@ -49,9 +49,10 @@ def get_dir_name(args, make_dir=True):
     """
     region_str = "" if args.regions is None else f"{args.regions.replace(',', '_').replace(' ', '_')}"
     filt_str = "_".join([f"{k}_{v}"for k, v in args.beh_filters.items()])
+    fr_str = args.fr_type if args.fr_type != "firing_rates" else None
     sig_units_str = f"{args.sig_unit_level}_units" if args.sig_unit_level else None
     splitter_str = f"kfold_{args.num_splits}" if args.splitter == "kfold" else None
-    parts = [args.subject, args.trial_event, region_str, filt_str, sig_units_str, splitter_str]
+    parts = [args.subject, args.trial_event, region_str, filt_str, fr_str, sig_units_str, splitter_str]
     run_name = "_".join(x for x in parts if x)
     if args.shuffle_idx is None: 
         dir = os.path.join(args.base_output_path, f"{run_name}")
@@ -340,6 +341,19 @@ def read_update_projections(args, num_shuffles=10):
     args.shuffle_idx = None
     res = pd.concat(([res] + shuffle_res))
     return res
+
+def read_update_projections_all_conds(args, cond_map):
+    # for i, event in enumerate(["StimOnset", "FeedbackOnsetLong"]):
+    all_conds = []
+    for cond_name in cond_map:
+        cond_args = copy.deepcopy(args)
+        cond_args.conditions = cond_map[cond_name]
+        res = read_update_projections(cond_args)
+        res["cond"] = res.apply(lambda x: f"shuffle" if "shuffle" in x["mode"] else cond_name, axis=1)
+        all_conds.append(res)
+    all_conds = pd.concat(all_conds)
+    all_conds["Time"] = all_conds["TimeIdx"] / 10
+    return all_conds
 
 def read_update_projections_pvals(args, cond_map, axis_vars=["pref", "conf"]):
     args.base_output_path = "/data/patrick_res/update_projections"

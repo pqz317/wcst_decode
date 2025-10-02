@@ -27,7 +27,7 @@ import scipy
 import argparse
 import copy
 
-OUTPUT_DIR = "/data/patrick_res/figures/wcst_paper/ccgp"
+OUTPUT_DIR = "/data/patrick_res/figures/wcst_paper/ccgp_no_cond"
 
 CCGP_DIM_TO_DISPLAY_NAMES = {
     "within dim": "within dim.",
@@ -46,7 +46,8 @@ CCGP_DIM_TO_COLOR = {
 
 def main():
     pairs = pd.read_pickle(PAIRS_PATH).reset_index(drop=True)
-    regions = [None] + REGIONS_OF_INTEREST
+    # regions = [None] + REGIONS_OF_INTEREST
+    regions = [None]
     for region in regions:
         args = argparse.Namespace(
             **BeliefPartitionConfigs()._asdict()
@@ -56,7 +57,9 @@ def main():
         args.subject = "both"
         args.mode = "feat_belief"
         args.base_output_path = "/data/patrick_res/ccgp_conf"
-        args.sig_unit_level = "pref_conf_99th_window_filter_drift"
+        # args.sig_unit_level = "pref_conf_99th_window_filter_drift"
+        args.sig_unit_level = "pref_conf_99th_no_cond_window_filter_drift"
+
 
         res = belief_partitions_io.read_ccgp_results(args, pairs, conds=["across_cond"])
         res = res[res.Time <= 0]

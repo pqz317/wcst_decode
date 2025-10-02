@@ -526,7 +526,7 @@ def visualize_bars_time(args, df, y_col="Accuracy", hue_col="condition", display
         prev_y_min = ax2.get_ylim()[0]
         ax2.set_ylim(bottom=prev_y_min - interval)
         plot_sig_bars(p_by_time, prev_y_min - interval / 2, ax2, color)
-        add_significance_bars(fig, ax1, df, x=hue_col, y=y_col, pairs=[(var1, var2)], test=stats_utils.permutation_test_wrapper)
+        add_significance_bars(fig, ax1, df, x=hue_col, y=y_col, pairs=[(var1, var2)], test=stats_utils.get_permutation_test_func())
     ax1.set_xlabel("")
     ax1.set_xticklabels(ax1.get_xticklabels(), rotation=45)
 
@@ -1373,7 +1373,23 @@ def compute_bar_positions_from_df(df, x, y, hue=None, group_width=0.8):
 
     return bar_positions
 
-def add_significance_bars(fig, ax, df, x, y, hue=None, pairs=None, test=ttest_ind, alpha_levels=[0.05, 0.01, 0.001]):
+
+def ttest_ind_wrapper(pair, data1, data2):
+    _, pval = ttest_ind(data1, data2)
+    return pval
+
+# Function to get star markers
+def pval_to_stars(p, alpha_levels=[0.05, 0.01, 0.001]):
+    if p < alpha_levels[2]:
+        return '***'
+    elif p < alpha_levels[1]:
+        return '**'
+    elif p < alpha_levels[0]:
+        return '*'
+    else:
+        return 'ns'
+
+def add_significance_bars(fig, ax, df, x, y, hue=None, pairs=None, test=ttest_ind_wrapper, alpha_levels=[0.05, 0.01, 0.001]):
     """
     adds significance markers between specified pairs to an existing barplot.
 
@@ -1399,17 +1415,6 @@ def add_significance_bars(fig, ax, df, x, y, hue=None, pairs=None, test=ttest_in
         else:
             categories = df[x].unique()
             pairs = list(itertools.combinations(categories, 2))
-    
-    # Function to get star markers
-    def pval_to_stars(p):
-        if p < alpha_levels[2]:
-            return '***'
-        elif p < alpha_levels[1]:
-            return '**'
-        elif p < alpha_levels[0]:
-            return '*'
-        else:
-            return 'ns'
 
     # Calculate max height for annotation
     if hue:
@@ -1419,7 +1424,7 @@ def add_significance_bars(fig, ax, df, x, y, hue=None, pairs=None, test=ttest_in
 
     group_stats['se'] = group_stats['std'] / group_stats['count']**0.5
     max_height = (group_stats['mean'] + group_stats['se']).max()
-    max_height = 0 if max_height < 0 else max_height
+    max_height = 0.1 if max_height < 0 else max_height
 
     # Add significance markers
     y_offset = max_height * 0.05
@@ -1437,13 +1442,66 @@ def add_significance_bars(fig, ax, df, x, y, hue=None, pairs=None, test=ttest_in
             xpos1, height1 = bar_positions[cat1]
             xpos2, height2 = bar_positions[cat2]
 
-        stat, pval = test(data1, data2)
+        # _, pval = test(data1, data2)
+        pval = test(pair, data1, data2)
         stars = pval_to_stars(pval)
 
         # Draw line and text
-        bar_y = max_height + y_offset
+        bar_y = max_height + y_offset * (i + 1)
         ax.plot([xpos1, xpos1, xpos2, xpos2], [bar_y, bar_y + y_offset * 0.1, bar_y + y_offset * 0.1, bar_y], color='black')
         ax.text((xpos1 + xpos2) / 2, bar_y + y_offset * 0.1, stars, ha='center', va='bottom')
 
     fig.tight_layout()
     return fig, ax
+
+def add_significance_markers(fig, ax, df, x, y, test, alpha_levels=[0.05, 0.01, 0.001]):
+    """
+    Add significance markers (*, **, ***, ns) on top of bars in a seaborn barplot.
+
+    Parameters
+    ----------
+    fig : matplotlib.figure.Figure
+        The figure object containing the barplot.
+    ax : matplotlib.axes.Axes
+        The axes object containing the barplot.
+    df : pandas.DataFrame
+        Dataframe used to create the barplot.
+    x : str
+        Column name for categorical grouping (bar categories).
+    y : str
+        Column name for the measurement (bar heights).
+    test : callable
+        Statistical test function. Should take a 1D array of values and return a p-value
+        testing whether the mean differs from 0 (or some baseline).
+        Example: `lambda v: ttest_1samp(v, 0).pvalue`
+    alpha_levels : list of float, optional
+        Thresholds for significance. Default [0.05, 0.01, 0.001].
+    """
+    
+    categories = df[x].unique()
+    positions = range(len(categories))
+    # group_stats = df.groupby(x)[y].agg(['mean', 'count', 'se']).reset_index()
+    # For each bar
+    for pos, cat in zip(positions, categories):
+        values = df.loc[df[x] == cat, y].values
+        pval = test(cat, values)
+
+        marker = pval_to_stars(pval, alpha_levels)
+
+        # Find bar height
+        bar = ax.patches[pos]
+        height = bar.get_height()
+
+        # Place marker above bar
+        ax.text(
+            bar.get_x() + bar.get_width() / 2.,
+            height * 1.01,
+            marker,
+            ha='center',
+            va='bottom',
+            fontsize=12,
+            color="black"
+        )
+
+    return ax
+

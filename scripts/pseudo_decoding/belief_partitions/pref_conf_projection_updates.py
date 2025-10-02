@@ -93,7 +93,8 @@ def get_proj_pseudo_for_session(session, args, num_pseudo=100):
         return (group.FiringRateDiff / group["std"] * group.weightsdiff).sum()
 
     proj = proj.groupby(["TimeIdx", "TrialNumber"]).apply(compute_dot).reset_index(name="proj")
-    rng = np.random.default_rng()
+    # so we're generating consistent pseudotrials, seed is set to 42
+    rng = np.random.default_rng(seed=args.train_test_seed)
     trial_nums = rng.choice(proj.TrialNumber.unique(), num_pseudo)
     pseudo_trials = pd.DataFrame({"TrialNumber": trial_nums, "PseudoTrialNumber": list(range(num_pseudo))})
     proj_pseudo = pd.merge(proj, pseudo_trials, on="TrialNumber")

@@ -44,7 +44,7 @@ SPECIES = 'nhp'
 # NUM_BINS_SMOOTH = 1
 # EVENT = "FeedbackOnset"
 
-BL_SESSIONS_PATH = "/data/patrick_res/sessions/BL/valid_sessions_61.pickle"
+BL_SESSIONS_PATH = "/data/patrick_res/sessions/BL/valid_sessions.pickle"
 SA_SESSIONS_PATH = "/data/patrick_res/sessions/SA/valid_sessions.pickle"
 
 
@@ -67,6 +67,8 @@ def transform_fr(row, args):
     elif args.fr_type == "true_pref_belief_frs":
         beh = behavioral_utils.get_valid_belief_beh_for_sub_sess(args.subject, sess_name)
         frs = spike_utils.pref_belief_as_frs(frs, beh)
+    elif args.fr_type == "zscore_firing_rates":
+        frs = spike_utils.zscore_frs(frs)
     else:
         raise ValueError(f"invalid transform {args.fr_type}")
 

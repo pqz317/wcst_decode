@@ -873,7 +873,7 @@ def get_belief_partitions(beh, feat, use_x=False, thresh=BELIEF_PARTITION_THRESH
             return pd.Series(["High", f"Not {feat_str}", f"High Not {feat_str}"])
     beh[["BeliefConf", "BeliefPolicy", "BeliefPartition"]] = beh.apply(label_trial, axis=1)
     beh[["NextBeliefConf", "NextBeliefPolicy", "NextBeliefPartition"]] = beh[["BeliefConf", "BeliefPolicy", "BeliefPartition"]].shift(-1)
-    beh = beh[~beh.NextBeliefConf.isna()]
+    beh = beh[~beh.NextBeliefConf.isna()].copy()
     return beh
 
 def get_belief_partitions_of_pair(beh, feat_pair, thresh=BELIEF_PARTITION_THRESH):
@@ -1054,3 +1054,21 @@ def get_label_by_mode(beh, mode):
 def load_all_beh_for_sub(sub):
     valid_sess = pd.read_pickle(SESSIONS_PATH.format(sub=sub))
     return pd.concat(valid_sess.apply(lambda x: get_valid_belief_beh_for_sub_sess(sub, x.session_name), axis=1).values)
+
+
+def get_belief_changes_by_obs(beh, feat, cond_filters):
+    beh = get_belief_partitions(beh, feat, use_x=True)
+    beh = get_feat_choice_label(beh, feat)
+
+    res = []
+    beh[f"Next{feat}Prob"] = beh[f"{feat}Prob"].shift(-1).copy()
+    beh = beh[(~beh[f"{feat}Prob"].isna()) & (~beh[f"Next{feat}Prob"].isna())]
+    for cond in cond_filters:
+        filt = cond_filters[cond]
+        sub_beh = filter_behavior(beh, filt)
+        if len(sub_beh) == 0:
+            continue
+        # res.append(pd.DataFrame({"cond": cond, "position": "prev", "prob": sub_beh[f"{feat}Prob"]}))
+        # res.append(pd.DataFrame({"cond": cond, "position": "next", "prob": sub_beh[f"Next{feat}Prob"]}))
+        res.append(pd.DataFrame({"cond": cond, "change in prob": sub_beh[f"Next{feat}Prob"] -  sub_beh[f"{feat}Prob"]}))
+    return pd.concat(res)

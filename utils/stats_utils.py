@@ -48,7 +48,7 @@ def compute_p_per_group(data, val_col, label_col, num_permutes=1000, seed=42, la
     return perm_test(values, mask_a, num_permutes, rng, one_sided)
     
 def get_permutation_test_func(test_type="one_side"):
-    def permutation_test_wrapper(data1, data2):
+    def permutation_test_wrapper(pair, data1, data2):
         """
         wrapper for permutation test, used for adding significance markers to bar plots
         calls compute_p_per_group under the hood
@@ -57,9 +57,21 @@ def get_permutation_test_func(test_type="one_side"):
         df2 = pd.DataFrame({"label": "b", "vals": data2})
         df = pd.concat((df1, df2))
         p = compute_p_per_group(df, val_col="vals", label_col="label", label_a="a", label_b="b", test_type=test_type)
-        return (None, p)
+        return p
     return permutation_test_wrapper
 
+def get_permutation_test_func_single(shuffle_vals, test_type="one_side"):
+    def permutation_test_wrapper(cond, data):
+        """
+        wrapper for permutation test, used for adding significance markers to bar plots
+        calls compute_p_per_group under the hood
+        """
+        df1 = pd.DataFrame({"label": "a", "vals": data})
+        df2 = pd.DataFrame({"label": "b", "vals": shuffle_vals})
+        df = pd.concat((df1, df2))
+        p = compute_p_per_group(df, val_col="vals", label_col="label", label_a="a", label_b="b", test_type=test_type)
+        return p
+    return permutation_test_wrapper
 
 
 def get_n_time_offset(trial_event):

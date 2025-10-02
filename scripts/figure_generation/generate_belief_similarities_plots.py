@@ -28,11 +28,12 @@ import argparse
 import copy
 from tqdm import tqdm
 
-OUTPUT_DIR = "/data/patrick_res/figures/wcst_paper/belief_similarities"
+OUTPUT_DIR = "/data/patrick_res/figures/wcst_paper/belief_similarities_explore_subpops_frs"
 
 def main():
     pairs = pd.read_pickle(PAIRS_PATH).reset_index(drop=True)
     regions = [None] + REGIONS_OF_INTEREST
+    # regions = [None]
     # regions = ["anterior_cingulate_gyrus_ACgG"]
     # regions = ["lateral_prefrontal_cortex_lat_PFC"]
     for region in tqdm(regions):
@@ -44,7 +45,7 @@ def main():
         args.subject = "both"
         args.base_output_path = "/data/patrick_res/belief_similarities"
         # TODO: remove
-        args.sig_unit_level = "pref_conf_99th_window_filter_drift"
+        # args.sig_unit_level = "pref_conf_99th_no_cond_window_filter_drift"
         args.relative_to_low = True
         args.sim_type = "cosine_sim"
 
@@ -67,8 +68,8 @@ def main():
         )
 
         ax1.set_ylabel("Cosine Sim")
-        fig.savefig(f"{OUTPUT_DIR}/{region}_sim.svg")
-        fig.savefig(f"{OUTPUT_DIR}/{region}_sim.png", dpi=300)
+        fig.savefig(f"{OUTPUT_DIR}/{region}_{args.sig_unit_level}_sim.svg")
+        fig.savefig(f"{OUTPUT_DIR}/{region}_{args.sig_unit_level}_sim.png", dpi=300)
 
 
 

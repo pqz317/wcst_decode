@@ -14,8 +14,11 @@ import argparse
 from distutils.util import strtobool
 
 
-SCRATCH_DIR = "/data/patrick_res/scratch/sessioninfomodified"
-DEST_DIR = "/data/rawdata/sub-{sub}/sess-{sess}/session_info"
+# SCRATCH_DIR = "/data/patrick_res/scratch/sessioninfomodified"
+# DEST_DIR = "/data/rawdata/sub-{sub}/sess-{sess}/session_info"
+
+SCRATCH_DIR = "/data/patrick_res/scratch/sessioninfomodified_corrected"
+DEST_DIR = "/data/rawdata/sub-{sub}/sess-{sess}/session_info_corrected"
 
 # example session_info name: sub-BL_sess-20190129_sessioninfomodified.json
 # example correct path: "/data/rawdata/sub-BL/sess-20190123/behavior/sub-BL_sess-20190123_object_features.csv"

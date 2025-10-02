@@ -16,6 +16,7 @@ import matplotlib
 import utils.spike_utils as spike_utils
 from constants.behavioral_constants import *
 from constants.decoding_constants import *
+from constants.update_projections_constants import *
 from scripts.pseudo_decoding.belief_partitions.belief_partition_configs import *
 import scripts.pseudo_decoding.belief_partitions.belief_partitions_io as belief_partitions_io
 import itertools
@@ -23,37 +24,6 @@ import itertools
 import argparse
 import copy
 from tqdm import tqdm
-
-# REGIONS = [None] + REGIONS_OF_INTEREST
-TRIAL_EVENT = "StimOnset"
-REGIONS = [None]
-AXIS_VARS = ["pref", "conf"]
-CONDITION_MAPS = {
-    "chose X / correct": {"Response": "Correct", "Choice": "Chose"},
-    "chose X / incorrect": {"Response": "Incorrect", "Choice": "Chose"},
-    "correct": {"Response": "Correct"},
-    "incorrect": {"Response": "Incorrect"},
-    "chose X / incorrect / low": {"Response": "Incorrect", "Choice": "Chose", "BeliefPartition": "Low"},
-    "chose X / incorrect / high X": {"Response": "Incorrect", "Choice": "Chose", "BeliefPartition": "High X"},
-    "chose X / incorrect / high not X": {"Response": "Incorrect", "Choice": "Chose", "BeliefPartition": "High Not X"},
-    "chose X / correct / low": {"Response": "Correct", "Choice": "Chose", "BeliefPartition": "Low"},
-    "chose X / correct / high X": {"Response": "Correct", "Choice": "Chose", "BeliefPartition": "High X"},
-    "chose X / correct / high not X": {"Response": "Correct", "Choice": "Chose", "BeliefPartition": "High Not X"},
-}
-
-
-def read_all_cond_data(args):
-    # for i, event in enumerate(["StimOnset", "FeedbackOnsetLong"]):
-    all_conds = []
-    for cond_name in CONDITION_MAPS:
-        cond_args = copy.deepcopy(args)
-        cond_args.conditions = CONDITION_MAPS[cond_name]
-        res = belief_partitions_io.read_update_projections(cond_args)
-        res["cond"] = res.apply(lambda x: f"shuffle" if "shuffle" in x["mode"] else cond_name, axis=1)
-        all_conds.append(res)
-    all_conds = pd.concat(all_conds)
-    all_conds["Time"] = all_conds["TimeIdx"] / 10
-    return all_conds
 
 def main():
     parser = argparse.ArgumentParser()
@@ -75,7 +45,7 @@ def main():
     args.base_output_path = "/data/patrick_res/update_projections"
 
     print("reading data")
-    res = read_all_cond_data(args)
+    res = belief_partitions_io.read_update_projections_all_conds(args, CONDITION_MAPS)
     res = res[res.Time <0]
     print("computing p")
     p = stats_utils.compute_p_per_group(res, "proj", "cond", label_a=cond, label_b="shuffle", test_type="two_sided")

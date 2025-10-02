@@ -9,7 +9,8 @@ from sklearn.linear_model import LinearRegression
 from constants.behavioral_constants import *
 from constants.decoding_constants import *
 
-
+DEFAULT_SESS_INFO_PATH = "/data/rawdata/sub-{subject}/sess-{session}/session_info/sub-{subject}_sess-{session}_sessioninfomodified.json"
+DEFAULT_FR_PATH = "/data/patrick_res/firing_rates/SA/{session}_firing_rates_1300_FeedbackOnset_1500_100_bins_1_smooth.pickle"
 
 def get_spikes_by_trial_interval_DEPRECATED(spike_times, intervals):
     """Finds all the spikes within a series of time intervals
@@ -169,11 +170,12 @@ def get_unit_fr_array(frs, column_name):
     return np.stack(grouped.squeeze(), axis=0)
 
 
-DEFAULT_FR_PATH = "/data/patrick_res/firing_rates/SA/{session}_firing_rates_1300_FeedbackOnset_1500_100_bins_1_smooth.pickle"
 
-def get_unit_positions_per_sess(session, subject="SA", fr_path=DEFAULT_FR_PATH):
-    info_path = f"/data/rawdata/sub-{subject}/sess-{session}/session_info/sub-{subject}_sess-{session}_sessioninfomodified.json"
-
+def get_unit_positions_per_sess(session, subject="SA", fr_path=DEFAULT_FR_PATH, sess_info_path=DEFAULT_SESS_INFO_PATH):
+    info_path = sess_info_path.format(
+        subject=subject,
+        session=session,
+    )
     with open(info_path, 'r') as f:
         data = json.load(f)
     locs = data['electrode_info']
@@ -245,12 +247,17 @@ def get_manual_structure(positions):
     positions["manual_structure"] = positions.apply(lambda x: LEVEL_2_TO_MANUALS[x.structure_level2], axis=1)
     return positions
 
-def get_unit_positions(sessions, subject="SA", get_manual_regions=True, fr_path=DEFAULT_FR_PATH):
+def get_unit_positions(
+    sessions, subject="SA", 
+    get_manual_regions=True, 
+    fr_path=DEFAULT_FR_PATH, 
+    sess_info_path=DEFAULT_SESS_INFO_PATH
+):
     """
     For each session, finds unit positions, concatenates
     """
     positions = pd.concat(sessions.apply(
-        lambda x: get_unit_positions_per_sess(x.session_name, subject, fr_path), 
+        lambda x: get_unit_positions_per_sess(x.session_name, subject, fr_path, sess_info_path), 
         axis=1
     ).values)
     # still want to plot the None units
@@ -277,12 +284,12 @@ def get_subpop_ratios_by_region(subpop, valid_sess):
     merged = merged.sort_values("Ratio", ascending=False)
     return merged
 
-def zscore_frs(frs, group_cols=["UnitID"], mode="SpikeCounts"):
+def zscore_frs(frs, group_cols=["UnitID"], mode="FiringRate"):
     def zscore_unit(group):
         mean = group[mode].mean()
         std = group[mode].std()
         # if std is 0, just set to 0. 
-        group[f"Z{mode}"] = np.nan_to_num((group[mode] - mean) / std)
+        group[mode] = np.nan_to_num((group[mode] - mean) / std)
         return group
     return frs.groupby(group_cols).apply(zscore_unit).reset_index(drop=True)
 
@@ -387,7 +394,13 @@ def pref_belief_as_frs(frs, beh):
 def get_frs_from_args(args, sess_name):
     """
     """
-    sub_units = get_region_units(args.region_level, args.regions, UNITS_PATH.format(sub=args.subject))
+    # need to account for corrected unit positions for BL...
+    if args.subject == "BL":
+        units_path = BL_CORRECTED_UNITS_PATH.format(sub=args.subject)
+    else: 
+        units_path = UNITS_PATH.format(sub=args.subject)
+
+    sub_units = get_region_units(args.region_level, args.regions, units_path)
     sub_units = get_sig_units(args, sub_units)
     trial_interval = args.trial_interval
     spikes_path = SESS_SPIKES_PATH.format(
