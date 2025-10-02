@@ -23,7 +23,7 @@ INTERVAL_SIZE = 100
 
 SESS_SPIKES_PATH = "/data/patrick_res/firing_rates/{sub}/{sess_name}_{fr_type}_{pre_interval}_{event}_{post_interval}_{interval_size}_bins_1_smooth.pickle"
 UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/all_units.pickle"
-BL_CORRECTED_UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/all_units_correct.pickle"
+BL_CORRECTED_UNITS_PATH = "/data/patrick_res/firing_rates/{sub}/all_units_corrected.pickle"
 DRIFT_PATH = "/data/patrick_res/firing_rates/{sub}/drifting_units.pickle"
 FEATS_PATH = "/data/patrick_res/sessions/{sub}/feats_at_least_3blocks.pickle"
 PAIRS_PATH = "/data/patrick_res/sessions/both/pairs_at_least_3blocks_10sess.pickle"
