@@ -111,7 +111,7 @@ def plot_for_mode(mode, by_region):
         sig_res = []
         var_res = []
         for region in REGIONS:
-            region_units = spike_utils.get_all_region_units("structure_level2_cleaned", region, filter_drift=True)
+            region_units = spike_utils.get_all_region_units("structure_level2_cleaned", region)
             frac_sig = anova_utils.num_sig_units_by_time(args, [MODE_TO_COND[mode]], sig_thresh="99th", units=region_units)
             frac_sig["region"] = region
             frac_var = anova_utils.frac_var_explained_by_time(args, [MODE_TO_COND[mode]], units=region_units)

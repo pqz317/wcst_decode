@@ -79,13 +79,6 @@ def find_sig_units_for_sub(args):
     res["session"] = (res.PseudoUnitID / 100).astype(int)
     return res
 
-def filter_drift(units, args):
-    drift_units = pd.read_pickle(DRIFT_PATH.format(sub=args.subject))
-    return units[~units.PseudoUnitID.isin(drift_units.PseudoUnitID)]
-
-def filter_bad_regions(units):
-    return units[~units.structure_level2_cleaned.isin(BAD_REGIONS)]
-
 def get_sub_stats(units, region):
     if region != "all_regions":
         units = units[units.structure_level2_cleaned == region]
@@ -133,9 +126,9 @@ def main():
         args.subject = sub
         sub_units = find_sig_units_for_sub(args)
         if args.filter_drift:
-            sub_units = filter_drift(sub_units, args)
+            sub_units = spike_utils.filter_drift(sub_units, args)
         if args.filter_bad_regions:
-            sub_units = filter_bad_regions(sub_units)
+            sub_units = spike_utils.filter_bad_regions(sub_units)
         print(len(sub_units))
         sig_level_str = get_sig_level_str(args)
         print(f"Saving units with sig level {sig_level_str}")

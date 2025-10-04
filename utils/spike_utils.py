@@ -315,27 +315,38 @@ def block_lowest_val_sub_frs(frs, mode="SpikeCounts"):
 def get_avg_fr_per_interval(frs):
     return frs.groupby(["UnitID", "TrialNumber"]).mean().reset_index()
 
-def get_region_units(region_level, regions, units_path):
-    all_units = pd.read_pickle(units_path)
-    if region_level is None or regions is None: 
-        return all_units.PseudoUnitID.unique()
-    regions_arr = regions.split(",")
-    return all_units[all_units[region_level].isin(regions_arr)].PseudoUnitID.unique()
+def filter_drift(units, subject):
+    drift_units = pd.read_pickle(DRIFT_PATH.format(sub=subject))
+    return units[~units.PseudoUnitID.isin(drift_units.PseudoUnitID)]
 
-def get_all_region_units(region_level, regions, subjects=["SA", "BL"], filter_drift=True):
+def filter_bad_regions(units):
+    return units[~units.structure_level2_cleaned.isin(BAD_REGIONS)]
+
+def get_subject_units(subject):
+    if subject == "BL":
+        units_path = BL_CORRECTED_UNITS_PATH.format(sub=subject)
+    else: 
+        units_path = UNITS_PATH.format(sub=subject)
+    return pd.read_pickle(units_path)
+
+def get_region_units(region_level, regions, units):
+    if region_level is None or regions is None: 
+        return units
+    regions_arr = regions.split(",")
+    return units[units[region_level].isin(regions_arr)].copy()
+
+def get_all_region_units(region_level, regions, subjects=["SA", "BL"]):
     """
     Gets all pseudounitids associated with a region, from both subjects
     optionally filters for drifting units
     """
     all_units = []
     for sub in subjects: 
-        units_path = UNITS_PATH.format(sub=sub)
-        units = get_region_units(region_level, regions, units_path)
-        if filter_drift:
-            drift_units = pd.read_pickle(DRIFT_PATH.format(sub=sub))
-            units = units[~np.isin(units, drift_units.PseudoUnitID.unique())]
+        units = get_subject_units(sub)
+        units = get_region_units(region_level, regions, units)
+        units = filter_drift(units, sub)
         all_units.append(units)
-    return np.concatenate(all_units)
+    return pd.concat(all_units).PseudoUnitID.unique()
 
 def get_sig_units(args, units=None):
     """
@@ -359,9 +370,9 @@ def get_sig_units(args, units=None):
     else: 
         raise ValueError("args has neither feat or feat_pair")
     if units is not None: 
-        return feat_sig_units[feat_sig_units.PseudoUnitID.isin(units)].PseudoUnitID.unique()
+        return feat_sig_units[feat_sig_units.PseudoUnitID.isin(units)].copy()
     else:
-        return feat_sig_units.PseudoUnitID.unique()
+        return feat_sig_units.copy()
 
 
 def regress_out_trial_number(frs):
@@ -391,17 +402,20 @@ def pref_belief_as_frs(frs, beh):
     merged["FiringRate"] = merged.apply(lambda x: pref_belief_per_row(x), axis=1)
     return merged[["TrialNumber", "UnitID", "TimeBins", "FiringRate"]]
 
+
+
+
+
 def get_frs_from_args(args, sess_name):
     """
     """
     # need to account for corrected unit positions for BL...
-    if args.subject == "BL":
-        units_path = BL_CORRECTED_UNITS_PATH.format(sub=args.subject)
-    else: 
-        units_path = UNITS_PATH.format(sub=args.subject)
+    units = get_subject_units(args.subject)
+    units = get_region_units(args.region_level, args.regions, units)
+    units = get_sig_units(args, units)
 
-    sub_units = get_region_units(args.region_level, args.regions, units_path)
-    sub_units = get_sig_units(args, sub_units)
+    # should always filter drift, and bad regions
+
     trial_interval = args.trial_interval
     spikes_path = SESS_SPIKES_PATH.format(
         sub=args.subject,
@@ -414,8 +428,8 @@ def get_frs_from_args(args, sess_name):
     )
     frs = pd.read_pickle(spikes_path)
     frs["PseudoUnitID"] = int(sess_name) * 100 + frs.UnitID.astype(int)
-    if sub_units is not None: 
-        frs = frs[frs.PseudoUnitID.isin(sub_units)]
+    if units is not None: 
+        frs = frs[frs.PseudoUnitID.isin(units.PseudoUnitID)]
     # create a time field as well that's relative to the trial event
     frs["Time"] = frs["TimeBins"] - args.trial_interval.pre_interval / 1000
     if hasattr(args, "time_range") and args.time_range is not None: 
