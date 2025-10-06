@@ -415,6 +415,8 @@ def get_frs_from_args(args, sess_name):
     units = get_sig_units(args, units)
 
     # should always filter drift, and bad regions
+    units = filter_bad_regions(units)
+    units = filter_drift(units)
 
     trial_interval = args.trial_interval
     spikes_path = SESS_SPIKES_PATH.format(
