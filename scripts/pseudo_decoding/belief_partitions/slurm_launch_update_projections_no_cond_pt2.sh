@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Default values
-partition="ckpt-all"
+# partition="ckpt-all"
+partition="gpu-a100"
 
 trial_event="StimOnset"
 modes="pref conf"
