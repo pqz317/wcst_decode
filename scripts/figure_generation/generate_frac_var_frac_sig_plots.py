@@ -36,7 +36,7 @@ MODES = ["choice", "reward", "pref", "conf"]
 # MODES = ["choice"]
 REGIONS = ["amygdala_Amy", "basal_ganglia_BG", "inferior_temporal_cortex_ITC", "medial_pallium_MPal", "lateral_prefrontal_cortex_lat_PFC", "anterior_cingulate_gyrus_ACgG"]
 # REGIONS = ["amygdala_Amy"]
-
+OUTPUT_DIR = "/data/patrick_res/figures/wcst_paper/frac_var_frac_sig_updated"
 
 
 def plot(res, y_col, hue_col=None, hue_order=None, palette=None, hue_display_names=None, color=None):
@@ -99,14 +99,14 @@ def plot_for_mode(mode, by_region):
         color = visualization_utils.MODE_TO_COLOR[visualization_utils.MODE_TO_DISPLAY_NAMES[mode]]
         frac_sig = anova_utils.num_sig_units_by_time(args, [MODE_TO_COND[mode]], sig_thresh="99th")
         fig, axs = plot(frac_sig, "frac_units_sig", color=color)
-        fig.savefig(f"/data/patrick_res/figures/wcst_paper/frac_var_frac_sig/{mode}_frac_sig_whole_pop.png")
-        fig.savefig(f"/data/patrick_res/figures/wcst_paper/frac_var_frac_sig/{mode}_frac_sig_whole_pop.svg")
+        fig.savefig(f"{OUTPUT_DIR}/{mode}_frac_sig_whole_pop.png")
+        fig.savefig(f"{OUTPUT_DIR}/{mode}_frac_sig_whole_pop.svg")
         plt.close(fig)        
 
         frac_var = anova_utils.frac_var_explained_by_time(args, [MODE_TO_COND[mode]])
         fig, axs = plot(frac_var, "frac_variance", color=color)
-        fig.savefig(f"/data/patrick_res/figures/wcst_paper/frac_var_frac_sig/{mode}_frac_var_whole_pop.png")
-        fig.savefig(f"/data/patrick_res/figures/wcst_paper/frac_var_frac_sig/{mode}_frac_var_whole_pop.svg")
+        fig.savefig(f"{OUTPUT_DIR}/{mode}_frac_var_whole_pop.png")
+        fig.savefig(f"{OUTPUT_DIR}/{mode}_frac_var_whole_pop.svg")
     else: 
         sig_res = []
         var_res = []
@@ -128,8 +128,8 @@ def plot_for_mode(mode, by_region):
             palette=visualization_utils.REGION_TO_COLOR,
             hue_display_names=visualization_utils.REGION_TO_DISPLAY_NAMES
         )
-        fig.savefig(f"/data/patrick_res/figures/wcst_paper/frac_var_frac_sig/{mode}_frac_sig_by_region.png")
-        fig.savefig(f"/data/patrick_res/figures/wcst_paper/frac_var_frac_sig/{mode}_frac_sig_by_region.svg")
+        fig.savefig(f"{OUTPUT_DIR}/{mode}_frac_sig_by_region.png")
+        fig.savefig(f"{OUTPUT_DIR}/{mode}_frac_sig_by_region.svg")
         plt.close(fig)        
 
         fig, axs = plot(
@@ -139,8 +139,8 @@ def plot_for_mode(mode, by_region):
             palette=visualization_utils.REGION_TO_COLOR,
             hue_display_names=visualization_utils.REGION_TO_DISPLAY_NAMES
         )
-        fig.savefig(f"/data/patrick_res/figures/wcst_paper/frac_var_frac_sig/{mode}_frac_var_by_region.png")
-        fig.savefig(f"/data/patrick_res/figures/wcst_paper/frac_var_frac_sig/{mode}_frac_var_by_region.svg")
+        fig.savefig(f"{OUTPUT_DIR}/{mode}_frac_var_by_region.png")
+        fig.savefig(f"{OUTPUT_DIR}/{mode}_frac_var_by_region.svg")
 
 
 

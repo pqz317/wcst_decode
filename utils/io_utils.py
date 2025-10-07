@@ -7,6 +7,7 @@ import pickle
 import torch
 import itertools
 from . import behavioral_utils
+from . import spike_utils
 from constants.glm_constants import *
 import copy
 from constants.behavioral_constants import *
@@ -541,10 +542,11 @@ def read_anova_good_units(args, percentile_str="95th", cond="combined_fracvar", 
         else:
             good_res.append(res)
     good_res = pd.concat(good_res)
-    if return_pos:
-        unit_pos = pd.read_pickle(UNITS_PATH.format(sub=args.subject))
-        good_res = pd.merge(good_res, unit_pos[["PseudoUnitID", "drive", "structure_level2", "structure_level2_cleaned"]])
-        good_res["whole_pop"] = "all_regions"
+
+    unit_pos = spike_utils.get_good_subject_units(args.subject)
+    good_res = pd.merge(good_res, unit_pos[["PseudoUnitID", "drive", "structure_level2", "structure_level2_cleaned"]], on="PseudoUnitID")
+    good_res["whole_pop"] = "all_regions"
+
     good_res["trial_event"] = args.trial_event
     return good_res
 

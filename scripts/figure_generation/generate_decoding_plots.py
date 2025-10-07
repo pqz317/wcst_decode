@@ -34,17 +34,17 @@ SUB_REGION_LEVEL_REGIONS = [
     ("both", "structure_level2_cleaned", "medial_pallium_MPal"),
     ("both", "structure_level2_cleaned", "lateral_prefrontal_cortex_lat_PFC"),
     ("both", "structure_level2_cleaned", "anterior_cingulate_gyrus_ACgG"),
-    ("SA", None, None),
-    ("BL", None, None),
-    ("SA", "drive", "Anterior"),
-    ("SA", "drive", "Temporal"),
+    # ("SA", None, None),
+    # ("BL", None, None),
+    # ("SA", "drive", "Anterior"),
+    # ("SA", "drive", "Temporal"),
 ]
 
 DECODE_VARS = ["pref", "conf", "choice", "reward"]
 # DECODE_VARS = ["pref"]
 CROSS_ALPHA = 0.01
 
-output_dir = "/data/patrick_res/figures/wcst_paper/decoding"
+output_dir = "/data/patrick_res/figures/wcst_paper/decoding_updated"
 
 def plot_weights(args):
     all_conts = belief_partitions_io.get_contributions_for_all_time(args, region_level="structure_level2")
@@ -87,9 +87,9 @@ def main():
         fig_cross_no_diag.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_cross_time_no_diag_accs_alpha_{CROSS_ALPHA}.png")
             
 
-        # fig_weights, _ = plot_weights(args)
-        # fig_weights.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_weights.svg")
-        # fig_weights.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_weights.png", dpi=300)
+        fig_weights, _ = plot_weights(args)
+        fig_weights.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_weights.svg")
+        fig_weights.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_weights.png", dpi=300)
 
 if __name__ == "__main__":
     main()

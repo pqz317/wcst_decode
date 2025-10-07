@@ -329,6 +329,12 @@ def get_subject_units(subject):
         units_path = UNITS_PATH.format(sub=subject)
     return pd.read_pickle(units_path)
 
+def get_good_subject_units(subject):
+    units = get_subject_units(subject)
+    units = filter_bad_regions(units)
+    units = filter_drift(units, subject)
+    return units
+
 def get_region_units(region_level, regions, units):
     if region_level is None or regions is None: 
         return units
@@ -370,7 +376,7 @@ def get_sig_units(args, units=None):
     else: 
         raise ValueError("args has neither feat or feat_pair")
     if units is not None: 
-        return feat_sig_units[feat_sig_units.PseudoUnitID.isin(units)].copy()
+        return feat_sig_units[feat_sig_units.PseudoUnitID.isin(units.PseudoUnitID)].copy()
     else:
         return feat_sig_units.copy()
 

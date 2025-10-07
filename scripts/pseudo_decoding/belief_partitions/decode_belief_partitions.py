@@ -46,6 +46,7 @@ def load_session_data(row, args, splits_df=None):
     beh = behavioral_utils.balance_trials_by_condition(beh, condition_columns=args.balance_cols if args.balance_cols else ["condition"])
 
     frs = spike_utils.get_frs_from_args(args, sess_name)
+
     frs = frs.rename(columns={DATA_MODE: "Value"})
     if len(frs) == 0 or len(beh) == 0:
         return None
@@ -62,6 +63,7 @@ def train_decoder(sess_datas, args):
     # setup decoder, specify all possible label classes, number of neurons, parameters
     classes = MODE_TO_CLASSES[args.mode]
     num_neurons = sess_datas.apply(lambda x: x.get_num_neurons()).sum()
+    print(f"using {num_neurons} neurons")
     init_params = {"n_inputs": num_neurons, "p_dropout": args.p_dropout, "n_classes": len(classes)}
     # create a trainer object
     trainer = Trainer(learning_rate=args.learning_rate, max_iter=args.max_iter)
@@ -79,7 +81,6 @@ def train_decoder(sess_datas, args):
     return test_accs, models
 
 def load_session_datas_for_sub(args, splits_df=None):
-    print(f"reading data from {len(args.sub_sessions)} sessions for {args.subject}")
     sess_datas = args.sub_sessions.apply(lambda row: load_session_data(
         row, args, splits_df
     ), axis=1)

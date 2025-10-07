@@ -1,4 +1,7 @@
 #!/bin/bash
+# launch with sbatch --array=0-47 wcst_decode/scripts/figure_generation/slurm_launch_single_unit_psths.slurm
+
+
 #SBATCH --job-name=psths
 #SBATCH -p gpu-a100
 #SBATCH -A walkerlab

@@ -80,8 +80,8 @@ def plot_for_mode_region(subject, mode, region):
 
     for i, row in all_good_units.iterrows():
         fig, axs = visualization_utils.plot_psth_both_events(mode, int(row.PseudoUnitID), row.feat, args, pval_res=res)
-        fig.savefig(f"/data/patrick_res/figures/wcst_paper/single_unit_psths_filter_drift/{mode}_{subject}_{region}_{row.PseudoUnitID}_{row.feat}.png", dpi=300)
-        fig.savefig(f"/data/patrick_res/figures/wcst_paper/single_unit_psths_filter_drift/{mode}_{subject}_{region}_{row.PseudoUnitID}_{row.feat}.svg")
+        fig.savefig(f"/data/patrick_res/figures/wcst_paper/single_unit_psths_filter_drift/{mode}_{region}_{subject}_{row.PseudoUnitID}_{row.feat}.png", dpi=300)
+        fig.savefig(f"/data/patrick_res/figures/wcst_paper/single_unit_psths_filter_drift/{mode}_{region}_{subject}_{row.PseudoUnitID}_{row.feat}.svg")
         plt.close(fig)
 
 def main():

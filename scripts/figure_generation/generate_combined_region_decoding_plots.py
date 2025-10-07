@@ -26,7 +26,7 @@ import matplotlib.colors as mcolors
 
 DECODE_VARS = ["pref", "conf", "choice", "reward"]
 REGIONS = ["medial_pallium_MPal", "inferior_temporal_cortex_ITC", "basal_ganglia_BG", "amygdala_Amy", "lateral_prefrontal_cortex_lat_PFC", "anterior_cingulate_gyrus_ACgG"]
-OUTPUT_DIR = "/data/patrick_res/figures/wcst_paper/decoding_combined_region"
+OUTPUT_DIR = "/data/patrick_res/figures/wcst_paper/decoding_combined_region_updated"
 
 
 def main():
@@ -51,7 +51,7 @@ def main():
             attr="regions", 
             values=REGIONS, 
             num_shuffles=10, 
-            hue_color=visualization_utils.REGION_ORDER,
+            hue_order=visualization_utils.REGION_ORDER,
             palette=visualization_utils.REGION_TO_COLOR,
             display_names=visualization_utils.REGION_TO_DISPLAY_NAMES)
         fig.savefig(f"{OUTPUT_DIR}/{decode_var}_accs.svg")

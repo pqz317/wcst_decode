@@ -24,7 +24,7 @@ import seaborn as sns
 import itertools
 
 
-
+OUTPUT_DIR = "/data/patrick_res/figures/wcst_paper/updates_projections_2_updated"
 
 """
 Try #2 at updates projections, using decoding axes defined from decoding without conditioning 
@@ -59,7 +59,6 @@ def get_sig_func_single(pvals):
     return get_pvals
 
 def plot_choice_reward(res, pvals, mode, shuffle_mean):
-    # order= ["chose X / correct", "correct", "shuffle", "incorrect", "chose X / incorrect"]
     order= ["chose X / correct", "correct", "incorrect", "chose X / incorrect"]
     res = res[res.cond.isin(order)]
 
@@ -76,34 +75,25 @@ def plot_choice_reward(res, pvals, mode, shuffle_mean):
 
     fig, ax = format_updates(fig, ax, mode)
 
-    fig.savefig(f"/data/patrick_res/figures/wcst_paper/updates_projections_2/{mode}_choice_reward_int.png")
-    fig.savefig(f"/data/patrick_res/figures/wcst_paper/updates_projections_2/{mode}_choice_reward_int.svg")
+    fig.savefig(f"{OUTPUT_DIR}/{mode}_choice_reward_int.png")
+    fig.savefig(f"{OUTPUT_DIR}/{mode}_choice_reward_int.svg")
 
 def plot_chose_reward_by_partitions(res, pvals, mode, reward, shuffle_mean):
     fig, ax = plt.subplots(figsize=(3, 4))
-    # order= ["shuffle", f"chose X / {reward} / low", f"chose X / {reward} / high X", f"chose X / {reward} / high not X"]
     order= [f"chose X / {reward} / low", f"chose X / {reward} / high X", f"chose X / {reward} / high not X"]
     res = res[res.cond.isin(order)]
     res = res.sort_values(by="cond", key=lambda x: x.map(order.index))
     sns.barplot(res, x="cond", y="proj", errorbar="se", ax=ax, palette=CONDITION_TO_COLORS, order=order)
     ax.axhline(shuffle_mean, color="grey", linestyle="dotted", linewidth=3)
 
-    # visualization_utils.add_significance_bars(
-    #     fig, ax, res, "cond", "proj", pairs=[
-    #         (f"chose X / {reward} / low", "shuffle"),
-    #         (f"chose X / {reward} / high X", "shuffle"),
-    #         (f"chose X / {reward} / high not X", "shuffle"),
-    #     ], 
-    #     test=get_sig_func(pvals)
-    # )
     visualization_utils.add_significance_markers(
         fig, ax, res, "cond", "proj", 
         test=get_sig_func_single(pvals)
     )
     ax.set_xticklabels(["low", "high X", "high not X"])
     fig, ax = format_updates(fig, ax, mode)
-    fig.savefig(f"/data/patrick_res/figures/wcst_paper/updates_projections_2/{mode}_chose_{reward}_by_partition.png", dpi=300)
-    fig.savefig(f"/data/patrick_res/figures/wcst_paper/updates_projections_2/{mode}_chose_{reward}_by_partition.svg")
+    fig.savefig(f"{OUTPUT_DIR}/{mode}_chose_{reward}_by_partition.png", dpi=300)
+    fig.savefig(f"{OUTPUT_DIR}/{mode}_chose_{reward}_by_partition.svg")
 
 def main():
     plt.rcParams.update({'font.size': 14})
