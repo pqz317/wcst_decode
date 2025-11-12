@@ -44,25 +44,48 @@ from matplotlib.colors import ListedColormap, BoundaryNorm
 
 REGION_TO_COLOR = {
     "AMY": "#30123b",
-    "BG": "#3e9bfe",
+    "DSTR": "#3e9bfe",
     "ITC": "#46f884",
-    "HPC": "#e1dd37",
+    "HC": "#e1dd37",
     "LPFC": "#f05b12",
     "ACC": "#7a0403",
     "shuffle": "gray"
 }
 
-REGION_ORDER = ["AMY", "BG", "HPC", "ITC", "LPFC", "ACC", "shuffle"]
+REGION_ORDER = ["AMY", "DSTR", "HC", "ITC", "LPFC", "ACC", "shuffle"]
 
-REGION_TO_DISPLAY_NAMES = {
+REGION_TO_ABBREV = {
     "amygdala_Amy": "AMY",
-    "basal_ganglia_BG": "BG",
+    "basal_ganglia_BG": "DSTR",
     "inferior_temporal_cortex_ITC": "ITC",
-    "medial_pallium_MPal": "HPC",
+    "medial_pallium_MPal": "HC",
     "lateral_prefrontal_cortex_lat_PFC": "LPFC",
     "anterior_cingulate_gyrus_ACgG": "ACC",
     "shuffle": "shuffle"
 }
+
+REGION_TO_DISPLAY_NAME = {
+    ":_eexxttrraassttrriiaattee__vviissuuaall__aarreeaass__22--44_VV22--VV44": "extrastriate visual areas V2-V4",
+    "amygdala_Amy": "amygdala (AMY)",
+    "anterior_cingulate_gyrus_ACgG": "anterior cingulate cortex (ACC)",
+    "basal_ganglia_BG": "dorsal striatum (DSTR)",
+    "extrastriate_visual_areas_2-4_V2-V4": "extrastriate visual areas V2-V4",
+    "floor_of_the_lateral_sulcus_floor_of_ls": "insular cortex",
+    "inferior_parietal_lobule_IPL": "inferior parietal cortex",
+    "inferior_temporal_cortex_ITC": "inferior temporal cortex (ITC)",
+    "lateral_and_ventral_pallium_LVPal": "claustrum",
+    "lateral_prefrontal_cortex_lat_PFC": "lateral prefrontal cortex (LPFC)",
+    "medial_pallium_MPal": "hippocampal formation (HC)",
+    "medial_temporal_lobe_MTL": "perirhinal/parahippocampal cortex",
+    "motor_cortex_motor": "motor cortex",
+    "orbital_frontal_cortex_OFC": "orbitofrontal cortex",
+    "posterior_medial_cortex_PMC": "posteromedial cortex",
+    "primary_visual_cortex_V1": "primary visual cortex",
+    "superior_parietal_lobule_SPL": "superior parietal cortex",
+    "thalamus_Thal": "thalamus",
+}
+
+
 
 MODE_TO_COLOR = {
     "Color": "#1B9E77",
@@ -88,16 +111,16 @@ MODE_TO_DISPLAY_NAMES = {
 
 CCGP_COND_TO_DISPLAY_NAMES = {
     "within_cond": "within cond.",
-    "within_cond_shuffle": "within cond. shuffle",
+    "within_cond_shuffle": "within shuffle",
     "across_cond": "across cond.",
-    "across_cond_shuffle": "across cond. shuffle",
+    "across_cond_shuffle": "across shuffle",
 }
 
 CCGP_COND_TO_COLOR = {
     "within cond.": "#1b9e77",
-    "within cond. shuffle": "#b3e2cd",
+    "within shuffle": "#b3e2cd",
     "across cond.": "#d95f02",
-    "across cond. shuffle": "#fdcdac"
+    "across shuffle": "#fdcdac"
 }
 
 SIG_LEVELS = [
@@ -501,15 +524,22 @@ def plot_sig_bars(p_vals, y_loc, ax, color="black"):
             ax.hlines(y=y_loc, xmin=row.Time - 0.1, xmax=row.Time, linewidth=lw, color=color)
 
 
-def visualize_bars_time(args, df, y_col="Accuracy", hue_col="condition", display_map=CCGP_COND_TO_DISPLAY_NAMES, color_map=CCGP_COND_TO_COLOR, y_lims=(None, None), sig_pairs=[]):
+def visualize_bars_time(
+        args, df, 
+        y_col="Accuracy", hue_col="condition", 
+        display_map=CCGP_COND_TO_DISPLAY_NAMES, color_map=CCGP_COND_TO_COLOR, 
+        y_lims=(None, None), sig_pairs=[],
+        fig=None, axs=None):
     """
     plots a bar plot and a time plot for data aligned to cards appearing,
     useful for CCGP and neural acivity similariies plots
     sig_pairs: a list of tuples of (var1, var2, color)
     """
     # needed to keep consistent for potential significance plotting
-
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5), width_ratios=(4, 6), sharey=True)
+    if fig is not None: 
+        ax1, ax2 = axs
+    else: 
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7, 7 / 5 * 3), width_ratios=(4, 6), sharey=True)
     if display_map is not None:
         df[hue_col] = df[hue_col].map(display_map)
     df = df.sort_values(by=hue_col, key=lambda x: x.map(list(color_map.keys()).index))
@@ -517,7 +547,7 @@ def visualize_bars_time(args, df, y_col="Accuracy", hue_col="condition", display
     sns.lineplot(df, x="Time", y=y_col, hue=hue_col, linewidth=3, errorbar="se", palette=color_map, ax=ax2)
     ax1.set_ylim(y_lims)
 
-    interval = (ax2.get_ylim()[1] - ax2.get_ylim()[0]) / 10
+    interval = (ax2.get_ylim()[1] - ax2.get_ylim()[0]) / 15
     for (var1, var2, color) in sig_pairs:
         p_by_time = df.groupby(["TimeIdx"]).apply(
             lambda x: stats_utils.compute_p_per_group(x, val_col=y_col, label_col=hue_col, label_a=var1, label_b=var2)
@@ -530,10 +560,11 @@ def visualize_bars_time(args, df, y_col="Accuracy", hue_col="condition", display
     ax1.set_xlabel("")
     ax1.set_xticklabels(ax1.get_xticklabels(), rotation=45)
 
-    ax2.set_xlabel("Time to cards appear (s)")
+    ax2.set_xlabel("Time to stimuli appear (s)")
     ax2.axvline(-.5, color='grey', linestyle='dotted', linewidth=3)
 
-    for line in ax2.legend().get_lines():
+    legend = ax2.legend(fontsize=10) 
+    for line in legend.get_lines():
         line.set_linewidth(6)
 
     format_plot([ax1, ax2])
@@ -674,7 +705,7 @@ def plot_combined_accs(args, by_dim=False, modes=None, with_pvals=True):
     ax1.axvline(-.5, color='grey', linestyle='dotted', linewidth=3)
     ax1.axvline(0, color='grey', linestyle='dotted', linewidth=3)
 
-    ax1.set_xlabel(f"Time to cards appear (s)")
+    ax1.set_xlabel(f"Time to stimuli appear (s)")
     stim_ticks = [-1, -.5, 0, .5, 1]
     ax1.set_xticks(stim_ticks)
     ax1.set_xticklabels(stim_ticks)
@@ -732,7 +763,7 @@ def plot_combined_accs_by_attr(args, attr, values, num_shuffles=0, hue_order=Non
     ax1.axvline(-.5, color='grey', linestyle='dotted', linewidth=3)
     ax1.axvline(0, color='grey', linestyle='dotted', linewidth=3)
 
-    ax1.set_xlabel(f"Time to cards appear (s)")
+    ax1.set_xlabel(f"Time to stimuli appear (s)")
     stim_ticks = [-1, -.5, 0, .5, 1]
     ax1.set_xticks(stim_ticks)
     ax1.set_xticklabels(stim_ticks)
@@ -819,7 +850,7 @@ def plot_combined_cross_accs(args, ignore_overlap=False, alpha=0.01):
 
     cross_fix_pos, stim_on_pos = 4.5, 9.5
     card_fix_pos, fb_pos = 9.5, 17.5
-    axs[0, 0].set_ylabel("Time to cards appear (s)")
+    axs[0, 0].set_ylabel("Time to stimuli appear (s)")
     axs[0, 0].set_xlabel("")
     axs[0, 0].set_yticks(stim_tick_pos)
     axs[0, 0].set_yticklabels(stim_ticks)
@@ -1052,8 +1083,8 @@ def plot_combined_cross_accs_no_diag(args, alpha=0.01):
     cross_fix_pos, stim_on_pos = 4.5, 9.5
     card_fix_pos, fb_pos = 9.5, 17.5
 
-    stim_ax.set_ylabel("Time to cards appear (s)")
-    stim_ax.set_xlabel("Time to cards appear (s)")
+    stim_ax.set_ylabel("Time to stimuli appear (s)")
+    stim_ax.set_xlabel("Time to stimuli appear (s)")
     stim_ax.set_xticks(stim_tick_pos)
     stim_ax.set_xticklabels(stim_ticks)
     stim_ax.set_yticks(stim_tick_pos)
@@ -1115,6 +1146,7 @@ def plot_pop_heatmap_by_time(all_data, value_col, time_col="Time", region_level=
 
     def plot_region(reg_conts):        
         region = reg_conts.name
+        display_name = REGION_TO_DISPLAY_NAME[region]
 
         for i, event in enumerate(trial_events):
             event_conts = reg_conts[reg_conts.trial_event == event]
@@ -1132,7 +1164,7 @@ def plot_pop_heatmap_by_time(all_data, value_col, time_col="Time", region_level=
             ax.set_ylabel("")
         cross_fix_pos, stim_on_pos = 4.5, 9.5
         card_fix_pos, fb_pos = 9.5, 17.5
-        axs[regions_to_idx[region], 0].set_title(region)
+        axs[regions_to_idx[region], 0].set_title(display_name, loc='left')
         axs[regions_to_idx[region], 0].axvline(cross_fix_pos, color='grey', linestyle='dotted', linewidth=3)
         axs[regions_to_idx[region], 0].axvline(stim_on_pos, color='grey', linestyle='dotted', linewidth=3)
         axs[regions_to_idx[region], 1].axvline(card_fix_pos, color='grey', linestyle='dotted', linewidth=3)
@@ -1146,7 +1178,7 @@ def plot_pop_heatmap_by_time(all_data, value_col, time_col="Time", region_level=
     fb_ticks = [-1.5, -1, -.5, 0, .5, 1, 1.5]
     fb_tick_pos = [ft * 10 + 18 - 0.5 for ft in fb_ticks]
     
-    axs[-1, 0].set_xlabel("Time to card appear (s)")
+    axs[-1, 0].set_xlabel("Time to stimuli appear (s)")
     axs[-1, 0].set_xticks(stim_tick_pos)
     axs[-1, 0].set_xticklabels(stim_ticks)
 
@@ -1250,7 +1282,7 @@ def plot_psth_both_events(mode, unit_id, feat, args, pval_res=None):
 
     ax1, ax2 = axs[1, :]
     ax1.set_ylabel("Trials")
-    ax1.set_xlabel(f"Time to cards appear (s)")
+    ax1.set_xlabel(f"Time to stimuli appear (s)")
     stim_ticks = [-1, -.5, 0, .5, 1]
     ax1.set_xticks(stim_ticks)
     ax1.set_xticklabels(stim_ticks)

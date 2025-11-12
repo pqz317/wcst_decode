@@ -64,7 +64,7 @@ def plot(res, y_col, hue_col=None, hue_order=None, palette=None, hue_display_nam
     ax2.axvline(-.8, color='grey', linestyle='dotted', linewidth=3)
     ax2.axvline(0, color='grey', linestyle='dotted', linewidth=3)
     ax1.set_ylabel(y_col_to_label[y_col])
-    ax1.set_xlabel(f"Time to cards appear (s)")
+    ax1.set_xlabel(f"Time to stimuli appear (s)")
     stim_ticks = [-1, -.5, 0, .5, 1]
     ax1.set_xticks(stim_ticks)
     ax1.set_xticklabels(stim_ticks)
@@ -126,7 +126,7 @@ def plot_for_mode(mode, by_region):
             hue_col="region",
             hue_order=visualization_utils.REGION_ORDER, 
             palette=visualization_utils.REGION_TO_COLOR,
-            hue_display_names=visualization_utils.REGION_TO_DISPLAY_NAMES
+            hue_display_names=visualization_utils.REGION_TO_ABBREV
         )
         fig.savefig(f"{OUTPUT_DIR}/{mode}_frac_sig_by_region.png")
         fig.savefig(f"{OUTPUT_DIR}/{mode}_frac_sig_by_region.svg")
@@ -137,7 +137,7 @@ def plot_for_mode(mode, by_region):
             hue_col="region",
             hue_order=visualization_utils.REGION_ORDER, 
             palette=visualization_utils.REGION_TO_COLOR,
-            hue_display_names=visualization_utils.REGION_TO_DISPLAY_NAMES
+            hue_display_names=visualization_utils.REGION_TO_ABBREV
         )
         fig.savefig(f"{OUTPUT_DIR}/{mode}_frac_var_by_region.png")
         fig.savefig(f"{OUTPUT_DIR}/{mode}_frac_var_by_region.svg")

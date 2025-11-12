@@ -26,10 +26,10 @@ from tqdm import tqdm
 import seaborn as sns
 
 BOTH_PAIRS_PATH = "/data/patrick_res/sessions/both/pairs_at_least_3blocks_10sess.pickle"
-OUTPUT_DIR = "/data/patrick_res/figures/wcst_paper/belief_similarities_explore_subpops_frs"
+OUTPUT_DIR = "/data/patrick_res/figures/wcst_paper/belief_similarities_explore_subpops_frs_updated"
 
 def main():
-    plt.rcParams.update({'font.size': 16})
+    plt.rcParams.update({'font.size': 14})
     parser = argparse.ArgumentParser()
     parser = add_defaults_to_parser(BeliefPartitionConfigs(), parser)
     parser.add_argument(f'--sim_type', default="cosine_sim")
@@ -37,6 +37,7 @@ def main():
     args = parser.parse_args()
 
     regions = [None] + REGIONS_OF_INTEREST
+    # regions = [None]
     for region in tqdm(regions):
         pairs = pd.read_pickle(BOTH_PAIRS_PATH).reset_index(drop=True)
         args.subject = "both"
@@ -67,7 +68,7 @@ def main():
             y_lims=(None, None),
             sig_pairs=sig_pairs
         )
-        ax1.set_ylabel("sim(within dim.) - sim(across dim.)")
+        ax1.set_ylabel("sim(within) - sim(across)")
 
         fig.savefig(f"{OUTPUT_DIR}/{region}_{args.sig_unit_level}_sim_diff_by_dim.svg")
         fig.savefig(f"{OUTPUT_DIR}/{region}_{args.sig_unit_level}sim_diff_by_dim.png", dpi=300)

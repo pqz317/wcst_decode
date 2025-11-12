@@ -26,29 +26,30 @@ import scripts.pseudo_decoding.belief_partitions.belief_partitions_io as belief_
 import scipy
 import argparse
 import copy
+from tqdm import tqdm
 
-OUTPUT_DIR = "/data/patrick_res/figures/wcst_paper/ccgp_no_cond"
+OUTPUT_DIR = "/data/patrick_res/figures/wcst_paper/ccgp_updated"
 
 CCGP_DIM_TO_DISPLAY_NAMES = {
     "within dim": "within dim.",
-    "within dim shuffle": "within dim. shuffle",
+    "within dim shuffle": "within shuffle",
     "across dim": "across dim.",
-    "across dim shuffle": "across dim. shuffle",
+    "across dim shuffle": "across shuffle",
 }
 
 CCGP_DIM_TO_COLOR = {
     "within dim.": "#1b9e77",
-    "within dim. shuffle": "#b3e2cd",
+    "within shuffle": "#b3e2cd",
     "across dim.": "#d95f02",
-    "across dim. shuffle": "#fdcdac"
+    "across shuffle": "#fdcdac"
 }
 
 
 def main():
     pairs = pd.read_pickle(PAIRS_PATH).reset_index(drop=True)
-    # regions = [None] + REGIONS_OF_INTEREST
-    regions = [None]
-    for region in regions:
+    regions = [None] + REGIONS_OF_INTEREST
+    # regions = [None]
+    for region in tqdm(regions):
         args = argparse.Namespace(
             **BeliefPartitionConfigs()._asdict()
         )
@@ -66,11 +67,15 @@ def main():
         res["condition"] = res.apply(lambda x: f"{x.dim_type} shuffle" if "shuffle" in x.condition else x.dim_type, axis=1)
 
         sig_pairs = [("within dim.", "across dim.", "black")]
+        fig, axs= plt.subplots(1, 2, figsize=(7, 7 / 5 * 3), width_ratios=(4, 6), sharey=True)
+
         fig, (ax1, ax2) = visualization_utils.visualize_bars_time(args, res, 
             display_map=CCGP_DIM_TO_DISPLAY_NAMES, 
             color_map=CCGP_DIM_TO_COLOR,
             y_lims=(0.5, None),
-            sig_pairs=sig_pairs
+            sig_pairs=sig_pairs,
+            fig=fig,
+            axs=axs
         )
         ax1.set_ylabel("Accuracy")
         fig.savefig(f"{OUTPUT_DIR}/{region}_belief_ccgp_by_dim.svg")

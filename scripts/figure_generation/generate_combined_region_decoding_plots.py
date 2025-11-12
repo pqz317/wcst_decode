@@ -53,9 +53,11 @@ def main():
             num_shuffles=10, 
             hue_order=visualization_utils.REGION_ORDER,
             palette=visualization_utils.REGION_TO_COLOR,
-            display_names=visualization_utils.REGION_TO_DISPLAY_NAMES)
+            display_names=visualization_utils.REGION_TO_ABBREV)
         fig.savefig(f"{OUTPUT_DIR}/{decode_var}_accs.svg")
         fig.savefig(f"{OUTPUT_DIR}/{decode_var}_accs.png")
+        plt.close(fig)
+
 
 if __name__ == "__main__":
     main()

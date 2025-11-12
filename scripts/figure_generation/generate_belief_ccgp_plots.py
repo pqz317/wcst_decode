@@ -27,12 +27,14 @@ import scipy
 import argparse
 import copy
 
-OUTPUT_DIR = "/data/patrick_res/figures/wcst_paper/ccgp"
+OUTPUT_DIR = "/data/patrick_res/figures/wcst_paper/ccgp_updated"
 
 
 def main():
+    plt.rcParams.update({'font.size': 14})
     pairs = pd.read_pickle(PAIRS_PATH).reset_index(drop=True)
     regions = [None] + REGIONS_OF_INTEREST
+    # regions = [None]
     for region in regions:
         args = argparse.Namespace(
             **BeliefPartitionConfigs()._asdict()
@@ -42,15 +44,17 @@ def main():
         args.subject = "both"
         args.mode = "feat_belief"
         args.base_output_path = "/data/patrick_res/ccgp_conf"
-        args.sig_unit_level = "pref_conf_99th_window_filter_drift"
+        args.sig_unit_level = "pref_conf_99th_no_cond_window_filter_drift"
 
         res = belief_partitions_io.read_ccgp_results(args, pairs, conds=["within_cond", "across_cond"])
         res = res[res.Time <= 0]
-        sig_pairs = [("within cond.", "within cond. shuffle", "#1b9e77"), ("across cond.", "across cond. shuffle", "#d95f02")]
-        fig, (ax1, ax2) = visualization_utils.visualize_bars_time(args, res, y_lims=(0.5, None), sig_pairs=sig_pairs)
+        sig_pairs = [("within cond.", "within shuffle", "#1b9e77"), ("across cond.", "across shuffle", "#d95f02")]
+        fig, axs= plt.subplots(1, 2, figsize=(7, 7 / 5 * 3), width_ratios=(4, 6), sharey=True)
+        fig, (ax1, ax2) = visualization_utils.visualize_bars_time(args, res, y_lims=(0.5, None), sig_pairs=sig_pairs, fig=fig, axs=axs)
         ax1.set_ylabel("Accuracy")
         fig.savefig(f"{OUTPUT_DIR}/{region}_belief_ccgp.svg")
         fig.savefig(f"{OUTPUT_DIR}/{region}_belief_ccgp.png", dpi=300)
+        plt.close(fig)
 
 
 

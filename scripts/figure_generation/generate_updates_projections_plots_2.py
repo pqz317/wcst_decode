@@ -63,7 +63,7 @@ def plot_choice_reward(res, pvals, mode, shuffle_mean):
     res = res[res.cond.isin(order)]
 
     res = res.sort_values(by="cond", key=lambda x: x.map(order.index))
-    fig, ax = plt.subplots(figsize=(6, 5))
+    fig, ax = plt.subplots(figsize=(5, 4))
     sns.barplot(res, x="cond", y="proj", errorbar="se", width=0.5, palette=CONDITION_TO_COLORS, ax=ax)
     ax.axhline(shuffle_mean, color="grey", linestyle="dotted", linewidth=3)
 
@@ -96,7 +96,7 @@ def plot_chose_reward_by_partitions(res, pvals, mode, reward, shuffle_mean):
     fig.savefig(f"{OUTPUT_DIR}/{mode}_chose_{reward}_by_partition.svg")
 
 def main():
-    plt.rcParams.update({'font.size': 14})
+    plt.rcParams.update({'font.size': 15})
 
     args = argparse.Namespace(
         **BeliefPartitionConfigs()._asdict()

@@ -49,18 +49,9 @@ def plot_choice_reward(stats_res, subject, shuffle_vals):
     stats_res = stats_res[stats_res.cond.isin(order)]
 
     stats_res = stats_res.sort_values(by="cond", key=lambda x: x.map(order.index))
-    fig, ax = plt.subplots(figsize=(6, 5))
+    fig, ax = plt.subplots(figsize=(5, 4))
     sns.barplot(stats_res, x="cond", y="change in prob", errorbar="se", width=0.5, palette=CONDITION_TO_COLORS, ax=ax)
     ax.axhline(shuffle_vals.mean(), color="grey", linestyle="dotted", linewidth=3)
-
-    # visualization_utils.add_significance_bars(fig, ax, stats_res, "cond", "change in prob", pairs=[
-    #     ("chose X / correct", "shuffle"),
-    #     ("chose X / incorrect", "shuffle"),
-    #     ("correct", "shuffle"),
-    #     ("incorrect", "shuffle"),
-    # ], 
-    # # test=stats_utils.get_permutation_test_func(test_type="two_side")
-    # )
 
     visualization_utils.add_significance_markers(
         fig, ax, stats_res, "cond", "change in prob", 
@@ -94,8 +85,8 @@ def plot_chose_reward_by_partitions(stats_res, reward, subject, shuffle_vals):
 
 
 def main():
-    plt.rcParams.update({'font.size': 14})
-    subject = "BL"
+    plt.rcParams.update({'font.size': 15})
+    subject = "SA"
     all_beh = behavioral_utils.load_all_beh_for_sub(subject)
     feat_sessions = pd.read_pickle(FEATS_PATH.format(sub=subject))
     stats_res = []
@@ -112,7 +103,6 @@ def main():
     shuffle_vals = stats_res["change in prob"].copy()
 
     plot_choice_reward(stats_res, subject, shuffle_vals)
-    # plot_full_choice_reward(stats_res, subject)
     plot_chose_reward_by_partitions(stats_res, "correct", subject, shuffle_vals)
     plot_chose_reward_by_partitions(stats_res, "incorrect", subject, shuffle_vals)
 

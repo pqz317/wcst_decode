@@ -47,9 +47,9 @@ CROSS_ALPHA = 0.01
 output_dir = "/data/patrick_res/figures/wcst_paper/decoding_updated"
 
 def plot_weights(args):
-    all_conts = belief_partitions_io.get_contributions_for_all_time(args, region_level="structure_level2")
-    peaks, orders = spike_utils.find_peaks(all_conts, value_col="mean_cont", time_col="abs_time", region_level="structure_level2")
-    return visualization_utils.plot_pop_heatmap_by_time(all_conts, value_col="mean_cont", region_level="structure_level2", orders=orders)
+    all_conts = belief_partitions_io.get_contributions_for_all_time(args, region_level="structure_level2_cleaned")
+    peaks, orders = spike_utils.find_peaks(all_conts, value_col="mean_cont", time_col="abs_time", region_level="structure_level2_cleaned")
+    return visualization_utils.plot_pop_heatmap_by_time(all_conts, value_col="mean_cont", region_level="structure_level2_cleaned", orders=orders)
 
 
 def main():
@@ -77,19 +77,23 @@ def main():
         fig_acc, _ = visualization_utils.plot_combined_accs(args)
         fig_acc.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_accs.svg")
         fig_acc.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_accs.png")
+        plt.close(fig_acc)
 
         fig_cross, _ = visualization_utils.plot_combined_cross_accs(args, ignore_overlap=True, alpha=CROSS_ALPHA)
         fig_cross.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_cross_time_accs_alpha_{CROSS_ALPHA}.svg")
         fig_cross.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_cross_time_accs_alpha_{CROSS_ALPHA}.png")
+        plt.close(fig_cross)
 
         fig_cross_no_diag, _ = visualization_utils.plot_combined_cross_accs_no_diag(args, alpha=CROSS_ALPHA)
         fig_cross_no_diag.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_cross_time_no_diag_accs_alpha_{CROSS_ALPHA}.svg")
         fig_cross_no_diag.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_cross_time_no_diag_accs_alpha_{CROSS_ALPHA}.png")
-            
+        plt.close(fig_cross_no_diag)
+
 
         fig_weights, _ = plot_weights(args)
         fig_weights.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_weights.svg")
         fig_weights.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_weights.png", dpi=300)
+        plt.close(fig_weights)
 
 if __name__ == "__main__":
     main()
