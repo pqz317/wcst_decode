@@ -35,7 +35,7 @@ BOTH_SIG_UNITS_PATH = "/data/patrick_res/firing_rates/{level}_units.pickle"
 
 # regions of interest
 REGIONS_OF_INTEREST = ["amygdala_Amy", "basal_ganglia_BG", "inferior_temporal_cortex_ITC", "medial_pallium_MPal", "lateral_prefrontal_cortex_lat_PFC", "anterior_cingulate_gyrus_ACgG"]
-BAD_REGIONS = ["unknown", "cerebellum_Cb", "preoptic_complex_POC", "somatosensory_cortex_SI/SII", "diagonal_subpallium_DSP"]
+BAD_REGIONS = ["unknown", "cerebellum_Cb", "preoptic_complex_POC", "somatosensory_cortex_SI/SII", "diagonal_subpallium_DSP", "core_and_belt_areas_of_auditory_cortex_core/belt", "middle_temporal_area_MT"]
 
 MODE_TO_CLASSES = {
     "conf": ["Low", "High"],

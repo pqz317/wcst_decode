@@ -145,7 +145,7 @@ def plot_for_mode(mode, by_region):
 
 
 def main():
-    plt.rcParams.update({'font.size': 14})
+    plt.rcParams.update({'font.size': 16})
     for mode in tqdm(MODES):
         plot_for_mode(mode, by_region=False)
         plot_for_mode(mode, by_region=True)

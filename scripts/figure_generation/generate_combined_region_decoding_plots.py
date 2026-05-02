@@ -30,6 +30,7 @@ OUTPUT_DIR = "/data/patrick_res/figures/wcst_paper/decoding_combined_region_upda
 
 
 def main():
+    plt.rcParams.update({'font.size': 16})
     for decode_var in DECODE_VARS:
         args = argparse.Namespace(
             **BeliefPartitionConfigs()._asdict()

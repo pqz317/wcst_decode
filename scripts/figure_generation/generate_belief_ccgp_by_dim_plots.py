@@ -46,6 +46,7 @@ CCGP_DIM_TO_COLOR = {
 
 
 def main():
+    plt.rcParams.update({'font.size': 16})
     pairs = pd.read_pickle(PAIRS_PATH).reset_index(drop=True)
     regions = [None] + REGIONS_OF_INTEREST
     # regions = [None]
@@ -67,7 +68,7 @@ def main():
         res["condition"] = res.apply(lambda x: f"{x.dim_type} shuffle" if "shuffle" in x.condition else x.dim_type, axis=1)
 
         sig_pairs = [("within dim.", "across dim.", "black")]
-        fig, axs= plt.subplots(1, 2, figsize=(7, 7 / 5 * 3), width_ratios=(4, 6), sharey=True)
+        fig, axs= plt.subplots(1, 2, figsize=(8, 8 / 5 * 3), width_ratios=(4, 6), sharey=True)
 
         fig, (ax1, ax2) = visualization_utils.visualize_bars_time(args, res, 
             display_map=CCGP_DIM_TO_DISPLAY_NAMES, 

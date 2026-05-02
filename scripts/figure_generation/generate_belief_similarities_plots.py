@@ -31,7 +31,7 @@ from tqdm import tqdm
 OUTPUT_DIR = "/data/patrick_res/figures/wcst_paper/belief_similarities_explore_subpops_frs_updated"
 
 def main():
-    plt.rcParams.update({'font.size': 14})
+    plt.rcParams.update({'font.size': 16})
     pairs = pd.read_pickle(PAIRS_PATH).reset_index(drop=True)
     regions = [None] + REGIONS_OF_INTEREST
     # regions = [None]
@@ -58,12 +58,14 @@ def main():
         }
         min = all_data.groupby(["TimeIdx", "type"]).cosine_sim.mean().min()
         sig_pairs = [("true", "shuffle", "black")]
-
+        fig, axs= plt.subplots(1, 2, figsize=(8, 8 / 5 * 2.5), width_ratios=(4, 6), sharey=True)
         fig, (ax1, ax2) = visualization_utils.visualize_bars_time(
             args, all_data, y_col="cosine_sim", hue_col="type", 
             display_map=None, color_map=color_map, 
             y_lims=(min, None),
-            sig_pairs=sig_pairs
+            sig_pairs=sig_pairs,
+            fig=fig, 
+            axs=axs
         )
 
         ax1.set_ylabel("Cosine sim of beliefs")

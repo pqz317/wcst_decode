@@ -28,6 +28,7 @@ import itertools
 import matplotlib.gridspec as gridspec
 import utils.behavioral_utils as behavioral_utils
 from matplotlib.colors import ListedColormap, BoundaryNorm
+from matplotlib.ticker import MaxNLocator
 
 
 # REGION_TO_COLOR = {
@@ -94,7 +95,7 @@ MODE_TO_COLOR = {
     "preference": "tab:blue",
     "confidence": "tab:red",
     "reward": "tab:green",
-    "feature selected": "tab:orange",
+    "feature": "tab:orange",
     "shuffle": "gray"
 }
 
@@ -105,7 +106,7 @@ MODE_TO_DISPLAY_NAMES = {
     "pref": "preference",
     "conf": "confidence",
     "reward": "reward",
-    "choice": "feature selected",
+    "choice": "feature",
     "shuffle": "shuffle"
 }
 
@@ -267,7 +268,13 @@ def plotly_add_glass_brain(fs, fig1, subject, areas=['brain'], show_axis=False):
             layout=layout
         )
         fig_data = fig_data + fig2.data
-        
+
+    layout = go.Layout(
+        scene_xaxis_visible=False, 
+        scene_yaxis_visible=False,
+        scene_zaxis_visible=False,
+        showlegend=True
+    )
     fig3 = go.Figure(data=fig_data, layout=fig1.layout)
     if not show_axis:
         fig3.update_layout(layout)
@@ -287,7 +294,7 @@ def get_name_to_color(positions, structure_level, color_list=None, unknown_color
     return name_to_color
 
 
-def generate_glass_brain(positions, structure_level, color_list=None, name_to_color=None, unknown_color="#adadad"):
+def generate_glass_brain(positions, structure_level, color_list=None, name_to_color=None, unknown_color="#adadad", sub="SA"):
     # hack to get things in the same order
     positions = positions.sort_values(structure_level)
     if not name_to_color:
@@ -297,7 +304,7 @@ def generate_glass_brain(positions, structure_level, color_list=None, name_to_co
         color=structure_level, 
         labels={structure_level: "Structure"},
         color_discrete_map=name_to_color)
-    fig = plotly_add_glass_brain(None, fig1, "SA", areas='all', show_axis=False)
+    fig = plotly_add_glass_brain(None, fig1, sub, areas=['brain'], show_axis=False)
     fig.update_layout(
         autosize=True,
         width=750,
@@ -489,8 +496,8 @@ def plot_and_calc_correlation(var_a, var_b, ax):
     Plots a scatterplot of two variables, fits a line
     """
     slope, intercept, r_value, p_value, std_err = stats.linregress(var_a, var_b)
-    ax.scatter(var_a, var_b, alpha=0.3, color="black")
-    ax.plot(var_a, var_a * slope + intercept)
+    sns.scatterplot(x=var_a, y=var_b, alpha=0.3, ax=ax, color="black")
+    sns.lineplot(x=var_a, y=var_a * slope + intercept, ax=ax, color="black", label=f"r: {r_value:.3f}")
     return slope, intercept, r_value, p_value, std_err
 
 def sns_plot_correlation(df, x_col, y_col, ax):
@@ -558,12 +565,12 @@ def visualize_bars_time(
         plot_sig_bars(p_by_time, prev_y_min - interval / 2, ax2, color)
         add_significance_bars(fig, ax1, df, x=hue_col, y=y_col, pairs=[(var1, var2)], test=stats_utils.get_permutation_test_func())
     ax1.set_xlabel("")
-    ax1.set_xticklabels(ax1.get_xticklabels(), rotation=45)
+    ax1.set_xticklabels(ax1.get_xticklabels(), rotation=45, ha="right")
 
     ax2.set_xlabel("Time to stimuli appear (s)")
     ax2.axvline(-.5, color='grey', linestyle='dotted', linewidth=3)
 
-    legend = ax2.legend(fontsize=10) 
+    legend = ax2.legend(fontsize=14) 
     for line in legend.get_lines():
         line.set_linewidth(6)
 
@@ -660,11 +667,22 @@ def visualize_cross_time_with_sig(args, cross_res, ax, vmin, vmax, p_vals=None, 
     if sig_thresh is not None:
         sig_mask = p_vals.pivot(index="TrainTime", columns="TestTime", values="p")
         sig_mask = (~pivoted.isna()) & (sig_mask >= sig_thresh)
-        pivoted[sig_mask] = -1
-    cmap = ListedColormap(['black'] + sns.color_palette("rocket", 256).as_hex())
-    boundaries = [-1, vmin] + list(np.linspace(vmin, vmax, 256))
-    norm = BoundaryNorm(boundaries, cmap.N)
-    sns.heatmap(pivoted, ax=ax, cmap=cmap, norm=norm, cbar=False, vmin=vmin, vmax=vmax)
+        # pivoted[sig_mask] = -1
+    cmap = sns.color_palette("rocket", as_cmap=True)
+    cmap.set_bad("grey")
+    sns.heatmap(
+        pivoted,
+        ax=ax,
+        cmap=cmap,
+        mask=sig_mask,
+        vmin=vmin,
+        vmax=vmax,
+        cbar=False
+    )
+    # cmap = ListedColormap(['grey'] + sns.color_palette("rocket", 256).as_hex())
+    # boundaries = [-1, vmin] + list(np.linspace(vmin, vmax, 256))
+    # norm = BoundaryNorm(boundaries, cmap.N)
+    # sns.heatmap(pivoted, ax=ax, cmap=cmap, norm=norm, cbar=False, vmin=vmin, vmax=vmax)
 
 
 def plot_combined_accs(args, by_dim=False, modes=None, with_pvals=True):
@@ -887,15 +905,16 @@ def plot_combined_cross_accs(args, ignore_overlap=False, alpha=0.01):
     axs[1, 1].axhline(fb_pos, color='white', linestyle='dotted', linewidth=3)
     # axs[1, 1].set_yticks([])
 
-    fig.supylabel("Train time")
-    fig.supxlabel("Test time")
+    # fig.supylabel("Train time")
+    # fig.supxlabel("Test time")
     fig.tight_layout()
 
     # Adjust subplots to make space for colorbar
     fig.subplots_adjust(right=0.85)
     # Create a single colorbar to the right of ax2
     cbar_ax = fig.add_axes([0.87, 0.15, 0.03, 0.7])
-    cbar = fig.colorbar(axs[1, 1].collections[0], cax=cbar_ax, orientation='vertical')
+    kwargs = {'format': '%.2f'}
+    cbar = fig.colorbar(axs[1, 1].collections[0], cax=cbar_ax, orientation='vertical', **kwargs)
     cbar.set_label('Accuracy')
 
     # fig.tight_layout()
@@ -1023,7 +1042,7 @@ def plot_combined_cross_accs_trunc(args, alpha=0.01):
     return fig, axs
 
 
-def plot_combined_cross_accs_no_diag(args, alpha=0.01):
+def plot_combined_cross_accs_no_diag(args, alpha=0.01, all_min=None, all_max=None):
     stim_args = copy.deepcopy(args)
     stim_args.trial_event = "StimOnset"
     stim_res = belief_partitions_io.read_results(stim_args, FEATURES)
@@ -1039,8 +1058,8 @@ def plot_combined_cross_accs_no_diag(args, alpha=0.01):
 
     stim_n = cross_stim_res.TestTime.nunique()
     fb_n = cross_fb_res.TestTime.nunique()
-    ratio = 5
 
+    ratio = 5.5
     # Define layout using a nested list (None means empty space)
     layout = [
         ["stim", "fb"],
@@ -1064,14 +1083,14 @@ def plot_combined_cross_accs_no_diag(args, alpha=0.01):
     
     # stim_ax = fig.add_subplot(gs[:stim_n, :stim_n])
     # fb_ax = fig.add_subplot(gs[:fb_n, stim_n:])
-
-    all_res = pd.concat((cross_stim_res, cross_fb_res))
-    all_max = all_res.groupby(["TestTime", "TrainTime", "TrainEvent", "TestEvent"]).Accuracy.mean().max()
-
-    all_decoder_res = pd.concat((stim_res, fb_res))
-    shuffles = all_decoder_res[all_decoder_res["mode"] == f"{args.mode}_shuffle"]
-    shuffle_means = shuffles.groupby(["Time"]).Accuracy.mean().reset_index(name="ShuffleAccuracy")
-    all_min = shuffle_means.ShuffleAccuracy.mean()
+    if all_max is None: 
+        all_res = pd.concat((cross_stim_res, cross_fb_res))
+        all_max = all_res.groupby(["TestTime", "TrainTime", "TrainEvent", "TestEvent"]).Accuracy.mean().max()
+    if all_min is None: 
+        all_decoder_res = pd.concat((stim_res, fb_res))
+        shuffles = all_decoder_res[all_decoder_res["mode"] == f"{args.mode}_shuffle"]
+        shuffle_means = shuffles.groupby(["Time"]).Accuracy.mean().reset_index(name="ShuffleAccuracy")
+        all_min = shuffle_means.ShuffleAccuracy.mean()
 
     visualize_cross_time_with_sig(args, cross_stim_res, stim_ax, vmin=all_min, vmax=all_max, p_vals=stim_pvals, sig_thresh=alpha)
     visualize_cross_time_with_sig(args, cross_fb_res, fb_ax, vmin=all_min, vmax=all_max, p_vals=fb_pvals, sig_thresh=alpha)
@@ -1083,8 +1102,8 @@ def plot_combined_cross_accs_no_diag(args, alpha=0.01):
     cross_fix_pos, stim_on_pos = 4.5, 9.5
     card_fix_pos, fb_pos = 9.5, 17.5
 
-    stim_ax.set_ylabel("Time to stimuli appear (s)")
-    stim_ax.set_xlabel("Time to stimuli appear (s)")
+    stim_ax.set_ylabel("Time to stim. appear (s)", fontsize=18)
+    stim_ax.set_xlabel("Time to stim. appear (s)", fontsize=18)
     stim_ax.set_xticks(stim_tick_pos)
     stim_ax.set_xticklabels(stim_ticks)
     stim_ax.set_yticks(stim_tick_pos)
@@ -1094,8 +1113,8 @@ def plot_combined_cross_accs_no_diag(args, alpha=0.01):
     stim_ax.axhline(cross_fix_pos, color='white', linestyle='dotted', linewidth=3)
     stim_ax.axhline(stim_on_pos, color='white', linestyle='dotted', linewidth=3)
 
-    fb_ax.set_xlabel("Time to feedback (s)")
-    fb_ax.set_ylabel("Time to feedback (s)")
+    fb_ax.set_xlabel("Time to feedback (s)", fontsize=18)
+    fb_ax.set_ylabel("Time to feedback (s)", fontsize=18)
     fb_ax.set_xticks(fb_tick_pos)
     fb_ax.set_xticklabels(fb_ticks)
     fb_ax.set_yticks(fb_tick_pos)
@@ -1105,8 +1124,8 @@ def plot_combined_cross_accs_no_diag(args, alpha=0.01):
     fb_ax.axhline(card_fix_pos, color='white', linestyle='dotted', linewidth=3)
     fb_ax.axhline(fb_pos, color='white', linestyle='dotted', linewidth=3)
 
-    fig.supylabel("Train time")
-    fig.supxlabel("Test time")
+    # fig.supylabel("Train time")
+    # fig.supxlabel("Test time")
 
     # # Adjust subplots to make space for colorbar
     # fig.subplots_adjust(right=0.85)
@@ -1114,10 +1133,11 @@ def plot_combined_cross_accs_no_diag(args, alpha=0.01):
     # cbar_ax = fig.add_axes([0.87, 0.15, 0.03, 0.7])
     # cbar = fig.colorbar(fb_ax.collections[0], cax=cbar_ax, orientation='vertical')
     # cbar.set_label('Accuracy')
-    fig.colorbar(fb_ax.collections[0], ax=fb_ax, orientation='vertical', location='right', label='Accuracy')
+    kwargs = {'format': '%.2f'}
+    cbar = fig.colorbar(fb_ax.collections[0], ax=fb_ax, orientation='vertical', location='right', label='Accuracy', **kwargs)
+    tick_locations = np.linspace(all_min, all_max, num=5)
+    cbar.set_ticks(tick_locations)
 
-
-    # fig.tight_layout()
     return fig, (stim_ax, fb_ax)
 
 
@@ -1278,7 +1298,7 @@ def plot_psth_both_events(mode, unit_id, feat, args, pval_res=None):
         ax2.axvline(-.8, color='grey', linestyle='dotted', linewidth=3)
         ax2.axvline(0, color='grey', linestyle='dotted', linewidth=3)
     
-    axs[0, 0].set_ylabel("Firing Rate (Hz)")
+    axs[0, 0].set_ylabel("Firing rate (Hz)")
 
     ax1, ax2 = axs[1, :]
     ax1.set_ylabel("Trials")
@@ -1298,9 +1318,12 @@ def plot_psth_both_events(mode, unit_id, feat, args, pval_res=None):
     axs[1, 0].get_legend().remove()
 
     if mode == "choice":
-        labels = [f"Selected card w. {feat}", f"Selected card w. no {feat}"]
+        dim = FEATURE_TO_DIM[feat]
+        labels = [f"{feat} {dim}", f"other {dim}"]
     elif mode == "pref":
-        labels = [f"Prefers {feat}", "Prefers other"]
+        labels = [f"prefers {feat}", "prefers other"]
+    # always lowercase legends 
+    labels = [lab.lower() for lab in labels]
     legend = fig.legend(
         handles, labels,
         loc='upper left',
@@ -1366,9 +1389,9 @@ def format_plot(
         ax.spines['left'].set_visible(leftspine)
         ax.spines['bottom'].set_linewidth(linewidth)
         ax.spines['left'].set_linewidth(linewidth)
-        ax.tick_params(axis='both', length=ticklength, labelsize=ticklabelsize, width=tickwidth)
-        ax.xaxis.label.set_size(axislabelsize)
-        ax.yaxis.label.set_size(axislabelsize)
+        # ax.tick_params(axis='both', length=ticklength, labelsize=ticklabelsize, width=tickwidth)
+        # ax.xaxis.label.set_size(axislabelsize)
+        # ax.yaxis.label.set_size(axislabelsize)
 
 
 def compute_bar_positions_from_df(df, x, y, hue=None, group_width=0.8):

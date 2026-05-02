@@ -29,7 +29,7 @@ BOTH_PAIRS_PATH = "/data/patrick_res/sessions/both/pairs_at_least_3blocks_10sess
 OUTPUT_DIR = "/data/patrick_res/figures/wcst_paper/belief_similarities_explore_subpops_frs_updated"
 
 def main():
-    plt.rcParams.update({'font.size': 14})
+    plt.rcParams.update({'font.size': 16})
     parser = argparse.ArgumentParser()
     parser = add_defaults_to_parser(BeliefPartitionConfigs(), parser)
     parser.add_argument(f'--sim_type', default="cosine_sim")
@@ -62,11 +62,14 @@ def main():
             "shuffle": "grey",
         }
         sig_pairs = [("true", "shuffle", "black")]
+        fig, axs= plt.subplots(1, 2, figsize=(8, 8 / 5 * 2.5), width_ratios=(4, 6), sharey=True)
         fig, (ax1, ax2) = visualization_utils.visualize_bars_time(
             args, crossed, y_col="sim_diff", hue_col="type", 
             display_map=None, color_map=color_map, 
             y_lims=(None, None),
-            sig_pairs=sig_pairs
+            sig_pairs=sig_pairs,
+            fig=fig,
+            axs=axs
         )
         ax1.set_ylabel("sim(within) - sim(across)")
 

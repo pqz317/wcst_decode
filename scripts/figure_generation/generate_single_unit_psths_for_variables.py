@@ -85,7 +85,7 @@ def plot_for_mode_region(subject, mode, region):
         plt.close(fig)
 
 def main():
-    plt.rcParams.update({'font.size': 14})
+    plt.rcParams.update({'font.size': 16})
     parser = argparse.ArgumentParser()
     parser.add_argument(f'--run_id', default=None, type=int)
     args = parser.parse_args()

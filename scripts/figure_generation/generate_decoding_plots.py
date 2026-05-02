@@ -41,7 +41,7 @@ SUB_REGION_LEVEL_REGIONS = [
 ]
 
 DECODE_VARS = ["pref", "conf", "choice", "reward"]
-# DECODE_VARS = ["pref"]
+# DECODE_VARS = ["choice"]
 CROSS_ALPHA = 0.01
 
 output_dir = "/data/patrick_res/figures/wcst_paper/decoding_updated"
@@ -53,16 +53,14 @@ def plot_weights(args):
 
 
 def main():
-    plt.rcParams.update({'font.size': 14})
+    plt.rcParams.update({'font.size': 16})
 
-    for (sub, region_level, regions), decode_var in tqdm(list(itertools.product(SUB_REGION_LEVEL_REGIONS, DECODE_VARS))):
+    for decode_var in DECODE_VARS:
         args = argparse.Namespace(
             **BeliefPartitionConfigs()._asdict()
         )
-        args.subject = sub
-        args.region_level = region_level
-        args.regions = regions
         args.mode = decode_var
+        args.subject = "both"
 
         if decode_var in ["choice", "reward"]:
             args.base_output_path = "/data/patrick_res/choice_reward"
@@ -73,27 +71,35 @@ def main():
             args.sig_unit_level = "response_99th_window_filter_drift"
         else: 
             args.sig_unit_level = f"{decode_var}_99th_window_filter_drift"
-        plt.rcParams.update({'font.size': 14})
-        fig_acc, _ = visualization_utils.plot_combined_accs(args)
-        fig_acc.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_accs.svg")
-        fig_acc.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_accs.png")
-        plt.close(fig_acc)
+        whole_min, whole_max = belief_partitions_io.compute_cross_time_min_max_for_regions(args, regions=[None])
+        regions_min, regions_max = belief_partitions_io.compute_cross_time_min_max_for_regions(args, regions=REGIONS_OF_INTEREST)
 
-        fig_cross, _ = visualization_utils.plot_combined_cross_accs(args, ignore_overlap=True, alpha=CROSS_ALPHA)
-        fig_cross.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_cross_time_accs_alpha_{CROSS_ALPHA}.svg")
-        fig_cross.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_cross_time_accs_alpha_{CROSS_ALPHA}.png")
-        plt.close(fig_cross)
+        for (sub, region_level, regions) in tqdm(SUB_REGION_LEVEL_REGIONS):
+            args.region_level = region_level
+            args.regions = regions
 
-        fig_cross_no_diag, _ = visualization_utils.plot_combined_cross_accs_no_diag(args, alpha=CROSS_ALPHA)
-        fig_cross_no_diag.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_cross_time_no_diag_accs_alpha_{CROSS_ALPHA}.svg")
-        fig_cross_no_diag.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_cross_time_no_diag_accs_alpha_{CROSS_ALPHA}.png")
-        plt.close(fig_cross_no_diag)
+            fig_acc, _ = visualization_utils.plot_combined_accs(args)
+            fig_acc.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_accs.svg")
+            fig_acc.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_accs.png")
+            plt.close(fig_acc)
+
+            # fig_cross, _ = visualization_utils.plot_combined_cross_accs(args, ignore_overlap=True, alpha=CROSS_ALPHA)
+            # fig_cross.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_cross_time_accs_alpha_{CROSS_ALPHA}.svg")
+            # fig_cross.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_cross_time_accs_alpha_{CROSS_ALPHA}.png")
+            # plt.close(fig_cross)
+            # all_min = whole_min if regions is None else regions_min
+            all_min = 0.5
+            all_max = whole_max if regions is None else regions_max
+            fig_cross_no_diag, _ = visualization_utils.plot_combined_cross_accs_no_diag(args, alpha=CROSS_ALPHA, all_min=all_min, all_max=all_max)
+            fig_cross_no_diag.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_cross_time_no_diag_accs_alpha_{CROSS_ALPHA}.svg")
+            fig_cross_no_diag.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_cross_time_no_diag_accs_alpha_{CROSS_ALPHA}.png")
+            plt.close(fig_cross_no_diag)
 
 
-        fig_weights, _ = plot_weights(args)
-        fig_weights.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_weights.svg")
-        fig_weights.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_weights.png", dpi=300)
-        plt.close(fig_weights)
+            # fig_weights, _ = plot_weights(args)
+            # fig_weights.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_weights.svg")
+            # fig_weights.savefig(f"{output_dir}/{sub}_{regions}_{decode_var}_weights.png", dpi=300)
+            # plt.close(fig_weights)
 
 if __name__ == "__main__":
     main()

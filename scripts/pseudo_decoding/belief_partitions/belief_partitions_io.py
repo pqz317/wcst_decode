@@ -160,6 +160,24 @@ def read_cross_time_results(args, feats, avg=False):
     df["TrainEvent"] = args.model_trial_event if args.model_trial_event else args.trial_event
     df["TestEvent"] = args.trial_event
     return df
+
+def compute_cross_time_min_max_for_regions(args, regions, alpha=0.01):
+    all_res = []
+    for region in regions:
+        args.region_level = None if region is None else "structure_level2_cleaned"
+        args.regions = region
+        for trial_event in ["StimOnset", "FeedbackOnsetLong"]:
+            args.trial_event = trial_event
+            cross_res = read_cross_time_results(args, FEATURES, avg=True)
+            pvals = pd.read_pickle(os.path.join(get_dir_name(args), f"{args.mode}_cross_p_vals.pickle"))
+            cross_res = pd.merge(cross_res, pvals, on=["TrainTime", "TestTime"]) 
+            cross_res = cross_res[cross_res.p < alpha]
+            cross_res["region"] = region if region is not None else "all_regions"
+            cross_res["trial_event"] = trial_event
+            all_res.append(cross_res)
+    all_res = pd.concat(all_res)
+    return all_res.Accuracy.min(), all_res.Accuracy.max()
+
     
 def load_ccgp_df(args, pairs, dir, conds, shuffle=False):
     res = []
