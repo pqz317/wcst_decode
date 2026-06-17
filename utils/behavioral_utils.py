@@ -876,6 +876,25 @@ def get_belief_partitions(beh, feat, use_x=False, thresh=BELIEF_PARTITION_THRESH
     beh = beh[~beh.NextBeliefConf.isna()].copy()
     return beh
 
+def get_belief_dim_partition(beh, feat, use_x=False, thresh=BELIEF_PARTITION_THRESH):
+    """
+    Adds BeliefDimPartition column to df, which partitions belief state space into: 
+     - Low (all beliefs < thresh)
+     - In X Dim where the highest belief is in the same dimension as the feature of interest, but not necessarily that feature
+     - Not in X Dim where the highest belief is in a different dimension as the feature of interest
+    """
+    def label_trial(row):
+        feat_str = "X" if use_x else feat
+        in_dim = FEATURE_TO_DIM[row.PreferredBelief] == FEATURE_TO_DIM[feat]
+        if row.PreferredBeliefProb <= thresh: 
+            return "Low"
+        elif in_dim:
+            return f"In {feat_str} Dim"
+        else:
+            return f"Not in {feat_str} Dim"
+    beh["BeliefDimPartition"] = beh.apply(label_trial, axis=1)
+    return beh
+
 def get_belief_partitions_of_pair(beh, feat_pair, thresh=BELIEF_PARTITION_THRESH):
     """
     Labels belief partitions for a pair of features Low, High X, High Y, omits the rest of trials

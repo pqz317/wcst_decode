@@ -40,6 +40,7 @@ def load_session_data(row, args, splits_df=None):
     if args.balance_by_filters: 
         beh = behavioral_utils.balance_trials_by_condition(beh, list(args.beh_filters.keys()))
     beh = behavioral_utils.get_belief_partitions(beh, args.feat, use_x=True)
+    beh = behavioral_utils.get_belief_dim_partition(beh, args.feat, use_x=True)
     beh = behavioral_utils.filter_behavior(beh, args.beh_filters)
     beh = behavioral_utils.get_label_by_mode(beh, args.mode)
     
