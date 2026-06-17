@@ -40,7 +40,7 @@ for dim_partition in "${dim_partitions[@]}"; do
         # First job array: 12 jobs
         submit_job_array "0-11" "${trial_event}${dim_partition}" \
             "--mode $mode --trial_event $trial_event --sig_unit_level $subpop \
-            --feat_idx \$SLURM_ARRAY_TASK_ID --balance_by_filters \
+            --feat_idx \$SLURM_ARRAY_TASK_ID --balance_by_filters True \
             --beh_filters '{\"BeliefDimPartition\":\"$dim_partition\"}' \
             --base_output_path /data/patrick_res/choice_belief_dim"
 
