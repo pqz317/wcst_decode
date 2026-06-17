@@ -10,6 +10,8 @@ notebooks/scrap.ipynb
 # any intermediate data locally
 data/
 
+claude_notes/
+
 # notebook checkpoints
 notebooks/.ipynb_checkpoints/
 

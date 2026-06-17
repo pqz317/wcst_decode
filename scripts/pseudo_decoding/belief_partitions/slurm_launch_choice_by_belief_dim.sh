@@ -50,7 +50,6 @@ for dim_partition in "${dim_partitions[@]}"; do
             --feat_idx \$((\$SLURM_ARRAY_TASK_ID % 12)) \
             --shuffle_idx \$((\$SLURM_ARRAY_TASK_ID / 12)) --balance_by_filters \
             --beh_filters '{\"BeliefDimPartition\":\"$dim_partition\"}' \
-            --balance_trials_by_condition \
             --base_output_path /data/patrick_res/choice_belief_dim"
     done
 done
