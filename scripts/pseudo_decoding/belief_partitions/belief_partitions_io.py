@@ -67,10 +67,13 @@ def get_cross_partition_file_name(args):
     return f"{args.feat}_{args.mode}_cross_partition{shuffle_str}"
 
 def get_cross_partition_dir_name(args, make_dir=True):
+    region_str = "" if args.regions is None else f"{args.regions.replace(',', '_').replace(' ', '_')}"
+    fr_str = args.fr_type if args.fr_type != "firing_rates" else None
     sig_units_str = f"{args.sig_unit_level}_units" if args.sig_unit_level else None
     train_str = args.train_partition.replace(' ', '_')
     test_str  = args.test_partition.replace(' ', '_')
-    run_name  = "_".join(x for x in [args.subject, args.trial_event, f"{train_str}_to_{test_str}", sig_units_str] if x)
+    parts = [args.subject, args.trial_event, region_str, f"{train_str}_to_{test_str}", fr_str, sig_units_str]
+    run_name = "_".join(x for x in parts if x)
     dir = os.path.join(args.base_output_path, run_name)
     if args.shuffle_idx is not None:
         dir = os.path.join(dir, "shuffles")
