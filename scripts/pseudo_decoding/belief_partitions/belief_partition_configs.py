@@ -51,6 +51,42 @@ class BeliefPartitionConfigs(NamedTuple):
 
 
 
+class CrossPartitionConfigs(NamedTuple):
+    """
+    Configs for evaluating a trained choice decoder (from one belief dim partition)
+    on trials from a different belief dim partition.
+    """
+    mode: str = "choice"
+    subject: str = "SA"
+    feat_idx: int = None
+    trial_event: str = "StimOnset"
+
+    train_partition: str = None   # partition the decoder was trained on, e.g. "In X Dim"
+    test_partition: str = None    # partition to evaluate on, e.g. "Not in X Dim"
+    balance_by_filters: bool = False
+    balance_cols: list = []
+
+    fr_type: str = "firing_rates"
+    shuffle_idx: int = None       # if set, loads shuffle_{N}_models from train partition
+    region_level: str = None
+    regions: str = None
+    train_test_seed: int = 42
+    sig_unit_level: str = None
+
+    learning_rate: float = 0.05
+    max_iter: int = 500
+    num_train_per_cond: int = 1000
+    num_test_per_cond: int = 200
+    p_dropout: float = 0.5
+    test_ratio: float = 0.2
+    num_splits: int = 8
+    splitter: str = "random"
+
+    run_name: str = None
+    base_model_path: str = "/data/patrick_res/choice_belief_dim"
+    base_output_path: str = "/data/patrick_res/choice_belief_dim_cross_partition"
+
+
 def add_defaults_to_parser(default_configs, parser):
     # Automatically add arguments based on the namedtuple fields
     for field, value in default_configs._asdict().items():

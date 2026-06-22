@@ -62,6 +62,22 @@ def get_dir_name(args, make_dir=True):
         os.makedirs(dir, exist_ok=True)
     return dir
 
+def get_cross_partition_file_name(args):
+    shuffle_str = "" if args.shuffle_idx is None else f"_shuffle_{args.shuffle_idx}"
+    return f"{args.feat}_{args.mode}_cross_partition{shuffle_str}"
+
+def get_cross_partition_dir_name(args, make_dir=True):
+    sig_units_str = f"{args.sig_unit_level}_units" if args.sig_unit_level else None
+    train_str = args.train_partition.replace(' ', '_')
+    test_str  = args.test_partition.replace(' ', '_')
+    run_name  = "_".join(x for x in [args.subject, args.trial_event, f"{train_str}_to_{test_str}", sig_units_str] if x)
+    dir = os.path.join(args.base_output_path, run_name)
+    if args.shuffle_idx is not None:
+        dir = os.path.join(dir, "shuffles")
+    if make_dir:
+        os.makedirs(dir, exist_ok=True)
+    return dir
+
 def load_df(args, feats, dir, shuffle=False):
     res = []
     for feat in feats:
