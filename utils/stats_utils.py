@@ -96,7 +96,69 @@ def compute_p_for_decoding_by_time(res, args):
     p_res = pd.DataFrame(p_res)
     return p_res
 
-def compute_p_for_cross_decoding_by_time(cross_res, shuffles, args): 
+
+def _gap_by_time_feat(res):
+    """
+    Given a read_results() dataframe for a single partition (cols: Time, feat, mode, Accuracy),
+    returns a df with columns [Time, feat, gap], where
+        gap = mean(true accuracy) - mean(shuffle accuracy)
+    averaged over runs (true) and over runs x shuffles (shuffle), per (Time, feat).
+    """
+    res = res.copy()
+    res["shuffle_type"] = res["mode"].apply(lambda x: "shuffle" if "shuffle" in x else "true")
+    means = res.groupby(["Time", "feat", "shuffle_type"]).Accuracy.mean().reset_index()
+    pivoted = means.pivot_table(index=["Time", "feat"], columns="shuffle_type", values="Accuracy")
+    # gap is only defined when both true and shuffle are present for the (Time, feat)
+    pivoted = pivoted.dropna(subset=["true", "shuffle"])
+    pivoted["gap"] = pivoted["true"] - pivoted["shuffle"]
+    return pivoted["gap"].reset_index()
+
+
+def compute_p_for_dod_by_time(res_in, res_notin, args, seed=42):
+    """
+    Difference-of-differences significance test, per timepoint:
+    tests whether the "In X Dim" partition decodes reliably further above its own shuffle
+    baseline than the "Not in X Dim" partition does above its own shuffle baseline, i.e.
+        delta_f = (true_In - shuffle_In) - (true_NotIn - shuffle_NotIn)   [per feature f]
+        Delta   = mean_f delta_f                                          [observed statistic]
+
+    res_in / res_notin are read_results() outputs for the two partitions (cols: Time, run,
+    Accuracy, mode, feat; mode in {args.mode, f"{args.mode}_shuffle"}).
+
+    Null model: per-feature sign-flip. Swapping a feature's In/Not-in label moves its true and
+    matched shuffle together, so it is exactly delta_f -> -delta_f. All 2^n_feat sign vectors are
+    enumerated exactly (n_feat = # features present in BOTH partitions at that time bin), giving an
+    exact one-sided p = mean(Delta* >= Delta). Because enumeration includes the identity (all +1),
+    p is always >= 1 / 2^n_feat. `seed` is unused (enumeration is deterministic); kept for a
+    consistent signature with the sibling permutation functions.
+
+    Returns df[Time, TimeIdx, p, n_feat] (Time/TimeIdx/p schema matches compute_p_for_decoding_by_time).
+    """
+    gap_in = _gap_by_time_feat(res_in).rename(columns={"gap": "gap_in"})
+    gap_notin = _gap_by_time_feat(res_notin).rename(columns={"gap": "gap_notin"})
+    # inner merge -> keep only features present in BOTH partitions at a given time bin
+    merged = pd.merge(gap_in, gap_notin, on=["Time", "feat"], how="inner")
+    merged["delta"] = merged["gap_in"] - merged["gap_notin"]
+
+    n_time, offset = get_n_time_offset(args.trial_event)
+    p_res = []
+    for time_idx in tqdm(range(n_time)):
+        time = round(time_idx / 10 - offset, 1)
+        deltas_f = merged[np.isclose(merged.Time, time)]["delta"].values.astype(np.float64)
+        n_feat = len(deltas_f)
+        if n_feat == 0:
+            p = np.nan
+        else:
+            obs = deltas_f.mean()
+            # (2^n_feat, n_feat) matrix of all +/-1 sign vectors
+            signs = np.array(list(itertools.product([1.0, -1.0], repeat=n_feat)))
+            null_deltas = signs @ deltas_f / n_feat
+            p = np.mean(null_deltas >= obs)
+        p_res.append({"Time": time, "TimeIdx": time_idx, "p": p, "n_feat": n_feat})
+    return pd.DataFrame(p_res)
+
+
+def compute_p_for_cross_decoding_by_time(cross_res, shuffles, args):
     train_event = args.model_trial_event if args.model_trial_event is not None else args.trial_event
     test_event = args.trial_event
 
