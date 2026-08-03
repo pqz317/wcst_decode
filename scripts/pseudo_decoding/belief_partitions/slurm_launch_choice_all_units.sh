@@ -1,20 +1,28 @@
 #!/bin/bash
 
-# Choice decoding (Chose X vs. Not Chose X) on the FULL population -- no selectivity subpop,
-# drift-filtered only (sig_unit_level=all_filter_drift).
+# Choice decoding (Chose X vs. Not Chose X) on the FULL population -- no selectivity subpop.
 #
 # Motivation: the choice_99th_window_filter_drift subpop covers only 52% of the units in the
 # pref_99th_window_filter_drift subpop, so a choice axis fit on it has no weight for ~half the
-# preference population. Fitting on all (drift-filtered) units means the choice axis restricted
-# to preference units is a genuine sub-vector, with nothing zero-filled.
+# preference population. Fitting on all units means the choice axis restricted to preference
+# units is a genuine sub-vector, with nothing zero-filled.
 #
 # Runs the whole population plus each of the 6 regions of interest, both trial events.
 #
-# WARNING: writes into the same canonical directories as the existing June-2025 runs, i.e.
-#   /data/patrick_res/choice_reward/both_{event}[_{region}]_all_filter_drift_units/
-# For 10 of the 14 configs those directories already contain {feat}_choice_* files, which WILL be
-# overwritten. Files for other modes (reward, chose_and_correct) in those directories are untouched.
-# Only ACgG and the whole-population configs are new.
+# Deliberately passes NO --sig_unit_level. get_sig_units() returns the units table untouched when
+# the level is unset, and get_frs_from_args() still applies filter_bad_regions + filter_drift
+# afterwards -- so this is "all units, bad regions and drifting units removed", which is what
+# all_filter_drift was meant to mean.
+#
+# Do NOT use --sig_unit_level all_filter_drift: those pickles are stale artifacts whose
+# sig_type="all" branch in 20250606_generate_significant_units.py selects only
+# ["feat", "structure_level2", "session", "PseudoUnitID"], dropping structure_level2_cleaned, so
+# filter_bad_regions() raises AttributeError. They are also built from all_units.pickle for BOTH
+# subjects, while get_subject_units() reads all_units_corrected.pickle for BL -- so BL region
+# labels in those files disagree with the canonical table.
+#
+# Output dirs are therefore /data/patrick_res/choice_reward/both_{event}[_{region}]/ -- no
+# collision with the existing *_units runs, so nothing is overwritten.
 
 # Default values
 partition="ckpt-all"
@@ -25,7 +33,6 @@ time_limit="240"
 
 trial_events="StimOnset FeedbackOnsetLong"
 mode="choice"
-sig_unit_level="all_filter_drift"
 
 # "whole_pop" is a sentinel for the no-region-filter run
 regions="whole_pop amygdala_Amy basal_ganglia_BG inferior_temporal_cortex_ITC medial_pallium_MPal lateral_prefrontal_cortex_lat_PFC anterior_cingulate_gyrus_ACgG"
@@ -73,7 +80,6 @@ for region in $regions; do
     for trial_event in $trial_events; do
         common_args="--mode $mode --trial_event $trial_event \
             --subject both \
-            --sig_unit_level $sig_unit_level \
             $region_args \
             --base_output_path /data/patrick_res/choice_reward"
 
