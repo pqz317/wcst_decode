@@ -19,9 +19,43 @@ def transform_input_data(pseudo_data):
 def transform_label_data(pseudo_data, condition_label_map=None):
     pseudo_data = pseudo_data[["PseudoTrialNumber", "Condition"]].drop_duplicates()
     sorted = pseudo_data.sort_values(by=["PseudoTrialNumber"])
-    if condition_label_map is not None: 
+    if condition_label_map is not None:
         sorted["Condition"] = sorted["Condition"].map(condition_label_map)
     return sorted["Condition"].to_numpy()
+
+def fit_threshold(proj, is_positive):
+    """
+    Fits a 1D decision threshold on a fixed direction (predict positive iff proj > threshold)
+    that maximizes accuracy on the given (proj, is_positive) pairs. Direction is never flipped,
+    only the cutpoint is searched, via a vectorized decision-stump grid search over all
+    candidate cutpoints (midpoints between sorted unique projections).
+    """
+    order = np.argsort(proj)
+    sorted_proj = proj[order]
+    sorted_pos = is_positive[order]
+    n = len(sorted_pos)
+    total_pos = sorted_pos.sum()
+    # cum_pos[i] = number of positives among the i lowest-projection points
+    cum_pos = np.concatenate(([0], np.cumsum(sorted_pos)))
+    # cut position i: predict negative for the i lowest-projection points, positive for the rest
+    correct_neg = np.arange(n + 1) - cum_pos
+    correct_pos = total_pos - cum_pos
+    accs = (correct_neg + correct_pos) / n
+    best_i = np.argmax(accs)
+    if best_i == 0:
+        threshold = sorted_proj[0] - 1.0
+    elif best_i == n:
+        threshold = sorted_proj[-1] + 1.0
+    else:
+        threshold = (sorted_proj[best_i - 1] + sorted_proj[best_i]) / 2
+    return threshold
+
+def score_threshold(proj, is_positive, threshold):
+    """
+    Accuracy of the fixed-direction threshold classifier (predict positive iff proj > threshold).
+    """
+    preds = proj > threshold
+    return np.mean(preds == is_positive)
 
 
 
