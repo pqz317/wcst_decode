@@ -445,3 +445,26 @@ def read_all_similarities(args, pairs, num_shuffles=10):
     # still actually dont know why I need this, but plotting for ACC doesn't work without...
     all_res = all_res.reset_index(drop=True)
     return all_res
+
+
+def read_alignment(args, num_shuffles=10):
+    """
+    Reads choice_pref_vector_alignment results, true run plus shuffles.
+
+    Unlike read_results, one file holds every feature, so there's no per-feature loop and no
+    args.feat. Returns columns feat, TimeIdx, Time, cos_sim, norm_choice, norm_pref, n_units,
+    n_sessions, mode -- with mode carrying the "_shuffle" suffix, as compute_p_for_decoding_by_time
+    expects.
+    """
+    args = copy.deepcopy(args)
+    args.trial_interval = get_trial_interval(args.trial_event)
+
+    args.shuffle_idx = None
+    res = [pd.read_pickle(os.path.join(get_dir_name(args, make_dir=False), f"{args.mode}.pickle"))]
+    for shuffle_idx in range(num_shuffles):
+        args.shuffle_idx = shuffle_idx
+        path = os.path.join(get_dir_name(args, make_dir=False), f"{args.mode}_shuffle_{shuffle_idx}.pickle")
+        if not os.path.exists(path):
+            continue
+        res.append(pd.read_pickle(path))
+    return pd.concat(res, ignore_index=True)

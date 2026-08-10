@@ -83,7 +83,11 @@ def get_n_time_offset(trial_event):
         offset = 1.7
     return n_time, offset
 
-def compute_p_for_decoding_by_time(res, args): 
+def compute_p_for_decoding_by_time(res, args, val_col="Accuracy"):
+    """
+    val_col is the column holding the statistic being tested, "Accuracy" for decoding runs.
+    Pass e.g. "cos_sim" for analyses whose statistic isn't an accuracy.
+    """
     # res["shuffle_type"] = res["mode"].map({"pref": "true", "pref_shuffle": "shuffle"})
     res["shuffle_type"] = res["mode"].apply(lambda x: "shuffle" if "shuffle" in x else "true")
     n_time, offset = get_n_time_offset(args.trial_event)
@@ -91,7 +95,7 @@ def compute_p_for_decoding_by_time(res, args):
     for time_idx in tqdm(range(n_time)):
         time = round(time_idx / 10 - offset, 1)
         time_res = res[np.isclose(res.Time, time)]
-        p = compute_p_per_group(time_res, "Accuracy", "shuffle_type")
+        p = compute_p_per_group(time_res, val_col, "shuffle_type")
         p_res.append({"Time": time, "TimeIdx": time_idx, "p": p})
     p_res = pd.DataFrame(p_res)
     return p_res
