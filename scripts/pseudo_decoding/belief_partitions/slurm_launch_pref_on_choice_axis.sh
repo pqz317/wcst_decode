@@ -5,9 +5,11 @@
 #
 # Reads:
 #   preference splits/units from /data/patrick_res/belief_partitions/both_{event}[_{region}]_...
-#   choice axes from /data/patrick_res/choice_reward/both_{event}[_{region}]/ (all units)
+#   choice axes from /data/patrick_res/choice_reward/both_{event}[_{region}]_Response_Correct/
+#     (all units, correct trials only -- see axis_beh_filters below)
 # Writes:
-#   /data/patrick_res/choice_axis_projection_accs/, mirroring the preference run's dir name
+#   /data/patrick_res/choice_axis_projection_accs/, mirroring the preference run's dir name, under
+#   mode pref_on_choice_Response_Correct so it sits beside the earlier all-trials-axis results
 #
 # Runs the whole population plus each of the 6 regions of interest, both trial events, matching
 # slurm_launch_choice_all_units.sh so each region's projection uses that region's choice axis.
@@ -21,6 +23,15 @@ time_limit="180"
 trial_events="StimOnset FeedbackOnsetLong"
 sig_unit_level="pref_99th_window_filter_drift"
 beh_filters='{"Response": "Correct", "Choice": "Chose"}'
+
+# Trials the choice axis was fit on, picking which choice run to read the axis from.
+# '{}' reproduces the original all-trials axis runs, stored as mode pref_on_choice.
+# '{"Response": "Correct"}' uses the correct-only choice re-runs, stored as mode
+# pref_on_choice_Response_Correct -- the better matched axis, since the projected preference
+# trials are themselves Correct + Chose.
+# Set here rather than passed in: extra_args="$@" drops the inner quoting and the json would be
+# word split.
+axis_beh_filters='{"Response": "Correct"}'
 
 # "whole_pop" is a sentinel for the no-region-filter run
 regions="whole_pop amygdala_Amy basal_ganglia_BG inferior_temporal_cortex_ITC medial_pallium_MPal lateral_prefrontal_cortex_lat_PFC anterior_cingulate_gyrus_ACgG"
@@ -66,6 +77,7 @@ for region in $regions; do
             --subject both \
             --sig_unit_level $sig_unit_level \
             --beh_filters '$beh_filters' \
+            --axis_beh_filters '$axis_beh_filters' \
             $region_args"
 
         # 12 jobs: one per feature

@@ -43,12 +43,18 @@ def get_ccgp_file_name(args):
     shuffle_str = "" if args.shuffle_idx is None else f"_shuffle_{args.shuffle_idx}"
     return f"{pair_str}_{args.mode}{shuffle_str}"
 
+def get_filter_str(beh_filters):
+    """
+    Naming convention for behavioral filters, e.g. {"Response": "Correct"} -> "Response_Correct"
+    """
+    return "_".join([f"{k}_{v}"for k, v in beh_filters.items()])
+
 def get_dir_name(args, make_dir=True):
     """
     Directory convention for preferred beliefs decoding
     """
     region_str = "" if args.regions is None else f"{args.regions.replace(',', '_').replace(' ', '_')}"
-    filt_str = "_".join([f"{k}_{v}"for k, v in args.beh_filters.items()])
+    filt_str = get_filter_str(args.beh_filters)
     fr_str = args.fr_type if args.fr_type != "firing_rates" else None
     sig_units_str = f"{args.sig_unit_level}_units" if args.sig_unit_level else None
     splitter_str = f"kfold_{args.num_splits}" if args.splitter == "kfold" else None

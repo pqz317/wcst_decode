@@ -9,6 +9,10 @@ decodability the choice axis already captures.
 Uses the same pseudo population generation and train/test splits as preference decoding. The axis
 direction is never refit: only a threshold along it is, with the sign fixed so that High X sits on
 the Chose side of the axis.
+
+Which choice run the axis comes from is set by --axis_beh_filters, the trials that run was fit on:
+{} for the all-trials runs, {"Response": "Correct"} for the correct-only re-runs. The filters are
+part of the mode results are stored under, so runs against different axes sit side by side.
 """
 
 import os
@@ -20,6 +24,7 @@ from constants.behavioral_constants import *
 from constants.decoding_constants import *
 
 import argparse
+import json
 from scripts.pseudo_decoding.belief_partitions.belief_partition_configs import BeliefPartitionConfigs, add_defaults_to_parser
 import scripts.pseudo_decoding.belief_partitions.belief_partitions_io as belief_partitions_io
 import scripts.pseudo_decoding.belief_partitions.decode_belief_partitions as decode_belief_partitions
@@ -35,6 +40,17 @@ PROJ_MODE = "pref_on_choice"
 PROJ_OUTPUT_PATH = "/data/patrick_res/choice_axis_projection_accs"
 
 
+def get_proj_mode(axis_beh_filters):
+    """
+    Mode results are stored under. The axis run's filters are part of the name, so projections
+    onto different choice axes sit side by side rather than overwriting each other: an axis fit
+    on all trials stays "pref_on_choice", one fit on correct trials only becomes
+    "pref_on_choice_Response_Correct".
+    """
+    filt_str = belief_partitions_io.get_filter_str(axis_beh_filters)
+    return f"{PROJ_MODE}_{filt_str}" if filt_str else PROJ_MODE
+
+
 def load_choice_axes(args, num_bins):
     """
     Loads the choice decoder's axis for every time bin, averaged over the choice run's splits.
@@ -46,13 +62,14 @@ def load_choice_axes(args, num_bins):
     """
     axis_args = copy.deepcopy(args)
     axis_args.mode = AXIS_MODE
-    # the all units choice runs pass no filters, no subpopulation
-    axis_args.beh_filters = {}
+    # the all units choice runs use no subpopulation, and only whichever trials they were fit on
+    axis_args.beh_filters = args.axis_beh_filters
     axis_args.sig_unit_level = None
     axis_args.shuffle_idx = None
     axis_args.base_output_path = CHOICE_AXIS_PATH
 
     axis_dir = belief_partitions_io.get_dir_name(axis_args, make_dir=False)
+    print(f"Reading choice axes from {axis_dir}", flush=True)
     models = np.load(
         os.path.join(axis_dir, f"{belief_partitions_io.get_file_name(axis_args)}_models.npy"),
         allow_pickle=True
@@ -137,7 +154,7 @@ def project(args):
 
     # store under the projection's own mode and path, everything else named as the preference run
     save_args = copy.deepcopy(args)
-    save_args.mode = PROJ_MODE
+    save_args.mode = get_proj_mode(args.axis_beh_filters)
     save_args.base_output_path = PROJ_OUTPUT_PATH
     output_dir = belief_partitions_io.get_dir_name(save_args)
     file_name = belief_partitions_io.get_file_name(save_args)
@@ -153,7 +170,8 @@ def process_args(args):
     args.feat = FEATURES[args.feat_idx]
     args.trial_interval = get_trial_interval(args.trial_event)
     print(f"Projecting {args.mode} activity for feat {args.feat} onto the {AXIS_MODE} axis", flush=True)
-    print(f"With filters {args.beh_filters}", flush=True)
+    print(f"With filters {args.beh_filters}, onto an axis fit with filters {args.axis_beh_filters}", flush=True)
+    print(f"Storing results under mode {get_proj_mode(args.axis_beh_filters)}", flush=True)
     if args.sig_unit_level:
         print(f"Using only units that are selective with signifance level {args.sig_unit_level}")
     return args
@@ -167,5 +185,8 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser = add_defaults_to_parser(BeliefPartitionConfigs(), parser)
+    # not part of BeliefPartitionConfigs, that's shared by every decoding script and only this one
+    # reads a second run's axis. Parsed as json, same as --beh_filters
+    parser.add_argument('--axis_beh_filters', default={}, type=lambda x: json.loads(x))
     args = parser.parse_args()
     main(args)
