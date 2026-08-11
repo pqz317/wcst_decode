@@ -7,7 +7,9 @@
 # activity rather than decoder weights, so no models are fit and no decoder runs are read. See
 # claude_notes/weight_vs_mean_difference_axes.md for why the two are different quantities.
 #
-# Writes /data/patrick_res/choice_pref_alignment/both_{event}/, shuffles in .../shuffles/.
+# Writes /data/patrick_res/choice_pref_alignment/both_{event}/, shuffles in .../shuffles/, with the
+# choice contrast's filters in the file name (see choice_beh_filters below), so runs against
+# differently filtered choice vectors sit side by side in the same dir.
 #
 # Two structural differences from every other launcher here:
 #
@@ -21,6 +23,14 @@
 #      vectors rather than a separate run.
 #
 # Parallelism is therefore over (event x shuffle) only: 2 x 11 = 22 jobs.
+#
+# Off the cluster, the same 22 cases run in one process with
+#   python3 choice_pref_vector_alignment.py --subject both --run_all True \
+#       --choice_beh_filters '{"Response": "Correct"}'
+# which writes the identical files, and reads each session's firing rates once per event instead
+# of once per (event, shuffle) -- the shuffles only permute behavior. --trial_events /
+# --num_shuffles shrink that grid. The choice filters are NOT part of that grid, so a second
+# filter setting is a second launch either way.
 
 # Default values
 partition="ckpt-all"
@@ -30,6 +40,15 @@ mem="8G"
 time_limit="60"
 
 trial_events="StimOnset FeedbackOnsetLong"
+
+# Trials the choice vector is built from, the encoding counterpart to the projection runs'
+# --axis_beh_filters.
+# '{}' reproduces the original all-trials vector, stored under mode choice_pref_align.
+# '{"Response": "Correct"}' restricts it to correct trials -- the pool v_pref is itself drawn from
+# -- and is stored under mode choice_pref_align_Response_Correct.
+# Set here rather than passed in: extra_args="$@" drops the inner quoting and the json would be
+# word split.
+choice_beh_filters='{"Response": "Correct"}'
 
 # Optional args passed to the alignment script
 extra_args="$@"
@@ -58,7 +77,9 @@ EOT
 }
 
 for trial_event in $trial_events; do
-    common_args="--trial_event $trial_event --subject both"
+    common_args="--trial_event $trial_event \
+        --subject both \
+        --choice_beh_filters '$choice_beh_filters'"
 
     # 1 job: the true run
     submit_job_array "0-0" "a${trial_event:0:4}" \

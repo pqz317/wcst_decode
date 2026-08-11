@@ -8,10 +8,14 @@ stats_utils.compute_p_for_decoding_by_time -- just on "cos_sim" instead of "Accu
 
 Reads what scripts/pseudo_decoding/belief_partitions/choice_pref_vector_alignment.py wrote and
 writes the p-values back into each run dir as
-    {MODE}_pvals.pickle
+    {mode}_pvals.pickle
 with columns Time, TimeIdx, p, region -- the whole population plus each region of interest, each
 tested against its own shuffle. The Time/TimeIdx/p schema matches what plot_sig_bars consumes, so
 callers filter by region and pass the rest straight through.
+
+mode carries the alignment run's --choice_beh_filters, so this script takes that flag too and must
+be passed the same value the alignment run was: left unset it tests the all-trials choice vector,
+'{"Response": "Correct"}' the correct-only one, whose files sit beside it in the same run dir.
 
 Regions are comparable in significance but NOT in the magnitude of cos_sim: a region has far fewer
 units (15-141 per feature vs 382-681 for the whole population), and fewer units means more
@@ -37,10 +41,11 @@ from constants.decoding_constants import *
 from scripts.pseudo_decoding.belief_partitions.belief_partition_configs import *
 import scripts.pseudo_decoding.belief_partitions.belief_partitions_io as belief_partitions_io
 from scripts.pseudo_decoding.belief_partitions.choice_pref_vector_alignment import (
-    MODE, OUTPUT_PATH, WHOLE_POP,
+    OUTPUT_PATH, WHOLE_POP, get_mode,
 )
 
 import argparse
+import json
 import pandas as pd
 from tqdm import tqdm
 
@@ -48,7 +53,7 @@ NUM_SHUFFLES = 10
 TRIAL_EVENTS = ["StimOnset", "FeedbackOnsetLong"]
 
 
-def run_event(trial_event):
+def run_event(trial_event, choice_beh_filters):
     """
     One p value per (region, timepoint). Each region is tested against its OWN shuffle, so the
     regions are directly comparable in significance -- but NOT in the magnitude of cos_sim, which
@@ -58,7 +63,8 @@ def run_event(trial_event):
 
     args = argparse.Namespace(**BeliefPartitionConfigs()._asdict())
     args.subject = "both"
-    args.mode = MODE
+    # picks which alignment run is read, and names this script's output alongside it
+    args.mode = get_mode(choice_beh_filters)
     args.trial_event = trial_event
     args.base_output_path = OUTPUT_PATH
     # every population lives in one run dir; region is a column, not a separate run
@@ -91,11 +97,13 @@ def run_event(trial_event):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(f'--trial_event', default=None, type=str)
+    # must match the alignment run being tested, see the module docstring
+    parser.add_argument('--choice_beh_filters', default={}, type=lambda x: json.loads(x))
     args = parser.parse_args()
 
     events = TRIAL_EVENTS if args.trial_event is None else [args.trial_event]
     for trial_event in tqdm(events):
-        run_event(trial_event)
+        run_event(trial_event, args.choice_beh_filters)
 
 
 if __name__ == "__main__":
