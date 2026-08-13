@@ -11,8 +11,19 @@ direction is never refit: only a threshold along it is, with the sign fixed so t
 the Chose side of the axis.
 
 Which choice run the axis comes from is set by --axis_beh_filters, the trials that run was fit on:
-{} for the all-trials runs, {"Response": "Correct"} for the correct-only re-runs. The filters are
-part of the mode results are stored under, so runs against different axes sit side by side.
+{} for the all-trials runs, {"Response": "Correct"} for the correct-only re-runs, and
+{"Response": "Correct", "BeliefPartition": "High Not X"} for the A-vs-B stimulus axis of the A/B/C
+design in claude_notes/stim_belief_alignment_updated.md. The filters are part of the mode results
+are stored under, so runs against different axes sit side by side.
+
+On that third variant, note what the axis and the scored conditions are in the note's terms. The
+axis is A (High Not X, Not Chose) vs. B (High Not X, Chose), so it is selection of X with belief
+held fixed; the conditions scored along it are B vs. C (High X, Chose), which is preference for X
+with selection held fixed. That is Step 5 of the note, and it is run WITHOUT the note's Issue 1(a)
+split of group B: B trains the axis and is also one of the two classes scored along it, and the two
+runs draw their train/test assignments independently, so projected accuracy is inflated -- and
+inflated specifically in the direction of the hypothesis. Accepted deliberately, not overlooked.
+The shuffle baseline does not absorb it, since it permutes preference labels against the true axis.
 """
 
 import os
@@ -46,8 +57,14 @@ def get_proj_mode(axis_beh_filters):
     onto different choice axes sit side by side rather than overwriting each other: an axis fit
     on all trials stays "pref_on_choice", one fit on correct trials only becomes
     "pref_on_choice_Response_Correct".
+
+    Spaces are collapsed to underscores because this string goes into file names, and a filter
+    value like "High Not X" would otherwise put a space in every .npy written. Deliberately not
+    done in get_filter_str itself, which also names directories: /data/patrick_res/update_projections
+    already holds runs under "..._BeliefPartition_High Not X_...", and sanitizing there would
+    orphan them. No existing projection mode contains a space, so the shipped results are unaffected.
     """
-    filt_str = belief_partitions_io.get_filter_str(axis_beh_filters)
+    filt_str = belief_partitions_io.get_filter_str(axis_beh_filters).replace(" ", "_")
     return f"{PROJ_MODE}_{filt_str}" if filt_str else PROJ_MODE
 
 
