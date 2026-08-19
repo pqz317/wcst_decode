@@ -229,10 +229,13 @@ def get_anova_file_name(args):
 def get_anova_output_dir(args, make_dir=True):
     condition_str = "_".join(args.conditions)
     time_range_str = f"{args.time_range[0]}_to_{args.time_range[1]}" if args.time_range else None
-    filt_str = "_".join([f"{k}_{v}"for k, v in args.beh_filters.items()])
+    # a filter value can contain spaces ("High Not X"), which would put a space in the directory
+    # name. No existing run has one, so replacing them is a no-op for everything already stored
+    filt_str = "_".join([f"{k}_{v}"for k, v in args.beh_filters.items()]).replace(" ", "_")
     window_str = f"window_{args.window_size}" if args.window_size else None
     split_str = f"split_{args.split_idx}" if args.split_idx is not None else None
-    components = [args.subject, args.trial_event, condition_str, time_range_str, filt_str, window_str, split_str]
+    b_split_str = f"b_split_half_{args.b_split_half}" if getattr(args, "b_split_half", None) is not None else None
+    components = [args.subject, args.trial_event, condition_str, time_range_str, filt_str, window_str, split_str, b_split_str]
     run_name = "_".join(s for s in components if s)
     if args.shuffle_idx is None: 
         dir = os.path.join(args.base_output_path, f"{run_name}")

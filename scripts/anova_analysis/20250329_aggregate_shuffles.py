@@ -20,8 +20,8 @@ def compute_stats(unit_res, conditions):
         combined_cond_str = "".join(comb)
         row[f"{combined_cond_str}_95th"] = unit_res[f"x_{combined_cond_str}_comb_time_fracvar"].quantile(0.95)
         row[f"{combined_cond_str}_99th"] = unit_res[f"x_{combined_cond_str}_comb_time_fracvar"].quantile(0.99)
-    # HACK: 
-    if "BeliefPartition" in conditions: 
+    # HACK: mirrors run_anova.run_anova -- BeliefPref only exists when Conf is a factor too
+    if "BeliefPartition" in conditions and "BeliefConf" in conditions:
         row["BeliefPref_95th"] = unit_res[f"x_BeliefPref_comb_time_fracvar"].quantile(0.95)
         row["BeliefPref_99th"] = unit_res[f"x_BeliefPref_comb_time_fracvar"].quantile(0.99)
     return pd.Series(row)

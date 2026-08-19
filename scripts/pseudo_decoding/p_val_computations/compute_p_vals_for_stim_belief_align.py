@@ -4,15 +4,21 @@ Significance of the stimulus/belief population-vector alignment, per timepoint.
 For each event, tests whether cos(v_stim, v_pref) sits above its own session-permute shuffle:
     p = P(mean(true*) - mean(shuffle*) >= mean(true) - mean(shuffle))   [one sided permutation]
 the same test compute_p_vals_for_decoders.py applies to the decoders, see
-stats_utils.compute_p_for_decoding_by_time -- just on "cos_raw" instead of "Accuracy". This is the
+stats_utils.compute_p_for_decoding_by_time -- just on a cosine instead of "Accuracy". This is the
 A/B/C counterpart of compute_p_vals_for_choice_pref_align.py.
+
+Both of the compute script's estimators are tested: cos_raw, whose denominator is inflated by
+finite-trial noise, and cos_cv, whose is cross-validated (cosine_similarity_debiasing.md sections
+2a and 4). Same test, same shuffle, one pass each.
 
 Reads what scripts/pseudo_decoding/belief_partitions/stim_belief_vector_alignment.py wrote and
 writes the p-values back into each run dir as
     {mode}_pvals.pickle
-with columns Time, TimeIdx, p, region -- the whole population plus each region of interest, each
-tested against its own shuffle. The Time/TimeIdx/p schema matches what plot_sig_bars consumes, so
-callers filter by region and pass the rest straight through.
+with columns Time, TimeIdx, p, region, statistic -- the whole population plus each region of
+interest, each tested against its own shuffle, for each statistic in STATISTICS. The Time/TimeIdx/p
+schema matches what plot_sig_bars consumes, so callers filter by region AND statistic and pass the
+rest straight through. Note that filter is new: a caller written against the single-statistic file
+will silently read both statistics stacked.
 
 Unlike the choice_pref version there is no --choice_beh_filters: the A/B/C groups fix the pool to
 correct trials, so there is exactly one run per event and one mode name. The pool filter is part of
@@ -20,9 +26,11 @@ the run directory, which is why POOL_FILTERS is carried on args here.
 
 Regions are comparable in significance but NOT in the magnitude of cos_raw: a region has far fewer
 units than the whole population, and fewer units means more attenuation, so a smaller cos_raw in a
-small region is not evidence of weaker alignment. A regional dissociation claim needs
-unit-count-matched subsampling first -- see choice_pref_axis_geometry.md shared caveat 3, and
-cosine_similarity_debiasing.md for the attenuation itself.
+small region is not evidence of weaker alignment. Removing exactly that confound is what cos_cv is
+for, so its magnitudes are in principle comparable across regions -- but it is also noisier, and a
+regional dissociation claim still needs unit-count-matched subsampling first. See
+choice_pref_axis_geometry.md shared caveat 3, and cosine_similarity_debiasing.md for the
+attenuation itself.
 
 Note on what the shuffle is for here, and how it differs from the choice_pref case. There the
 shared-trial cross-term cancels structurally, because both preference conditions sit inside the
@@ -62,12 +70,17 @@ from tqdm import tqdm
 NUM_SHUFFLES = 10
 TRIAL_EVENTS = ["StimOnset", "FeedbackOnsetLong"]
 
+# both alignment estimators get the same test, and the output carries a `statistic` column to say
+# which is which. cos_raw is kept so the reported numbers stay comparable to the figures already
+# produced; cos_cv is the one whose magnitude is interpretable across bins and regions
+STATISTICS = ["cos_raw", "cos_cv"]
+
 
 def run_event(trial_event):
     """
-    One p value per (region, timepoint). Each region is tested against its OWN shuffle, so the
-    regions are directly comparable in significance -- but NOT in the magnitude of cos_raw, which
-    is attenuated more in regions with fewer units. See the module docstring.
+    One p value per (statistic, region, timepoint). Each region is tested against its OWN shuffle,
+    so the regions are directly comparable in significance -- but NOT in the magnitude of cos_raw,
+    which is attenuated more in regions with fewer units. See the module docstring.
     """
     print(f"computing p vals for {trial_event}")
 
@@ -86,16 +99,33 @@ def run_event(trial_event):
     res = belief_partitions_io.read_alignment(args, num_shuffles=NUM_SHUFFLES)
 
     p_vals = []
-    for region in res.region.unique():
-        region_res = res[res.region == region].copy()
-        region_p = stats_utils.compute_p_for_decoding_by_time(region_res, args, val_col="cos_raw")
-        region_p["region"] = region
-        p_vals.append(region_p)
+    for statistic in STATISTICS:
+        print(f" {statistic}")
+        for region in res.region.unique():
+            region_res = res[res.region == region].copy()
+            # cos_cv is nan wherever a cross-half squared norm came out <= 0, and the permutation
+            # test means over its input, so one nan would make every permuted difference nan and
+            # hand back p = 0. Dropping is the only option, but it changes what the test is over,
+            # so it is reported rather than done quietly
+            n_before = len(region_res)
+            region_res = region_res.dropna(subset=[statistic])
+            if len(region_res) < n_before:
+                print(f"  {region:34s} WARNING dropped {n_before - len(region_res)}/{n_before} "
+                      f"(feat, bin, mode) cells with nan {statistic}")
+            if len(region_res) == 0:
+                print(f"  {region:34s} no usable {statistic}, skipping")
+                continue
 
-        is_shuf = region_res["mode"].str.contains("shuffle")
-        true_mean, shuffle_mean = region_res[~is_shuf].cos_raw.mean(), region_res[is_shuf].cos_raw.mean()
-        print(f"  {region:34s} true {true_mean:+.4f}  shuffle {shuffle_mean:+.4f}  "
-              f"gap {true_mean - shuffle_mean:+.4f}  bins p<0.05: {(region_p.p < 0.05).sum()}/{len(region_p)}")
+            region_p = stats_utils.compute_p_for_decoding_by_time(region_res, args, val_col=statistic)
+            region_p["region"] = region
+            region_p["statistic"] = statistic
+            p_vals.append(region_p)
+
+            is_shuf = region_res["mode"].str.contains("shuffle")
+            true_mean = region_res[~is_shuf][statistic].mean()
+            shuffle_mean = region_res[is_shuf][statistic].mean()
+            print(f"  {region:34s} true {true_mean:+.4f}  shuffle {shuffle_mean:+.4f}  "
+                  f"gap {true_mean - shuffle_mean:+.4f}  bins p<0.05: {(region_p.p < 0.05).sum()}/{len(region_p)}")
     p_vals = pd.concat(p_vals, ignore_index=True)
 
     # read_alignment works on a copy, so args.shuffle_idx is still None -> the run dir, not shuffles/
