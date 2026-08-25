@@ -1,0 +1,9 @@
+.claude/
+claude_notes/
+.git/
+data/
+.env
+*.log
+__pycache__/
+*.egg-info/
+notebooks/.ipynb_checkpoints/

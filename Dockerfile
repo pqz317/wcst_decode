@@ -21,3 +21,7 @@ RUN pip3 install numpy-stl
 
 COPY . /src/wcst_decode
 RUN pip3 install -e /src/wcst_decode
+
+# Persist Claude Code user state on the host bind mount rather than the
+# container's ephemeral layer. Target appears when ./ is mounted at runtime.
+RUN rm -rf /root/.claude && ln -sfn /src/wcst_decode/.claude /root/.claude

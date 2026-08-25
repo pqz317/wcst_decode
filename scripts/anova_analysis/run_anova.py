@@ -122,6 +122,24 @@ def anova(args):
     res.to_pickle(os.path.join(output_dir, f"{file_name}.pickle"))
 
 
+def is_complete_pickle(path):
+    """
+    True if `path` holds a pickle that loads. False if it is absent, empty or truncated.
+
+    A preempted job can die inside to_pickle, leaving a partial file. os.path.exists is True for
+    those, so an existence check would treat a corrupt shuffle as done and leave the grid quietly
+    broken; reading it is the only way to tell.
+    """
+    if not os.path.exists(path):
+        return False
+    try:
+        pd.read_pickle(path)
+        return True
+    except Exception as e:
+        print(f"{path} exists but does not load ({type(e).__name__}: {e}), recomputing", flush=True)
+        return False
+
+
 def anova_batch(args):
     """
     Runs the contiguous batch of shuffles starting at args.shuffle_idx, one after another.
@@ -132,7 +150,10 @@ def anova_batch(args):
     therefore everything downstream -- is identical either way.
 
     skip_existing lets a preempted job resume: these run on a checkpoint partition, and a batch that
-    dies at shuffle 7 should not redo the first seven.
+    dies at shuffle 7 should not redo the first seven. It tests that the pickle actually LOADS, not
+    just that the path exists -- a job killed mid-write leaves a zero-byte or truncated file, which
+    an existence check would skip forever and which only surfaces much later, as an EOFError in
+    whatever reads the grid.
     """
     if args.shuffle_idx is None or args.num_shuffles_per_job == 1:
         anova(args)
@@ -143,7 +164,7 @@ def anova_batch(args):
         out_path = os.path.join(
             io_utils.get_anova_output_dir(args), f"{io_utils.get_anova_file_name(args)}.pickle"
         )
-        if args.skip_existing and os.path.exists(out_path):
+        if args.skip_existing and is_complete_pickle(out_path):
             print(f"--- shuffle {shuffle_idx} already on disk, skipping ---", flush=True)
             continue
         print(f"--- shuffle {shuffle_idx} of batch {start}-{start + args.num_shuffles_per_job - 1} ---", flush=True)

@@ -24,3 +24,5 @@ src.code-workspace
 .env
 
 *.log
+# Claude Code user state (moved from /root/.claude to persist across container restarts)
+.claude/

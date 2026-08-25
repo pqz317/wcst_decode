@@ -138,27 +138,85 @@ def run_args(args, run, feat, shuffle_idx=None):
     return run_args
 
 
+class BadGridFile(Exception):
+    """A grid pickle that is missing, empty, truncated or otherwise unreadable."""
+
+
+def pickle_path(args, run, feat, shuffle_idx):
+    """Where the launcher put one (run, feat, shuffle)'s output."""
+    a = run_args(args, run, feat, shuffle_idx)
+    return os.path.join(io_utils.get_anova_output_dir(a, make_dir=False),
+                        f"{io_utils.get_anova_file_name(a)}.pickle")
+
+
+def describe_bad_file(path, exc):
+    """
+    Why one grid file could not be read, and what to do about it.
+
+    Worth spelling out because the three causes need different responses and pandas' own error --
+    "EOFError: Ran out of input" out of pickle.load -- names neither the file nor the cause.
+    """
+    if not os.path.exists(path):
+        why = "the file does not exist -- that (feature, shuffle) never ran"
+    elif os.path.getsize(path) == 0:
+        why = "the file is EMPTY -- a job was killed inside to_pickle, most likely preempted on ckpt-all"
+    else:
+        why = (f"the file is {os.path.getsize(path)} bytes but does not parse "
+               f"({type(exc).__name__}: {exc}) -- a truncated or interrupted write")
+    return (f"{path}\n  {why}.\n"
+            f"  The permutation null would otherwise be built on the wrong number of shuffles.\n"
+            f"  Re-submit 20260819_run_stim_belief_unit_anova.sh: --skip_existing True checks that "
+            f"each pickle LOADS, not just that it exists, so it recomputes exactly the broken ones.")
+
+
+def check_grid(args):
+    """
+    Verifies every file the analysis will read, without doing the analysis.
+
+    A whole-grid scan costs one pass over ~2400 pickles per (subject, event), which is far cheaper
+    than discovering the third bad file on the third run of a 2 h job. Reports every bad file rather
+    than stopping at the first.
+    """
+    bad = []
+    for subject in SUBJECTS:
+        sub_args = copy.deepcopy(args)
+        sub_args.subject = subject
+        for feat in FEATURES:
+            for run in RUNS:
+                for shuffle_idx in [None] + list(range(args.num_shuffles)):
+                    path = pickle_path(sub_args, run, feat, shuffle_idx)
+                    try:
+                        pd.read_pickle(path)
+                    except Exception as e:
+                        bad.append(describe_bad_file(path, e))
+        print(f"  checked {subject}", flush=True)
+    n_total = len(SUBJECTS) * len(FEATURES) * len(RUNS) * (args.num_shuffles + 1)
+    if bad:
+        print(f"\n{len(bad)} of {n_total} files unusable for {args.trial_event}:\n", flush=True)
+        for b in bad:
+            print(b + "\n", flush=True)
+    else:
+        print(f"\nall {n_total} files for {args.trial_event} load", flush=True)
+    return bad
+
+
 def read_run_feat(args, run, feat):
     """
     One (run, feature)'s eta^2 as a (J+1, N) array with row 0 the true run, plus the item index.
 
     Every shuffle is reindexed onto the true run's (unit, window) index, so the rows are aligned and
-    a shuffle that is missing a unit shows up as a nan rather than a silent shift. Missing FILES are
-    an error: a grid with holes in it would quietly change the null's denominator.
+    a shuffle that is missing a unit shows up as a nan rather than a silent shift. A file that is
+    missing OR unreadable is an error: a grid with holes in it would quietly change the null's
+    denominator. Use --check_only True to find every such file in one pass first.
     """
     stat_col = RUNS[run]["stat_col"]
 
     def read(shuffle_idx):
-        a = run_args(args, run, feat, shuffle_idx)
-        path = os.path.join(io_utils.get_anova_output_dir(a, make_dir=False),
-                            f"{io_utils.get_anova_file_name(a)}.pickle")
-        if not os.path.exists(path):
-            raise FileNotFoundError(
-                f"missing {path} -- the grid is incomplete, so the permutation null would be built "
-                f"on the wrong number of shuffles. Re-submit the launcher (--skip_existing True "
-                f"means it only recomputes what is actually absent)."
-            )
-        return pd.read_pickle(path).set_index(ITEM_KEY)[stat_col]
+        path = pickle_path(args, run, feat, shuffle_idx)
+        try:
+            return pd.read_pickle(path).set_index(ITEM_KEY)[stat_col]
+        except Exception as e:
+            raise BadGridFile(describe_bad_file(path, e)) from e
 
     true = read(None)
     # a unit x window can appear once only; a duplicated index would make reindex ambiguous
@@ -429,11 +487,18 @@ def save(summary, null, items, args):
 def main(args):
     args.trial_interval = get_trial_interval(args.trial_event)
     events = ALL_TRIAL_EVENTS if args.run_all else [args.trial_event]
+    bad = []
     for event in events:
         event_args = copy.deepcopy(args)
         event_args.trial_event = event
         event_args.trial_interval = get_trial_interval(event)
+        if args.check_only:
+            print(f"\n=== checking {event} ===", flush=True)
+            bad.extend(check_grid(event_args))
+            continue
         save(*run_event(event_args), event_args)
+    if args.check_only and bad:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
@@ -446,6 +511,8 @@ if __name__ == "__main__":
     parser.add_argument("--alpha", default=ALPHA, type=float)
     parser.add_argument("--loo_matched", default=True, type=lambda x: bool(strtobool(x)))
     parser.add_argument("--output_path", default=OUTPUT_PATH, type=str)
+    # verify every input file loads, then stop. Exits 1 if any is unusable, so it can gate a re-run
+    parser.add_argument("--check_only", default=False, type=lambda x: bool(strtobool(x)))
     args = parser.parse_args()
     # the two runs' anova dirs are resolved from these, so they must match the launcher
     args.window_size = 500
