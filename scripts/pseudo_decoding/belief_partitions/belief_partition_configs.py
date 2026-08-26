@@ -29,9 +29,17 @@ class BeliefPartitionConfigs(NamedTuple):
     regions: str = None
     train_test_seed: int = 42
 
+    # keep only one half of group B (X chosen, X not preferred), split with
+    # stim_belief_groups.draw_b_split, so the A-vs-B axis run and the B-vs-C run scored along that
+    # axis share no B trials. 1 keeps B1, 2 keeps B2. Without it a B trial trains the axis and is
+    # then scored along it, which closes the very gap being measured -- see Issue 2 of
+    # claude_notes/stim_belief_alignment_updated.md. Mirrors AnovaConfigs.b_split_half, and
+    # draw_b_split is seeded with train_test_seed above, matching AnovaConfigs.split_seed
+    b_split_half: int = None
+
     # a file path for loading up significant units
     # a dataframe in pickle format, with feature, PseudoUnitID columns
-    sig_unit_level: str = None  
+    sig_unit_level: str = None
 
     # decoder configs
     learning_rate: float = 0.05

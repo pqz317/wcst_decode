@@ -21,6 +21,7 @@ from models.multinomial_logistic_regressor import NormedDropoutMultinomialLogist
 import argparse
 from scripts.pseudo_decoding.belief_partitions.belief_partition_configs import BeliefPartitionConfigs, add_defaults_to_parser
 import scripts.pseudo_decoding.belief_partitions.belief_partitions_io as belief_partitions_io
+from scripts.pseudo_decoding.belief_partitions.stim_belief_groups import draw_b_split
 import copy
 
 FEATS_PATH = "/data/patrick_res/sessions/{sub}/feats_at_least_3blocks.pickle"
@@ -44,6 +45,22 @@ def load_session_data(row, args, splits_df=None):
     if args.balance_by_filters: 
         beh = behavioral_utils.balance_trials_by_condition(beh, list(args.beh_filters.keys()) + ["condition"])
     beh = behavioral_utils.filter_behavior(beh, args.beh_filters)
+
+    if getattr(args, "b_split_half", None) is not None:
+        # group B -- X chosen, X not preferred -- split into disjoint halves, so the A-vs-B axis run
+        # and the B-vs-C run scored along that axis share no trials. Without it every B trial trains
+        # the axis and is then scored along it, which pushes B toward C and closes the gap being
+        # measured: claude_notes/stim_belief_alignment_updated.md Issue 2. Same construction as
+        # scripts/anova_analysis/run_anova.py. B is identified after filtering because both runs'
+        # filters are supersets of B -- the axis run's {Correct, High Not X} and the projection
+        # run's {Correct, Chose} -- so both see the identical `b` array, and draw_b_split sorts
+        # before permuting, so the assignment doesn't depend on row order. Before the balance below,
+        # so class priors are computed on the halved pool. Passing shuffle_idx gives each shuffle
+        # its own split, matching the population and single unit analyses
+        b = beh[(beh.BeliefPartition == "High Not X") & (beh.Choice == "Chose")].TrialNumber.to_numpy()
+        b1, b2 = draw_b_split(sess_name, args.feat, b, args.train_test_seed, args.shuffle_idx)
+        beh = beh[~beh.TrialNumber.isin(b2 if args.b_split_half == 1 else b1)]
+
     beh = behavioral_utils.balance_trials_by_condition(beh, condition_columns=args.balance_cols if args.balance_cols else ["condition"])
 
     frs = spike_utils.get_frs_from_args(args, sess_name)

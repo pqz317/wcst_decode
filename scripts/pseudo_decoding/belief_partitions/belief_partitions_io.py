@@ -58,7 +58,10 @@ def get_dir_name(args, make_dir=True):
     fr_str = args.fr_type if args.fr_type != "firing_rates" else None
     sig_units_str = f"{args.sig_unit_level}_units" if args.sig_unit_level else None
     splitter_str = f"kfold_{args.num_splits}" if args.splitter == "kfold" else None
-    parts = [args.subject, args.trial_event, region_str, filt_str, fr_str, sig_units_str, splitter_str]
+    # getattr, since a few callers build their args from a config tuple that has no such field.
+    # None for every run predating the B half-split, so those keep resolving to the same directory
+    b_split_str = f"b_split_half_{args.b_split_half}" if getattr(args, "b_split_half", None) is not None else None
+    parts = [args.subject, args.trial_event, region_str, filt_str, fr_str, sig_units_str, splitter_str, b_split_str]
     run_name = "_".join(x for x in parts if x)
     if args.shuffle_idx is None: 
         dir = os.path.join(args.base_output_path, f"{run_name}")

@@ -19,11 +19,23 @@ are stored under, so runs against different axes sit side by side.
 On that third variant, note what the axis and the scored conditions are in the note's terms. The
 axis is A (High Not X, Not Chose) vs. B (High Not X, Chose), so it is selection of X with belief
 held fixed; the conditions scored along it are B vs. C (High X, Chose), which is preference for X
-with selection held fixed. That is Step 5 of the note, and it is run WITHOUT the note's Issue 1(a)
-split of group B: B trains the axis and is also one of the two classes scored along it, and the two
-runs draw their train/test assignments independently, so projected accuracy is inflated -- and
-inflated specifically in the direction of the hypothesis. Accepted deliberately, not overlooked.
-The shuffle baseline does not absorb it, since it permutes preference labels against the true axis.
+with selection held fixed. That is Step 5 of the note.
+
+Group B is on both sides of that: it trains the axis and is one of the two classes scored along it.
+Left alone, a B trial's own noise helps build the axis, so it projects further toward the Chose end
+than a fresh B trial would, by sum_u Var_B(z_u) / n_B. Along this axis the ordering is A < B < C and
+C is the positive class, so the leak pushes B TOWARD C and closes the gap being measured -- it
+deflates projected accuracy, and a below chance result would be manufactured rather than evidence of
+anti-alignment. Refitting the threshold does not rescue it: the shift is differential between the two
+scored classes (B moves, C does not, since C never enters the axis run), and a threshold refit is a
+location fix rather than a separation fix. Nor does the shuffle absorb it, since that permutes
+preference labels against the true axis and mixes shifted B with unshifted C into both classes.
+
+--b_split_half / --axis_b_split_half are the fix (the note's Issue 2, and Issue 1(a) for the cosine
+analysis): B is split into disjoint halves by stim_belief_groups.draw_b_split, the axis run trains on
+B1 only, and the projection scores B2 only, so the two share no trials and the term is exactly zero.
+Pass --b_split_half 2 --axis_b_split_half 1 and both the scored run and the axis it reads resolve to
+their own directories. Left unset, the runs are the earlier leaky ones and read back unchanged.
 """
 
 import os
@@ -51,12 +63,17 @@ PROJ_MODE = "pref_on_choice"
 PROJ_OUTPUT_PATH = "/data/patrick_res/choice_axis_projection_accs"
 
 
-def get_proj_mode(axis_beh_filters):
+def get_proj_mode(axis_beh_filters, axis_b_split_half=None):
     """
     Mode results are stored under. The axis run's filters are part of the name, so projections
     onto different choice axes sit side by side rather than overwriting each other: an axis fit
     on all trials stays "pref_on_choice", one fit on correct trials only becomes
     "pref_on_choice_Response_Correct".
+
+    Which half of group B the axis was fit on is part of the name for the same reason -- the scored
+    run's own half already separates the output directories, but naming the axis's half here keeps
+    the two readable apart in one directory. Unset for every run predating the split, so those read
+    back under the names they were written with.
 
     Spaces are collapsed to underscores because this string goes into file names, and a filter
     value like "High Not X" would otherwise put a space in every .npy written. Deliberately not
@@ -65,7 +82,8 @@ def get_proj_mode(axis_beh_filters):
     orphan them. No existing projection mode contains a space, so the shipped results are unaffected.
     """
     filt_str = belief_partitions_io.get_filter_str(axis_beh_filters).replace(" ", "_")
-    return f"{PROJ_MODE}_{filt_str}" if filt_str else PROJ_MODE
+    mode = f"{PROJ_MODE}_{filt_str}" if filt_str else PROJ_MODE
+    return mode if axis_b_split_half is None else f"{mode}_axis_b_split_half_{axis_b_split_half}"
 
 
 def load_choice_axes(args, num_bins):
@@ -84,6 +102,8 @@ def load_choice_axes(args, num_bins):
     axis_args.sig_unit_level = None
     axis_args.shuffle_idx = None
     axis_args.base_output_path = CHOICE_AXIS_PATH
+    # the axis run's half of group B, the complement of the half being scored here
+    axis_args.b_split_half = args.axis_b_split_half
 
     axis_dir = belief_partitions_io.get_dir_name(axis_args, make_dir=False)
     print(f"Reading choice axes from {axis_dir}", flush=True)
@@ -171,7 +191,7 @@ def project(args):
 
     # store under the projection's own mode and path, everything else named as the preference run
     save_args = copy.deepcopy(args)
-    save_args.mode = get_proj_mode(args.axis_beh_filters)
+    save_args.mode = get_proj_mode(args.axis_beh_filters, args.axis_b_split_half)
     save_args.base_output_path = PROJ_OUTPUT_PATH
     output_dir = belief_partitions_io.get_dir_name(save_args)
     file_name = belief_partitions_io.get_file_name(save_args)
@@ -188,7 +208,9 @@ def process_args(args):
     args.trial_interval = get_trial_interval(args.trial_event)
     print(f"Projecting {args.mode} activity for feat {args.feat} onto the {AXIS_MODE} axis", flush=True)
     print(f"With filters {args.beh_filters}, onto an axis fit with filters {args.axis_beh_filters}", flush=True)
-    print(f"Storing results under mode {get_proj_mode(args.axis_beh_filters)}", flush=True)
+    if args.b_split_half is not None or args.axis_b_split_half is not None:
+        print(f"Scoring group B half {args.b_split_half}, axis fit on half {args.axis_b_split_half}", flush=True)
+    print(f"Storing results under mode {get_proj_mode(args.axis_beh_filters, args.axis_b_split_half)}", flush=True)
     if args.sig_unit_level:
         print(f"Using only units that are selective with signifance level {args.sig_unit_level}")
     return args
@@ -205,5 +227,9 @@ if __name__ == "__main__":
     # not part of BeliefPartitionConfigs, that's shared by every decoding script and only this one
     # reads a second run's axis. Parsed as json, same as --beh_filters
     parser.add_argument('--axis_beh_filters', default={}, type=lambda x: json.loads(x))
+    # the half of group B the axis run trained on. --b_split_half, from BeliefPartitionConfigs, is
+    # the half scored here, and the two must be complementary for the axis and the scored trials to
+    # be disjoint: --b_split_half 2 --axis_b_split_half 1
+    parser.add_argument('--axis_b_split_half', default=None, type=int)
     args = parser.parse_args()
     main(args)

@@ -96,27 +96,21 @@ from distutils.util import strtobool
 from scripts.pseudo_decoding.belief_partitions.belief_partition_configs import BeliefPartitionConfigs, add_defaults_to_parser
 import scripts.pseudo_decoding.belief_partitions.belief_partitions_io as belief_partitions_io
 import scripts.pseudo_decoding.belief_partitions.decode_belief_partitions as decode_belief_partitions
+# The group definitions and B's half-split live in a leaf module so the decoding path can share
+# them: decode_belief_partitions.py needs draw_b_split for --b_split_half (Issue 2), and importing
+# it from here would close a cycle with the import above. Re-exported so the importers that already
+# take these names from this module keep working
+from scripts.pseudo_decoding.belief_partitions.stim_belief_groups import (
+    POOL_FILTERS, BASE_GROUPS, GROUP_CODE, group_masks, draw_half_split, draw_b_split,
+)
 
 # mode results are stored under
 MODE = "stim_belief_align"
 OUTPUT_PATH = "/data/patrick_res/stim_belief_alignment"
 
-# the single pool all three groups are drawn from. Not configurable: "control for external
-# confounds by examining only correct trials" is part of the design, not a variant of it. It is
-# still written into the output directory name, so a future variant would sit beside this one
-POOL_FILTERS = {"Response": "Correct"}
-
 # the four cells the vectors are built from, after B is halved. Their order is the order the
 # per-unit columns appear in
 GROUPS = ["A", "B1", "B2", "C"]
-
-# the three cells before any halving. cos_raw halves only B; cos_cv halves all three, so this is
-# what the half-split and the min-trial guard are expressed over
-BASE_GROUPS = ["A", "B", "C"]
-
-# a seed field, so the three groups' half-assignments are independent draws rather than the same
-# permutation applied three times
-GROUP_CODE = {"A": 1, "B": 2, "C": 3}
 
 # the per-unit terms cos_cv is assembled from, summed over whatever population is being reported.
 # cv_num / cv_sq_* are cross-half products and carry no noise power; cv_ss_* are self-half products
@@ -165,59 +159,6 @@ def prep_behavior_for_feat(raw_beh, feat):
     beh = behavioral_utils.get_feat_choice_label(raw_beh.copy(), feat)
     beh = behavioral_utils.get_belief_partitions(beh, feat, use_x=True)
     return behavioral_utils.filter_behavior(beh, POOL_FILTERS)
-
-
-def group_masks(beh):
-    """
-    The three (Choice x BeliefPartition) cells, as boolean masks over an already-filtered beh.
-
-    Same definitions as claude_notes/stim_belief_group_counts.py, which is where the trial counts
-    in the note's Step 1 table come from -- kept in sync by hand, since claude_notes isn't a package.
-    """
-    return {
-        "A": (beh.BeliefPartition == "High Not X") & (beh.Choice == "Not Chose"),
-        "B": (beh.BeliefPartition == "High Not X") & (beh.Choice == "Chose"),
-        "C": (beh.BeliefPartition == "High X") & (beh.Choice == "Chose"),
-    }
-
-
-def draw_half_split(session, feat, trials, seed, shuffle_idx, group="B", repeat=0):
-    """
-    Splits one base group's trial numbers into two disjoint halves.
-
-    Deterministic in (session, feat, seed, shuffle_idx, group, repeat) and nothing else, so it is
-    reproducible without being persisted: Steps 3 and 5 of the note need the choice decoder to
-    train on B1 only and the projection to score B2 only, and they get the identical assignment by
-    importing draw_b_split below and calling it with the same arguments.
-
-    Halves are drawn within the group rather than as a boolean over every trial in the session, so
-    the two are exactly balanced (differing by at most one trial when |G| is odd) rather than
-    binomially scattered around |G|/2.
-
-    cos_raw needs one call, on B, and that is what draw_b_split names. cos_cv needs all three of
-    A, B and C halved, once per repeat, which is what `group` and `repeat` index. The two agree on
-    B at repeat 0 by construction, so cos_cv's first repeat reuses cos_raw's B1/B2 exactly.
-    """
-    # a list seed is hashed as SeedSequence entropy, so the six fields can't collide the way an
-    # arithmetic combination can. shuffle_idx is offset by 1 to keep the true run's 0 distinct
-    rng = np.random.default_rng([
-        int(session), FEATURES.index(feat), seed,
-        0 if shuffle_idx is None else shuffle_idx + 1,
-        GROUP_CODE[group], repeat,
-    ])
-    perm = rng.permutation(np.sort(np.asarray(trials)))
-    h1, h2 = perm[:len(perm) // 2], perm[len(perm) // 2:]
-    assert len(np.intersect1d(h1, h2)) == 0, f"{group} halves overlap"
-    assert len(h1) + len(h2) == len(trials), f"{group} halves don't partition {group}"
-    return h1, h2
-
-
-def draw_b_split(session, feat, b_trials, seed, shuffle_idx):
-    """
-    Group B's canonical halves, B1 and B2 (Issue 1 fix (a)) -- the assignment v_stim = r_B1 - r_A
-    and v_pref = r_C - r_B2 are built from, and the one Steps 3 and 5 reproduce by importing this.
-    """
-    return draw_half_split(session, feat, b_trials, seed, shuffle_idx, group="B", repeat=0)
 
 
 def pivot_frs(frs):
