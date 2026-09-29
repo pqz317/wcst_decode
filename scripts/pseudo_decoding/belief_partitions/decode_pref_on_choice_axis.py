@@ -127,14 +127,25 @@ def load_choice_axes(args, num_bins):
 
     axes = np.empty((num_bins, len(units)))
     for bin_idx in range(num_bins):
-        per_split = []
-        for model in models[bin_idx, :]:
-            weights_diff = model.coef_[high_idx, :] - model.coef_[low_idx, :]
-            # 1e-5 from torch batchnorm1d, numerical
-            std = np.sqrt(model.model.norm.running_var.detach().cpu().numpy() + 1e-5)
-            per_split.append(weights_diff / std)
-        axes[bin_idx, :] = np.mean(np.vstack(per_split), axis=0)
+        axes[bin_idx, :] = axis_from_models(models[bin_idx, :], high_idx, low_idx)
     return axes, units.PseudoUnitID.to_numpy()
+
+
+def axis_from_models(models_row, high_idx, low_idx):
+    """
+    One time bin's axis in raw firing rate units, averaged over that bin's splits.
+
+    Each split's axis is weights / batch norm std first, then averaged, rather than averaging
+    weights and stds separately. Also used by stim_belief_projection_sim.py, so the simulated axis
+    is built exactly as the real one is.
+    """
+    per_split = []
+    for model in models_row:
+        weights_diff = model.coef_[high_idx, :] - model.coef_[low_idx, :]
+        # 1e-5 from torch batchnorm1d, numerical
+        std = np.sqrt(model.model.norm.running_var.detach().cpu().numpy() + 1e-5)
+        per_split.append(weights_diff / std)
+    return np.mean(np.vstack(per_split), axis=0)
 
 
 def evaluate_projections(sess_datas, axes, axis_unit_ids, time_bins, args):
