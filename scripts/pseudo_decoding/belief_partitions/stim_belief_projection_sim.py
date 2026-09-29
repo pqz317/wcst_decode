@@ -36,8 +36,8 @@ expected test accuracy is
 
     acc = Phi( d^2 / (2 sqrt(d^2 + T)) ),    d = norm of the mean difference
 
-s is solved from the stim gap over its peak window (T over all the axis run's units), p from the pref
-gap over all bins (T over the pref units), each so the mean over features hits 0.5 + gap.
+s is solved from the stim gap (T over all the axis run's units), p from the pref gap (T over the pref
+units), both over stim_belief_sim_layout.PEAK_WINDOW, each so the mean over features hits 0.5 + gap.
 
 The trained decoder is less efficient than a plain mean difference, which the formula takes as
 kappa T in place of T, kappa fit once to the real decoder on the ITC, ACC and whole population
@@ -391,7 +391,7 @@ def analytic_calibration(test_ratio, stim_noise_factor, pref_noise_factor):
         feat_layouts = [layouts[(population, feat, TARGETS_SPLIT)] for feat in FEATURES]
         T_stim = [stim_noise_factor * noise_power(l, "n_units", "n_A", "n_B_axis", test_ratio) for l in feat_layouts]
         T_pref = [pref_noise_factor * noise_power(l, "n_pref_units", "n_B_pref", "n_C", test_ratio) for l in feat_layouts]
-        stim_gap, pref_gap = targets.loc[population, "stim_gap_peak"], targets.loc[population, "pref_gap_all"]
+        stim_gap, pref_gap = targets.loc[population, "stim_gap_peak"], targets.loc[population, "pref_gap_peak"]
         s, p = solve_signal(stim_gap, T_stim), solve_signal(pref_gap, T_pref)
         # the axis averages 8 splits of one pool, so its noise is roughly that of the full counts
         T_axis = np.mean([np.sum(l.n_units * (1 / l.n_A + 1 / l.n_B_axis)) for l in feat_layouts])

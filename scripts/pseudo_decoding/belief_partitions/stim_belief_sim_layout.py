@@ -24,11 +24,14 @@ Split variants:
 
 Targets, per population, feedback aligned:
 
-- stim gap: true - shuffle of the axis run, averaged over its peak window -- post-feedback bins
-  where it beats its shuffle at p < 0.05. If none do, the PEAK_FALLBACK_BINS bins with the largest
-  gap, flagged in `stim_window_fallback`.
-- pref gap: true - shuffle of the pref run, averaged over all bins, since it's roughly flat in time.
-- proj gap: the observed projection's true - shuffle, over both windows, to mark on the figures.
+- stim gap: true - shuffle of the axis run, averaged over PEAK_WINDOW, -0.6 to -0.2s before
+  feedback. That is where stim decoding peaks in the whole population, ITC and AMY, while the choice
+  is being made; after feedback it has already fallen off. One fixed window for every population
+  rather than each one's own top bins, which in DSTR, LPFC and ACC are scattered noise.
+- pref gap: true - shuffle of the pref run over the same window, so both targets describe the same
+  moment. Also over all bins, for reference.
+- proj gap: the observed projection's true - shuffle, over the window and over all bins, to mark on
+  the figures.
 
     python3 scripts/pseudo_decoding/belief_partitions/stim_belief_sim_layout.py
 
@@ -42,7 +45,6 @@ import pandas as pd
 
 from constants.behavioral_constants import *
 from constants.decoding_constants import *
-import utils.stats_utils as stats_utils
 from scripts.pseudo_decoding.belief_partitions.belief_partition_configs import BeliefPartitionConfigs
 import scripts.pseudo_decoding.belief_partitions.belief_partitions_io as belief_partitions_io
 from scripts.pseudo_decoding.belief_partitions.decode_pref_on_choice_axis import get_proj_mode, PROJ_OUTPUT_PATH, CHOICE_AXIS_PATH
@@ -66,8 +68,8 @@ SPLIT_VARIANTS = {"b_split": (1, 2), "no_split": (None, None)}
 # calibration's noise power comes from, and no_split reuses the resulting s, p
 TARGETS_SPLIT = "b_split"
 
-PEAK_ALPHA = 0.05
-PEAK_FALLBACK_BINS = 5
+# bin times, inclusive, in seconds relative to feedback
+PEAK_WINDOW = (-0.6, -0.2)
 
 
 def get_args(population, mode, b_split_half):
@@ -160,6 +162,11 @@ def gap(res, mode):
     return true - shuffle
 
 
+def in_window(times):
+    times = np.asarray(times)
+    return (times > PEAK_WINDOW[0] - 1e-6) & (times < PEAK_WINDOW[1] + 1e-6)
+
+
 def targets_for(population):
     """
     Calibration targets and the observed projection gap, for the B split runs, plus the observed
@@ -170,18 +177,14 @@ def targets_for(population):
     axis_args = get_args(population, "choice", 1)
     stim_res = belief_partitions_io.read_results(axis_args, FEATURES)
     stim_gap = gap(stim_res, "choice")
-    p_vals = stats_utils.compute_p_for_decoding_by_time(stim_res, axis_args)
-    sig_times = p_vals[(p_vals.p < PEAK_ALPHA) & (p_vals.Time > 0)].Time.to_numpy()
-    window = stim_gap.index[np.isin(np.round(stim_gap.index, 1), np.round(sig_times, 1))]
-    row["stim_window_fallback"] = len(window) == 0
-    if len(window) == 0:
-        window = stim_gap[stim_gap.index > 0].nlargest(PEAK_FALLBACK_BINS).index
-    row["stim_window"] = np.sort(np.asarray(window))
-    row["stim_gap_peak"] = stim_gap.loc[window].mean()
+    row["stim_window"] = np.round(stim_gap.index[in_window(stim_gap.index)], 1)
+    row["stim_gap_peak"] = stim_gap[in_window(stim_gap.index)].mean()
     row["stim_gap_all"] = stim_gap.mean()
 
     pref_args = get_args(population, "pref", 2)
-    row["pref_gap_all"] = gap(belief_partitions_io.read_results(pref_args, FEATURES), "pref").mean()
+    pref_gap = gap(belief_partitions_io.read_results(pref_args, FEATURES), "pref")
+    row["pref_gap_peak"] = pref_gap[in_window(pref_gap.index)].mean()
+    row["pref_gap_all"] = pref_gap.mean()
 
     for split, (axis_half, pref_half) in SPLIT_VARIANTS.items():
         proj_args = get_args(population, "pref", pref_half)
@@ -189,7 +192,7 @@ def targets_for(population):
         proj_args.base_output_path = PROJ_OUTPUT_PATH
         proj_gap = gap(belief_partitions_io.read_results(proj_args, FEATURES), proj_args.mode)
         row[f"proj_gap_all_{split}"] = proj_gap.mean()
-        row[f"proj_gap_peak_{split}"] = proj_gap.loc[proj_gap.index.intersection(window)].mean()
+        row[f"proj_gap_peak_{split}"] = proj_gap[in_window(proj_gap.index)].mean()
     return row
 
 
