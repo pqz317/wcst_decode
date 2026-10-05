@@ -30,6 +30,20 @@ def perm_test(values, mask_a, num_permutes, rng, one_sided=True):
     return p_val
 
 
+def sign_flip_test(d, num_flips, rng):
+    """
+    One-sided sign-flip test of sum(d) > 0, treating each entry of d as an independent unit whose
+    sign is exchangeable under the null (each d_i symmetric about 0).
+    Returns (sum(d), p), with p = (#{null >= observed} + 1) / (num_flips + 1).
+    """
+    d = np.asarray(d, dtype=np.float64)
+    observed = d.sum()
+    signs = rng.integers(0, 2, size=(num_flips, len(d))) * 2 - 1
+    null = signs @ d
+    p_val = (np.sum(null >= observed) + 1) / (num_flips + 1)
+    return observed, p_val
+
+
 def compute_p_per_group(data, val_col, label_col, num_permutes=1000, seed=42, label_a="true", label_b="shuffle", test_type="one_side"):
     """
     Computes a one-sided permutation test, 
