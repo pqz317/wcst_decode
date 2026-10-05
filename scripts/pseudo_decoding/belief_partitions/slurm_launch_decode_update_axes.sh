@@ -7,7 +7,7 @@
 # 2 modes x 12 features = 24 jobs. When all have finished, run locally:
 #   python -m scripts.pseudo_decoding.belief_partitions.decoder_update_projections
 
-partition="gpu-a100"
+partition="ckpt-all"
 modes="pref conf"
 
 declare -A mode_to_subpop
