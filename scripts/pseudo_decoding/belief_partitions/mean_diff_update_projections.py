@@ -162,11 +162,13 @@ def split_halves(sess_name, feat, trials, seed):
     return trials
 
 
-def split_pairs(sess_name, feat, trials, seed, split_idx=None):
+def split_pairs(sess_name, feat, trials, seed, split_idx=None, test_frac=0.5):
     """
-    Adds `half`: in each chose-X cell, half of the trials that have a next trial are drawn as
-    "test", the odd one going to a random half; each test trial's next trial, if not itself a test
-    trial, is "reserved"; every other trial is "axis". Seeded like split_halves, per cell.
+    Adds `half`: in each chose-X cell, a test_frac fraction of the trials that have a next trial
+    are drawn as "test"; each test trial's next trial, if not itself a test trial, is "reserved";
+    every other trial is "axis". Seeded like split_halves, per cell. When test_frac x cell size
+    isn't a whole number it's rounded down or up at random, so at 0.5 the odd trial of an odd-sized
+    cell goes to a random half, as before.
 
     split_idx, if given, joins the seed, so each index draws an independent split. None keeps the
     seed of the single split this script uses.
@@ -178,7 +180,10 @@ def split_pairs(sess_name, feat, trials, seed, split_idx=None):
         seed_parts = [int(sess_name), FEATURES.index(feat), seed] + ([] if split_idx is None else [split_idx])
         rng = np.random.default_rng(seed_parts + [code])
         perm = rng.permutation(cell_trials)
-        n_test = len(perm) // 2 + rng.integers(len(perm) % 2 + 1)
+        target = test_frac * len(perm)
+        n_floor = int(np.floor(target + 1e-9))
+        # same draws as the original len // 2 + rng.integers(len % 2 + 1) when test_frac is 0.5
+        n_test = n_floor + rng.integers(1 if np.isclose(target, n_floor) else 2)
         trials.loc[trials.TrialNumber.isin(perm[:n_test]), "half"] = "test"
     test_next = trials.loc[trials.half == "test", "NextTrialNumber"]
     trials.loc[trials.TrialNumber.isin(test_next) & (trials.half != "test"), "half"] = "reserved"
@@ -270,7 +275,7 @@ def process_session(sess_name, feats, args, sig):
     return events_res, axes_res
 
 
-def compute_stats(events, axes, num_flips=10000, seed=42, unit_cols=("session", "feat")):
+def compute_stats(events, axes, num_flips=10000, seed=42, unit_cols=("session", "feat"), normalize=True):
     """
     Sign-flip tests of CONTRASTS, plus per-cell summaries.
 
@@ -283,6 +288,8 @@ def compute_stats(events, axes, num_flips=10000, seed=42, unit_cols=("session", 
     unit_cols sets the replication unit; with ("session", "feat", "split") each split is its own
     unit, and the norm is taken per (feat, split), since each split has its own axis.
 
+    normalize=False skips the norm and uses the raw projections.
+
     Returns (stats, cells):
       stats: one row per contrast -- D, mean_d, n_units, p
       cells: per axis and cell, the mean and SE across (session, feat) units of the cell mean,
@@ -294,8 +301,11 @@ def compute_stats(events, axes, num_flips=10000, seed=42, unit_cols=("session", 
     events = events.copy()
     unit_means = {}
     for a in AXES:
-        norms = np.sqrt(kept.groupby(norm_cols)[f"sq_norm_{a}"].sum()).rename(f"norm_{a}")
-        events[f"proj_{a}_n"] = events[f"proj_{a}"] / events.join(norms, on=norm_cols)[f"norm_{a}"]
+        if normalize:
+            norms = np.sqrt(kept.groupby(norm_cols)[f"sq_norm_{a}"].sum()).rename(f"norm_{a}")
+            events[f"proj_{a}_n"] = events[f"proj_{a}"] / events.join(norms, on=norm_cols)[f"norm_{a}"]
+        else:
+            events[f"proj_{a}_n"] = events[f"proj_{a}"]
         unit_means[a] = (
             events.groupby(unit_cols + [f"{a}_cell"])[f"proj_{a}_n"].mean()
             .unstack(f"{a}_cell").reindex(columns=AXIS_CELLS[a])

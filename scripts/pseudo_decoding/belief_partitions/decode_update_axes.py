@@ -39,18 +39,30 @@ from scripts.pseudo_decoding.belief_partitions.prior_dependent_updates import lo
 import scripts.pseudo_decoding.belief_partitions.mean_diff_update_projections as md
 
 OUTPUT_PATH = "/data/patrick_res/update_axes_decoders"
+DEFAULT_TEST_FRAC = 0.5
 
 # TimeBins of the pre-stimulus bins, in seconds from the start of the StimOnset interval
 PRE_STIM_BINS = np.arange(0, 1.0, 0.1)
 
 
+def decoder_base_path(test_frac):
+    """
+    Where decoders for a given --test_frac live: OUTPUT_PATH at the default, a test_frac_{f}
+    subfolder otherwise, so runs at different fractions don't overwrite each other.
+    """
+    if np.isclose(test_frac, DEFAULT_TEST_FRAC):
+        return OUTPUT_PATH
+    return os.path.join(OUTPUT_PATH, f"test_frac_{test_frac:g}")
+
+
 def pair_splits(sess_name, feat, args):
     """
-    {split_idx: split_pairs output} for the session's --num_splits pair splits.
+    {split_idx: split_pairs output} for the session's --num_splits pair splits, each drawing
+    --test_frac of every chose-X cell as test trials.
     """
     labeled = md.label_trials(load_beh(sess_name, args), feat)
     return {
-        i: md.split_pairs(sess_name, feat, labeled.copy(), args.train_test_seed, split_idx=i)
+        i: md.split_pairs(sess_name, feat, labeled.copy(), args.train_test_seed, split_idx=i, test_frac=args.test_frac)
         for i in range(args.num_splits)
     }
 
@@ -133,7 +145,8 @@ def main(args):
     args.feat = FEATURES[args.feat_idx]
     args.trial_interval = get_trial_interval(args.trial_event)
     args.time_range = PRE_STIM_RANGE
-    print(f"feat {args.feat}, mode {args.mode}, units {args.sig_unit_level}", flush=True)
+    args.base_output_path = decoder_base_path(args.test_frac)
+    print(f"feat {args.feat}, mode {args.mode}, units {args.sig_unit_level}, test_frac {args.test_frac}", flush=True)
 
     sess_datas = load_session_datas(args)
     test_accs, models = train_decoder(sess_datas, args)
@@ -153,4 +166,6 @@ if __name__ == "__main__":
     parser = add_defaults_to_parser(
         BeliefPartitionConfigs(subject="both", base_output_path=OUTPUT_PATH), parser
     )
+    # fraction of each chose-X cell drawn as test trials k (k and k + 1 then reserved) per split
+    parser.add_argument("--test_frac", default=DEFAULT_TEST_FRAC, type=float)
     main(parser.parse_args())

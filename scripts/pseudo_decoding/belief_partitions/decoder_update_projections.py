@@ -12,9 +12,18 @@ splits. For each chose-X test trial k of split i, on split i's axis,
 
     proj = mean over bins of  sum over units of  (x[k+1] - x[k]) / std * weightsdiff
 
-which is md.project_tests with the axis weightsdiff / std in firing-rate units. The axis norm (per
-feature and split), the four contrasts and the sign flips are md.compute_stats with
-(session, feature, split) as the unit.
+which is md.project_tests with the axis weightsdiff / std in firing-rate units. The four contrasts
+and the sign flips are md.compute_stats with (session, feature, split) as the unit.
+
+--normalize_axes divides each projection by its axis norm, sqrt(sum of weightsdiff^2 over every
+unit and bin of that (feature, split)'s decoder), so each decoder's axis has unit length. Off by
+default: projections are then in the decoder's own weight scale.
+
+--old_axes projects onto the old no-cond decoders of decode_belief_partitions.py instead, which
+were trained on every trial, test trials included. Their 8 models are averaged into one axis per
+bin, as pref_conf_projection_updates.load_pref_vector does, and that axis is used for all 8 pair
+splits. Everything else -- test trials, projection, statistics -- is unchanged, so the comparison
+with the default run isolates the training-trial overlap of the old axes.
 
 Runs locally after every decode_update_axes.py job has finished.
 """
@@ -32,24 +41,29 @@ import scripts.pseudo_decoding.belief_partitions.belief_partitions_io as belief_
 from scripts.pseudo_decoding.belief_partitions.stim_belief_vector_alignment import get_feat_to_sessions, load_session_frs
 from scripts.pseudo_decoding.belief_partitions.prior_dependent_updates import load_beh, PRE_STIM_RANGE
 from scripts.pseudo_decoding.belief_partitions.pref_conf_projection_updates import MODE_TO_DIRECTION_LABELS
-from scripts.pseudo_decoding.belief_partitions.decode_update_axes import OUTPUT_PATH as DECODER_PATH, pair_splits
+from scripts.pseudo_decoding.belief_partitions.decode_update_axes import (
+    pair_splits, decoder_base_path, PRE_STIM_BINS, DEFAULT_TEST_FRAC,
+)
 import scripts.pseudo_decoding.belief_partitions.mean_diff_update_projections as md
 
 MODE = "decoder_updates"
+# the old no-cond decoders, trained on every trial
+OLD_DECODER_PATH = "/data/patrick_res/belief_partitions"
 OUTPUT_PATH = "/data/patrick_res/decoder_update_projections"
 SIG_UNIT_LEVEL = "{mode}_99th_no_cond_window_filter_drift"
 
 
 def decoder_args(args, mode, feat):
     """
-    args locating the decode_update_axes.py run for (mode, feat).
+    args locating the decoder run for (mode, feat): decode_update_axes.py's, or with --old_axes the
+    old no-cond run of decode_belief_partitions.py.
     """
     d_args = copy.deepcopy(args)
     d_args.subject = "both"
     d_args.mode = mode
     d_args.feat = feat
     d_args.sig_unit_level = SIG_UNIT_LEVEL.format(mode=mode)
-    d_args.base_output_path = DECODER_PATH
+    d_args.base_output_path = OLD_DECODER_PATH if args.old_axes else decoder_base_path(args.test_frac)
     d_args.shuffle_idx = None
     return d_args
 
@@ -78,19 +92,31 @@ def split_weights(d_args, mode, feat):
     return pd.concat(res, ignore_index=True)
 
 
+def averaged_weights(weights, num_splits):
+    """
+    The old analysis's axis: weightsdiff and std averaged over the decoder's models per
+    (unit, bin), as in load_pref_vector, repeated once per pair split.
+    """
+    avg = weights.groupby(["PseudoUnitID", "TimeIdx"])[["weightsdiff", "std"]].mean().reset_index()
+    return pd.concat([avg.assign(split=i) for i in range(num_splits)], ignore_index=True)
+
+
 def load_axes(args, feats):
     """
     {(mode, feat): split_weights}, {(mode, feat): mean pre-stim decoder test accuracy over splits},
-    and {(mode, feat): the splits table the decoders were trained with}.
+    and {(mode, feat): the splits table the decoders were trained with}, None with --old_axes,
+    whose decoders were not trained on pair splits.
     """
     axes, accs, splits = {}, {}, {}
     for mode in md.AXES:
         for feat in feats:
             d_args = decoder_args(args, mode, feat)
-            axes[(mode, feat)] = split_weights(d_args, mode, feat)
+            weights = split_weights(d_args, mode, feat)
+            axes[(mode, feat)] = averaged_weights(weights, args.num_splits) if args.old_axes else weights
             dir_name = belief_partitions_io.get_dir_name(d_args, make_dir=False)
-            accs[(mode, feat)] = np.load(os.path.join(dir_name, f"{feat}_{mode}_test_accs.npy")).mean()
-            splits[(mode, feat)] = pd.read_pickle(os.path.join(dir_name, f"{feat}_{mode}_splits.pickle"))
+            # the old decoders cover the whole StimOnset interval; its first 10 bins are pre-stim
+            accs[(mode, feat)] = np.load(os.path.join(dir_name, f"{feat}_{mode}_test_accs.npy"))[:len(PRE_STIM_BINS)].mean()
+            splits[(mode, feat)] = None if args.old_axes else pd.read_pickle(os.path.join(dir_name, f"{feat}_{mode}_splits.pickle"))
     return axes, accs, splits
 
 
@@ -107,18 +133,26 @@ def check_split(trials, table, sess_name, split_idx):
     assert (half.loc[test] == "test").all(), f"session {sess_name} split {split_idx}: test trial not a test trial"
 
 
-def session_axis(weights, unit_ids, time_idxs):
+def session_axis(weights, unit_ids, time_idxs, min_std=0.0):
     """
     The axis weightsdiff / std as a units x bins array over this session's units, 0 for units not in
-    the decoder, plus its squared norm sum(weightsdiff^2) over the session's decoder units.
+    the decoder, plus its squared norm sum(weightsdiff^2) over the session's decoder units, the
+    number of decoder units, and the number of (unit, bin) entries dropped by min_std.
+
+    Entries whose BatchNorm std is below min_std are set to 0, in the projection and the norm.
+    Such a unit was nearly silent in that bin on the decoder's training trials, so its weight is
+    barely trained, and dividing a test trial's change by that std multiplies it by up to ~300.
     """
     w = weights[weights.PseudoUnitID.isin(unit_ids)]
     if len(w) == 0:
-        return np.zeros((len(unit_ids), len(time_idxs))), 0.0, 0
+        return np.zeros((len(unit_ids), len(time_idxs))), 0.0, 0, 0
     grid = w.pivot(index="PseudoUnitID", columns="TimeIdx", values="weightsdiff").reindex(index=unit_ids, columns=time_idxs)
     std = w.pivot(index="PseudoUnitID", columns="TimeIdx", values="std").reindex(index=unit_ids, columns=time_idxs)
+    n_units = int(grid.notna().any(axis=1).sum())
+    low = std < min_std
+    grid = grid.mask(low)
     u = (grid / std).fillna(0).to_numpy()
-    return u, float((grid.fillna(0).to_numpy() ** 2).sum()), int(grid.notna().any(axis=1).sum())
+    return u, float((grid.fillna(0).to_numpy() ** 2).sum()), n_units, int(low.to_numpy().sum())
 
 
 def process_session(sess_name, feats, args, axes, tables):
@@ -143,13 +177,14 @@ def process_session(sess_name, feats, args, axes, tables):
             sess_axes = {}
             axis_row = {"session": sess_name, "subject": args.subject, "feat": feat, "split": split_idx, "dropped": False}
             for mode in md.AXES:
-                if sess_name in set(tables[(mode, feat)].session):
+                if tables[(mode, feat)] is not None and sess_name in set(tables[(mode, feat)].session):
                     check_split(trials, tables[(mode, feat)], sess_name, split_idx)
                 weights = axes[(mode, feat)]
-                u, sq_norm, n = session_axis(weights[weights.split == split_idx], unit_ids, time_idxs)
+                u, sq_norm, n, n_low = session_axis(weights[weights.split == split_idx], unit_ids, time_idxs, args.min_std)
                 sess_axes[mode] = u
                 axis_row[f"sq_norm_{mode}"] = sq_norm
                 axis_row[f"n_units_{mode}"] = n
+                axis_row[f"n_low_std_{mode}"] = n_low
             axes_res.append(axis_row)
 
             test = md.project_tests(X, rows, trials, sess_axes)
@@ -189,13 +224,21 @@ def main(args):
     events = pd.concat(events, ignore_index=True)
     axes_df = pd.DataFrame(axes_df)
     stats, cells = md.compute_stats(events, axes_df, args.num_flips, args.train_test_seed,
-                                    unit_cols=("session", "feat", "split"))
+                                    unit_cols=("session", "feat", "split"), normalize=args.normalize_axes)
 
     out_args = copy.deepcopy(args)
     out_args.subject = "both"
     out_args.sig_unit_level = None
     output_dir = belief_partitions_io.get_dir_name(out_args)
     prefix = MODE if not args.feats else f"{MODE}_{'_'.join(feats)}"
+    if args.normalize_axes:
+        prefix += "_axis_norm"
+    if args.old_axes:
+        prefix += "_old_axes"
+    if not np.isclose(args.test_frac, DEFAULT_TEST_FRAC):
+        prefix += f"_test_frac_{args.test_frac:g}"
+    if args.min_std > 0:
+        prefix += f"_min_std_{args.min_std:g}"
     for name, df in [("events", events), ("axes", axes_df), ("stats", stats), ("cells", cells)]:
         df.to_pickle(os.path.join(output_dir, f"{prefix}_{name}.pickle"))
 
@@ -216,4 +259,10 @@ if __name__ == "__main__":
     parser.add_argument("--num_flips", default=10000, type=int)
     # comma separated feature names, for checking the pipeline on a subset; default all 12
     parser.add_argument("--feats", default=None, type=str)
+    parser.add_argument("--normalize_axes", action="store_true")
+    parser.add_argument("--old_axes", action="store_true")
+    # must match the decode_update_axes.py run: it sets which decoders are read and rebuilds the splits
+    parser.add_argument("--test_frac", default=DEFAULT_TEST_FRAC, type=float)
+    # (unit, bin) axis entries with BatchNorm std below this, in firing-rate units, are left out
+    parser.add_argument("--min_std", default=0.0, type=float)
     main(parser.parse_args())
