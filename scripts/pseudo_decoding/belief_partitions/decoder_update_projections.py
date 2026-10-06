@@ -4,15 +4,17 @@ sign-flip tests of mean_diff_update_projections.py. Replaces pref_conf_projectio
 decoders were trained on every trial they then scored, and whose inference ran on pseudo-trials
 against a shuffle baseline.
 
-The decoders come from decode_update_axes.py, trained on the pair split's axis trials only. For
-each feature, mode and pre-stimulus bin, the axis is coef[high] - coef[low] averaged over the 8
-decoder splits, applied to firing rates divided by the BatchNorm running std, as in
-pref_conf_projection_updates.load_pref_vector. For each chose-X test trial k,
+The decoders come from decode_update_axes.py, one per pair split, each trained on its split's
+axis trials only. For each feature, mode, split and pre-stimulus bin, the axis is
+coef[high] - coef[low] of that split's decoder, applied to firing rates divided by its BatchNorm
+running std, as in pref_conf_projection_updates.load_pref_vector but without averaging over
+splits. For each chose-X test trial k of split i, on split i's axis,
 
     proj = mean over bins of  sum over units of  (x[k+1] - x[k]) / std * weightsdiff
 
-which is md.project_tests with the axis weightsdiff / std in firing-rate units. The axis norm, the
-four contrasts and the sign flips over (session, feature) are md.compute_stats unchanged.
+which is md.project_tests with the axis weightsdiff / std in firing-rate units. The axis norm (per
+feature and split), the four contrasts and the sign flips are md.compute_stats with
+(session, feature, split) as the unit.
 
 Runs locally after every decode_update_axes.py job has finished.
 """
@@ -29,8 +31,8 @@ from scripts.pseudo_decoding.belief_partitions.belief_partition_configs import B
 import scripts.pseudo_decoding.belief_partitions.belief_partitions_io as belief_partitions_io
 from scripts.pseudo_decoding.belief_partitions.stim_belief_vector_alignment import get_feat_to_sessions, load_session_frs
 from scripts.pseudo_decoding.belief_partitions.prior_dependent_updates import load_beh, PRE_STIM_RANGE
-from scripts.pseudo_decoding.belief_partitions.pref_conf_projection_updates import load_pref_vector
-from scripts.pseudo_decoding.belief_partitions.decode_update_axes import OUTPUT_PATH as DECODER_PATH
+from scripts.pseudo_decoding.belief_partitions.pref_conf_projection_updates import MODE_TO_DIRECTION_LABELS
+from scripts.pseudo_decoding.belief_partitions.decode_update_axes import OUTPUT_PATH as DECODER_PATH, pair_splits
 import scripts.pseudo_decoding.belief_partitions.mean_diff_update_projections as md
 
 MODE = "decoder_updates"
@@ -52,23 +54,57 @@ def decoder_args(args, mode, feat):
     return d_args
 
 
+def split_weights(d_args, mode, feat):
+    """
+    One split's axis per row: DataFrame of split, PseudoUnitID, TimeIdx, weightsdiff, std. The same
+    quantities and TimeIdx convention as pref_conf_projection_updates.load_pref_vector, kept per
+    split instead of averaged.
+    """
+    high_idx = MODE_TO_CLASSES[mode].index(MODE_TO_DIRECTION_LABELS[mode]["high"])
+    low_idx = MODE_TO_CLASSES[mode].index(MODE_TO_DIRECTION_LABELS[mode]["low"])
+    models = belief_partitions_io.read_models(copy.deepcopy(d_args), [feat])
+    units = belief_partitions_io.read_units(copy.deepcopy(d_args), [feat]).PseudoUnitID.to_numpy()
+    res = []
+    for row in models.itertuples():
+        coef = row.models.coef_
+        assert coef.shape[1] == len(units), f"{mode} {feat}: {len(units)} unit ids but {coef.shape[1]} decoder inputs"
+        # 1e-5 from torch batchnorm1d, numerical
+        std = np.sqrt(row.models.model.norm.running_var.detach().cpu().numpy() + 1e-5)
+        res.append(pd.DataFrame({
+            "split": int(row.run), "PseudoUnitID": units,
+            "TimeIdx": int(round((row.Time - 0.1) * 10)),
+            "weightsdiff": coef[high_idx, :] - coef[low_idx, :], "std": std,
+        }))
+    return pd.concat(res, ignore_index=True)
+
+
 def load_axes(args, feats):
     """
-    {(mode, feat): DataFrame of PseudoUnitID, TimeIdx, weightsdiff, std} and
-    {(mode, feat): mean pre-stim decoder test accuracy}.
+    {(mode, feat): split_weights}, {(mode, feat): mean pre-stim decoder test accuracy over splits},
+    and {(mode, feat): the splits table the decoders were trained with}.
     """
-    axes, accs = {}, {}
+    axes, accs, splits = {}, {}, {}
     for mode in md.AXES:
         for feat in feats:
             d_args = decoder_args(args, mode, feat)
-            n_units = len(belief_partitions_io.read_units(copy.deepcopy(d_args), [feat]))
-            n_coef = belief_partitions_io.read_models(copy.deepcopy(d_args), [feat]).models.iloc[0].coef_.shape[1]
-            assert n_units == n_coef, f"{mode} {feat}: {n_units} unit ids but {n_coef} decoder inputs"
-            weights = load_pref_vector(copy.deepcopy(d_args))
-            axes[(mode, feat)] = weights[["PseudoUnitID", "TimeIdx", "weightsdiff", "std"]]
+            axes[(mode, feat)] = split_weights(d_args, mode, feat)
             dir_name = belief_partitions_io.get_dir_name(d_args, make_dir=False)
             accs[(mode, feat)] = np.load(os.path.join(dir_name, f"{feat}_{mode}_test_accs.npy")).mean()
-    return axes, accs
+            splits[(mode, feat)] = pd.read_pickle(os.path.join(dir_name, f"{feat}_{mode}_splits.pickle"))
+    return axes, accs, splits
+
+
+def check_split(trials, table, sess_name, split_idx):
+    """
+    Asserts the decoder for this split trained only on axis trials and was tested only on test
+    trials of the split rebuilt here.
+    """
+    rows = table[(table.session == sess_name) & (table.split_idx == split_idx)]
+    half = trials.set_index("TrialNumber").half
+    train = np.concatenate(rows.TrainTrials.values)
+    test = np.concatenate(rows.TestTrials.values)
+    assert (half.loc[train] == "axis").all(), f"session {sess_name} split {split_idx}: train trial not an axis trial"
+    assert (half.loc[test] == "test").all(), f"session {sess_name} split {split_idx}: test trial not a test trial"
 
 
 def session_axis(weights, unit_ids, time_idxs):
@@ -85,9 +121,10 @@ def session_axis(weights, unit_ids, time_idxs):
     return u, float((grid.fillna(0).to_numpy() ** 2).sum()), int(grid.notna().any(axis=1).sum())
 
 
-def process_session(sess_name, feats, args, axes):
+def process_session(sess_name, feats, args, axes, tables):
     """
-    The test events' projections and the axis summaries for every valid feature of one session.
+    The test events' projections and the axis summaries for every valid feature and split of one
+    session, each split's test trials projected on that split's axes.
     """
     beh = load_beh(sess_name, args)
     frs_args = copy.deepcopy(args)
@@ -102,26 +139,31 @@ def process_session(sess_name, feats, args, axes):
 
     events_res, axes_res = [], []
     for feat in feats:
-        trials = md.split_pairs(sess_name, feat, md.label_trials(beh, feat), args.train_test_seed)
-        sess_axes, axis_row = {}, {"session": sess_name, "subject": args.subject, "feat": feat, "dropped": False}
-        for mode in md.AXES:
-            u, sq_norm, n = session_axis(axes[(mode, feat)], unit_ids, time_idxs)
-            sess_axes[mode] = u
-            axis_row[f"sq_norm_{mode}"] = sq_norm
-            axis_row[f"n_units_{mode}"] = n
-        axes_res.append(axis_row)
+        for split_idx, trials in pair_splits(sess_name, feat, args).items():
+            sess_axes = {}
+            axis_row = {"session": sess_name, "subject": args.subject, "feat": feat, "split": split_idx, "dropped": False}
+            for mode in md.AXES:
+                if sess_name in set(tables[(mode, feat)].session):
+                    check_split(trials, tables[(mode, feat)], sess_name, split_idx)
+                weights = axes[(mode, feat)]
+                u, sq_norm, n = session_axis(weights[weights.split == split_idx], unit_ids, time_idxs)
+                sess_axes[mode] = u
+                axis_row[f"sq_norm_{mode}"] = sq_norm
+                axis_row[f"n_units_{mode}"] = n
+            axes_res.append(axis_row)
 
-        test = md.project_tests(X, rows, trials, sess_axes)
-        for mode in md.AXES:
-            if axis_row[f"n_units_{mode}"] == 0:
-                test[f"proj_{mode}"] = np.nan
-        test["session"] = sess_name
-        test["subject"] = args.subject
-        test["feat"] = feat
-        events_res.append(test[[
-            "session", "subject", "feat", "TrialNumber", "outcome", "partition",
-            "pref_cell", "conf_cell", "proj_pref", "proj_conf",
-        ]])
+            test = md.project_tests(X, rows, trials, sess_axes)
+            for mode in md.AXES:
+                if axis_row[f"n_units_{mode}"] == 0:
+                    test[f"proj_{mode}"] = np.nan
+            test["session"] = sess_name
+            test["subject"] = args.subject
+            test["feat"] = feat
+            test["split"] = split_idx
+            events_res.append(test[[
+                "session", "subject", "feat", "split", "TrialNumber", "outcome", "partition",
+                "pref_cell", "conf_cell", "proj_pref", "proj_conf",
+            ]])
     return events_res, axes_res
 
 
@@ -129,7 +171,7 @@ def main(args):
     args.trial_interval = get_trial_interval(args.trial_event)
     args.time_range = PRE_STIM_RANGE
     feats = args.feats.split(",") if args.feats else FEATURES
-    axes, accs = load_axes(args, feats)
+    axes, accs, tables = load_axes(args, feats)
 
     events, axes_df = [], []
     for sub in ["SA", "BL"]:
@@ -141,12 +183,13 @@ def main(args):
             if not sess_feats:
                 continue
             print(f"{sub} session {sess_name}: {len(sess_feats)} features", flush=True)
-            sess_events, sess_axes = process_session(sess_name, sess_feats, sub_args, axes)
+            sess_events, sess_axes = process_session(sess_name, sess_feats, sub_args, axes, tables)
             events.extend(sess_events)
             axes_df.extend(sess_axes)
     events = pd.concat(events, ignore_index=True)
     axes_df = pd.DataFrame(axes_df)
-    stats, cells = md.compute_stats(events, axes_df, args.num_flips, args.train_test_seed)
+    stats, cells = md.compute_stats(events, axes_df, args.num_flips, args.train_test_seed,
+                                    unit_cols=("session", "feat", "split"))
 
     out_args = copy.deepcopy(args)
     out_args.subject = "both"
@@ -157,7 +200,7 @@ def main(args):
         df.to_pickle(os.path.join(output_dir, f"{prefix}_{name}.pickle"))
 
     print(f"\nsaved {prefix}_*.pickle to {output_dir}", flush=True)
-    print("\nmean pre-stim decoder test accuracy:", flush=True)
+    print("\nmean pre-stim decoder test accuracy, over splits:", flush=True)
     print(pd.Series(accs).unstack(0).round(3).to_string(), flush=True)
     print("\ncells:", flush=True)
     print(cells.to_string(), flush=True)

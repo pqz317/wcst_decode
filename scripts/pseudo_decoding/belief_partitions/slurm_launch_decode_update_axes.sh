@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# Pref and conf decoders for decoder_update_projections.py, trained on the axis trials of the pair
-# split only (decode_update_axes.py). Same units and resources as slurm_launch_decode_no_cond.sh.
+# Pref and conf decoders for decoder_update_projections.py (decode_update_axes.py): one decoder per
+# each of 8 pair splits, trained on that split's axis trials only. Same units and resources as
+# slurm_launch_decode_no_cond.sh.
 # No shuffles: decoder_update_projections.py tests by sign flips instead.
 #
 # 2 modes x 12 features = 24 jobs. When all have finished, run locally:

@@ -1,16 +1,18 @@
 """
-Pref and conf decoders for decoder_update_projections.py, trained only on the axis trials of
-mean_diff_update_projections' pair split.
+Pref and conf decoders for decoder_update_projections.py, one per pair split of
+mean_diff_update_projections, trained only on that split's axis trials.
 
-For each (session, feature X), the pair split draws half of each chose-X cell (outcome x partition)
-as test trials k and reserves k and k + 1; every other trial is an axis trial. Only axis trials
-reach the decoder, so no trial the projections score was trained on. The split is rebuilt from
-behavior alone, so decoder_update_projections.py reproduces it exactly.
+For each (session, feature X) and each of --num_splits splits, the pair split draws half of each
+chose-X cell (outcome x partition) as test trials k and reserves k and k + 1; every other trial is
+an axis trial. Split i's decoder trains on split i's axis trials, balanced by class, and its test
+accuracy is scored on split i's test trials k. So no trial a split's projections score was trained
+on by that split's decoder. The splits are rebuilt from behavior alone, so
+decoder_update_projections.py reproduces them; the splits table is saved to check that.
 
-Otherwise as the old no-cond decoders of decode_belief_partitions.py: no behavior filters, classes
-balanced, units from --sig_unit_level, the same decoder and 8 internal train/test splits. Only the
-10 pre-stimulus bins are trained, which are the first 10 bins of the StimOnset interval, so
-belief_partitions_io.read_models gives them the same Time values as the old models.
+Otherwise as the old no-cond decoders of decode_belief_partitions.py: no behavior filters, units
+from --sig_unit_level, the same decoder. Only the 10 pre-stimulus bins are trained, which are the
+first 10 bins of the StimOnset interval, so belief_partitions_io.read_models gives them the same
+Time values as the old models. Model column i of the saved array is split i.
 
 Launched by slurm_launch_decode_update_axes.sh, one job per (mode, feature).
 """
@@ -42,32 +44,61 @@ OUTPUT_PATH = "/data/patrick_res/update_axes_decoders"
 PRE_STIM_BINS = np.arange(0, 1.0, 0.1)
 
 
-def axis_trials(sess_name, feat, args):
+def pair_splits(sess_name, feat, args):
     """
-    TrialNumbers of the pair split's axis trials for (session, feat).
+    {split_idx: split_pairs output} for the session's --num_splits pair splits.
     """
-    trials = md.split_pairs(sess_name, feat, md.label_trials(load_beh(sess_name, args), feat), args.train_test_seed)
-    return set(trials.loc[trials.half == "axis", "TrialNumber"])
+    labeled = md.label_trials(load_beh(sess_name, args), feat)
+    return {
+        i: md.split_pairs(sess_name, feat, labeled.copy(), args.train_test_seed, split_idx=i)
+        for i in range(args.num_splits)
+    }
+
+
+def splits_table(sess_name, beh, splits):
+    """
+    Train/test trials per (split, class), in ConditionTrialSplitter's format: train is the split's
+    axis trials, balanced by class; test is the split's test trials k. beh is labeled by mode, so
+    trials outside the mode's classes (Low, for pref) are already dropped.
+
+    Raises if any class has no train or no test trials, since pseudo-trials can't be drawn from an
+    empty set.
+    """
+    rows = []
+    for i, trials in splits.items():
+        half = beh.TrialNumber.map(trials.set_index("TrialNumber").half)
+        train = behavioral_utils.balance_trials_by_condition(beh[half == "axis"], condition_columns=["condition"])
+        test = beh[half == "test"]
+        for cond in sorted(beh.condition.unique()):
+            row = {
+                "Condition": cond,
+                "TrainTrials": train[train.condition == cond].TrialNumber.to_numpy(),
+                "TestTrials": test[test.condition == cond].TrialNumber.to_numpy(),
+                "split_idx": i, "session": sess_name,
+            }
+            if len(row["TrainTrials"]) == 0 or len(row["TestTrials"]) == 0:
+                raise ValueError(f"session {sess_name} split {i} class {cond}: "
+                                 f"{len(row['TrainTrials'])} train, {len(row['TestTrials'])} test trials")
+            rows.append(row)
+    return pd.DataFrame(rows)
 
 
 def load_session_data(sess_name, args):
     """
-    SessionData for the axis trials of one session, or None if it has no firing rates or trials.
-    As decode_belief_partitions.load_session_data with no filters, restricted to axis trials
-    before the classes are balanced.
+    SessionData whose splits are the session's pair splits, or None if it has no firing rates.
+    As decode_belief_partitions.load_session_data with no filters.
     """
     beh = behavioral_utils.load_behavior_from_args(sess_name, args)
     beh = behavioral_utils.get_feat_choice_label(beh, args.feat)
     beh = behavioral_utils.get_belief_partitions(beh, args.feat, use_x=True)
     beh = behavioral_utils.get_label_by_mode(beh, args.mode)
-    beh = beh[beh.TrialNumber.isin(axis_trials(sess_name, args.feat, args))]
-    beh = behavioral_utils.balance_trials_by_condition(beh, condition_columns=["condition"])
+    splits_df = splits_table(sess_name, beh, pair_splits(sess_name, args.feat, args))
 
     frs = spike_utils.get_frs_from_args(args, sess_name)
     frs = frs.rename(columns={"FiringRate": "Value"})
-    if len(frs) == 0 or len(beh) == 0:
+    if len(frs) == 0:
         return None
-    return session_data.create_from_splitter(args, "condition", sess_name, beh, frs)
+    return session_data.SessionData(sess_name, beh, frs, splits_df)
 
 
 def load_session_datas(args):
@@ -111,6 +142,7 @@ def main(args):
     file_name = belief_partitions_io.get_file_name(args)
     np.save(os.path.join(output_dir, f"{file_name}_test_accs.npy"), test_accs)
     np.save(os.path.join(output_dir, f"{file_name}_models.npy"), models)
+    pd.concat(sess_datas.apply(lambda x: x.get_splits_df()).values).to_pickle(os.path.join(output_dir, f"{file_name}_splits.pickle"))
     unit_ids = pd.DataFrame({"PseudoUnitIDs": np.concatenate(sess_datas.apply(lambda x: x.get_pseudo_unit_ids()).values)})
     unit_ids.to_csv(os.path.join(output_dir, f"{file_name}_unit_ids.csv"))
     print(f"saved {file_name} to {output_dir}; pre-stim test acc {test_accs.mean():.3f}", flush=True)

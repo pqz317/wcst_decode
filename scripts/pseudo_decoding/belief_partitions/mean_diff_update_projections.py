@@ -162,17 +162,21 @@ def split_halves(sess_name, feat, trials, seed):
     return trials
 
 
-def split_pairs(sess_name, feat, trials, seed):
+def split_pairs(sess_name, feat, trials, seed, split_idx=None):
     """
     Adds `half`: in each chose-X cell, half of the trials that have a next trial are drawn as
     "test", the odd one going to a random half; each test trial's next trial, if not itself a test
     trial, is "reserved"; every other trial is "axis". Seeded like split_halves, per cell.
+
+    split_idx, if given, joins the seed, so each index draws an independent split. None keeps the
+    seed of the single split this script uses.
     """
     trials["half"] = "axis"
     for code, cell in enumerate(PREF_CELLS):
         in_cell = (trials.pref_cell == cell) & (trials.NextTrialNumber >= 0)
         cell_trials = np.sort(trials.loc[in_cell, "TrialNumber"].to_numpy())
-        rng = np.random.default_rng([int(sess_name), FEATURES.index(feat), seed, code])
+        seed_parts = [int(sess_name), FEATURES.index(feat), seed] + ([] if split_idx is None else [split_idx])
+        rng = np.random.default_rng(seed_parts + [code])
         perm = rng.permutation(cell_trials)
         n_test = len(perm) // 2 + rng.integers(len(perm) % 2 + 1)
         trials.loc[trials.TrialNumber.isin(perm[:n_test]), "half"] = "test"
@@ -266,7 +270,7 @@ def process_session(sess_name, feats, args, sig):
     return events_res, axes_res
 
 
-def compute_stats(events, axes, num_flips=10000, seed=42):
+def compute_stats(events, axes, num_flips=10000, seed=42, unit_cols=("session", "feat")):
     """
     Sign-flip tests of CONTRASTS, plus per-cell summaries.
 
@@ -276,19 +280,24 @@ def compute_stats(events, axes, num_flips=10000, seed=42):
     D = sum d_{s,X} is tested by flipping signs per (session, feat). Conf's High cell is the mean
     over every test trial in High X or High Not X.
 
+    unit_cols sets the replication unit; with ("session", "feat", "split") each split is its own
+    unit, and the norm is taken per (feat, split), since each split has its own axis.
+
     Returns (stats, cells):
       stats: one row per contrast -- D, mean_d, n_units, p
       cells: per axis and cell, the mean and SE across (session, feat) units of the cell mean,
              n_units, n_events
     """
+    unit_cols = list(unit_cols)
+    norm_cols = [c for c in unit_cols if c != "session"]
     kept = axes[~axes.dropped]
     events = events.copy()
     unit_means = {}
     for a in AXES:
-        norms = np.sqrt(kept.groupby("feat")[f"sq_norm_{a}"].sum())
-        events[f"proj_{a}_n"] = events[f"proj_{a}"] / events.feat.map(norms)
+        norms = np.sqrt(kept.groupby(norm_cols)[f"sq_norm_{a}"].sum()).rename(f"norm_{a}")
+        events[f"proj_{a}_n"] = events[f"proj_{a}"] / events.join(norms, on=norm_cols)[f"norm_{a}"]
         unit_means[a] = (
-            events.groupby(["session", "feat", f"{a}_cell"])[f"proj_{a}_n"].mean()
+            events.groupby(unit_cols + [f"{a}_cell"])[f"proj_{a}_n"].mean()
             .unstack(f"{a}_cell").reindex(columns=AXIS_CELLS[a])
         )
 
