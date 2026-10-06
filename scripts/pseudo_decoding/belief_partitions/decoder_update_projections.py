@@ -42,7 +42,7 @@ from scripts.pseudo_decoding.belief_partitions.stim_belief_vector_alignment impo
 from scripts.pseudo_decoding.belief_partitions.prior_dependent_updates import load_beh, PRE_STIM_RANGE
 from scripts.pseudo_decoding.belief_partitions.pref_conf_projection_updates import MODE_TO_DIRECTION_LABELS
 from scripts.pseudo_decoding.belief_partitions.decode_update_axes import (
-    pair_splits, decoder_base_path, PRE_STIM_BINS, DEFAULT_TEST_FRAC,
+    pair_splits, args_base_path, add_split_args, PRE_STIM_BINS, DEFAULT_TEST_FRAC,
 )
 import scripts.pseudo_decoding.belief_partitions.mean_diff_update_projections as md
 
@@ -51,6 +51,11 @@ MODE = "decoder_updates"
 OLD_DECODER_PATH = "/data/patrick_res/belief_partitions"
 OUTPUT_PATH = "/data/patrick_res/decoder_update_projections"
 SIG_UNIT_LEVEL = "{mode}_99th_no_cond_window_filter_drift"
+# BatchNorm std below this (firing-rate units) drops a (unit, bin) axis entry. 0.25 removes the
+# entries at or near the numerical floor (sqrt(1e-5) ~ 0.003): ~6% of pref and ~1% of conf
+# entries. In a sweep of 0.1, 0.25, 0.5 and 1, every cell mean was stable from 0.25 to 0.5, while
+# at 0.1 the largest inc/High X (session, feature, split) mean was still 7.4, against 3.3 at 0.25
+DEFAULT_MIN_STD = 0.25
 
 
 def decoder_args(args, mode, feat):
@@ -63,7 +68,7 @@ def decoder_args(args, mode, feat):
     d_args.mode = mode
     d_args.feat = feat
     d_args.sig_unit_level = SIG_UNIT_LEVEL.format(mode=mode)
-    d_args.base_output_path = OLD_DECODER_PATH if args.old_axes else decoder_base_path(args.test_frac)
+    d_args.base_output_path = OLD_DECODER_PATH if args.old_axes else args_base_path(args)
     d_args.shuffle_idx = None
     return d_args
 
@@ -235,9 +240,11 @@ def main(args):
         prefix += "_axis_norm"
     if args.old_axes:
         prefix += "_old_axes"
-    if not np.isclose(args.test_frac, DEFAULT_TEST_FRAC):
+    if args.split_method == "chunk":
+        prefix += f"_chunk_{args.chunk_test_len}_train_frac_{args.chunk_train_frac:g}"
+    elif not np.isclose(args.test_frac, DEFAULT_TEST_FRAC):
         prefix += f"_test_frac_{args.test_frac:g}"
-    if args.min_std > 0:
+    if not np.isclose(args.min_std, DEFAULT_MIN_STD):
         prefix += f"_min_std_{args.min_std:g}"
     for name, df in [("events", events), ("axes", axes_df), ("stats", stats), ("cells", cells)]:
         df.to_pickle(os.path.join(output_dir, f"{prefix}_{name}.pickle"))
@@ -263,6 +270,8 @@ if __name__ == "__main__":
     parser.add_argument("--old_axes", action="store_true")
     # must match the decode_update_axes.py run: it sets which decoders are read and rebuilds the splits
     parser.add_argument("--test_frac", default=DEFAULT_TEST_FRAC, type=float)
-    # (unit, bin) axis entries with BatchNorm std below this, in firing-rate units, are left out
-    parser.add_argument("--min_std", default=0.0, type=float)
+    add_split_args(parser)
+    # (unit, bin) axis entries with BatchNorm std below this, in firing-rate units, are left out;
+    # 0 keeps every entry
+    parser.add_argument("--min_std", default=DEFAULT_MIN_STD, type=float)
     main(parser.parse_args())
