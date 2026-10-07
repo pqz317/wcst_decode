@@ -5,11 +5,13 @@
 # slurm_launch_decode_no_cond.sh.
 # No shuffles: decoder_update_projections.py tests by sign flips instead.
 #
-# 2 modes x 12 features = 24 jobs. When all have finished, run locally:
-#   python -m scripts.pseudo_decoding.belief_partitions.decoder_update_projections
+# One run per region of interest, units being the mode's subpopulation within the region:
+# 6 regions x 2 modes x 12 features = 144 jobs. When all have finished, run locally:
+#   python -m scripts.pseudo_decoding.belief_partitions.decoder_update_projections --per_region
 
 partition="ckpt-all"
 modes="pref conf"
+regions="amygdala_Amy basal_ganglia_BG inferior_temporal_cortex_ITC medial_pallium_MPal lateral_prefrontal_cortex_lat_PFC anterior_cingulate_gyrus_ACgG"
 
 declare -A mode_to_subpop
 mode_to_subpop["pref"]="pref_99th_no_cond_window_filter_drift"
@@ -40,7 +42,11 @@ singularity exec --writable-tmpfs --nv \
 EOT
 }
 
-for mode in $modes; do
-    submit_job_array "0-11" "ua${mode}" \
-        "--mode $mode --trial_event StimOnset --sig_unit_level ${mode_to_subpop[$mode]} --feat_idx \$SLURM_ARRAY_TASK_ID"
+for region in $regions; do
+    for mode in $modes; do
+        submit_job_array "0-11" "ua${mode}" \
+            "--mode $mode --trial_event StimOnset --sig_unit_level ${mode_to_subpop[$mode]} \
+            --region_level structure_level2_cleaned --regions $region \
+            --feat_idx \$SLURM_ARRAY_TASK_ID"
+    done
 done

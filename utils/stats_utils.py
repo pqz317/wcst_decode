@@ -30,17 +30,21 @@ def perm_test(values, mask_a, num_permutes, rng, one_sided=True):
     return p_val
 
 
-def sign_flip_test(d, num_flips, rng):
+def sign_flip_test(d, num_flips, rng, two_sided=False):
     """
     One-sided sign-flip test of sum(d) > 0, treating each entry of d as an independent unit whose
     sign is exchangeable under the null (each d_i symmetric about 0).
     Returns (sum(d), p), with p = (#{null >= observed} + 1) / (num_flips + 1).
+    two_sided=True tests sum(d) != 0 instead, with p = (#{|null| >= |observed|} + 1) / (num_flips + 1).
     """
     d = np.asarray(d, dtype=np.float64)
     observed = d.sum()
     signs = rng.integers(0, 2, size=(num_flips, len(d))) * 2 - 1
     null = signs @ d
-    p_val = (np.sum(null >= observed) + 1) / (num_flips + 1)
+    if two_sided:
+        p_val = (np.sum(np.abs(null) >= np.abs(observed)) + 1) / (num_flips + 1)
+    else:
+        p_val = (np.sum(null >= observed) + 1) / (num_flips + 1)
     return observed, p_val
 
 

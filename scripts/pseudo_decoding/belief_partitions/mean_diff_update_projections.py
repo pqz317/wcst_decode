@@ -66,7 +66,21 @@ STRATA = [(c, o, p) for c in [True, False] for o in ["cor", "inc"] for p in PART
 
 PREF_CELLS = [f"{o}/{p}" for o in ["cor", "inc"] for p in PARTITIONS]
 CONF_CELLS = [f"{o}/{c}" for o in ["cor", "inc"] for c in ["Low", "High"]]
-AXIS_CELLS = {"pref": PREF_CELLS, "conf": CONF_CELLS}
+# conf's High split back into High X and High Not X, summarized on the conf axis too; last, so the
+# pooled cells' sign-flip draws are as before they were added
+CONF_SPLIT_HIGH_CELLS = [f"{o}/{p}" for o in ["cor", "inc"] for p in ["High X", "High Not X"]]
+AXIS_CELLS = {"pref": PREF_CELLS, "conf": CONF_CELLS + CONF_SPLIT_HIGH_CELLS}
+# the events columns that label each axis's cells: conf's split High cells are pref_cell's
+AXIS_CELL_COLS = {"pref": ["pref_cell"], "conf": ["conf_cell", "pref_cell"]}
+
+# conditions of pref_conf_projection_updates.py, as (chose X only, outcome); the all-choice ones
+# need not-X events
+CONDITIONS = {
+    "chose X / cor": (True, "cor"),
+    "chose X / inc": (True, "inc"),
+    "cor": (False, "cor"),
+    "inc": (False, "inc"),
+}
 
 # contrasts as (axis, cell summed with +, cell summed with -), over chose-X test events
 CONTRASTS = {
@@ -216,14 +230,17 @@ def feature_axes(X, rows, trials):
     return axes, counts
 
 
-def project_tests(X, rows, trials, axes):
+def project_tests(X, rows, trials, axes, include=None):
     """
     The chose-X test trials whose activity on t and t + 1 both exist, with each axis's projection
     of dx_t, per bin then averaged over bins. Unnormalized: the norm needs every session.
+
+    include, a boolean mask over trials, replaces the chose-X test trials as the trials projected.
     """
+    if include is None:
+        include = (trials.half == "test") & trials.chose
     test = trials[
-        (trials.half == "test") & trials.chose
-        & trials.TrialNumber.isin(list(rows)) & trials.NextTrialNumber.isin(list(rows))
+        include & trials.TrialNumber.isin(list(rows)) & trials.NextTrialNumber.isin(list(rows))
     ].copy()
     cur = [rows[t] for t in test.TrialNumber]
     nxt = [rows[t] for t in test.NextTrialNumber]
@@ -275,7 +292,25 @@ def process_session(sess_name, feats, args, sig):
     return events_res, axes_res
 
 
-def compute_stats(events, axes, num_flips=10000, seed=42, unit_cols=("session", "feat"), normalize=True):
+def normalize_projections(events, axes, norm_cols, normalize=True, axis_names=AXES):
+    """
+    Adds proj_{axis}_n for each of axis_names: each axis's projections divided by its
+    pseudo-population norm per norm_cols group, sqrt(sum over sessions and bins of ||u_s||^2), or
+    the raw projections when normalize is False, in which case axes may be None.
+    """
+    kept = axes[~axes.dropped] if normalize else None
+    events = events.copy()
+    for a in axis_names:
+        if normalize:
+            norms = np.sqrt(kept.groupby(norm_cols)[f"sq_norm_{a}"].sum()).rename(f"norm_{a}")
+            events[f"proj_{a}_n"] = events[f"proj_{a}"] / events.join(norms, on=norm_cols)[f"norm_{a}"]
+        else:
+            events[f"proj_{a}_n"] = events[f"proj_{a}"]
+    return events
+
+
+def compute_stats(events, axes, num_flips=10000, seed=42, unit_cols=("session", "feat"), normalize=True,
+                  session_flips=False, axis_names=AXES):
     """
     Sign-flip tests of CONTRASTS, plus per-cell summaries.
 
@@ -283,51 +318,111 @@ def compute_stats(events, axes, num_flips=10000, seed=42, unit_cols=("session", 
     sqrt(sum over sessions and bins of ||u_s||^2), so each feature's axis has unit length across
     all bins. A contrast d_{s,X} is formed for each (session, feat) with both cells non-empty, and
     D = sum d_{s,X} is tested by flipping signs per (session, feat). Conf's High cell is the mean
-    over every test trial in High X or High Not X.
+    over every test trial in High X or High Not X; conf's cells also include High X and High Not X
+    separately, which no contrast uses.
 
     unit_cols sets the replication unit; with ("session", "feat", "split") each split is its own
     unit, and the norm is taken per (feat, split), since each split has its own axis.
 
-    normalize=False skips the norm and uses the raw projections.
+    normalize=False skips the norm and uses the raw projections; axes may then be None.
+
+    axis_names limits the cells, and the contrasts, to those axes; events need proj_{axis} only for
+    them.
+
+    Each cell's p_vs_0 is a two-sided sign-flip test of its unit means against 0, flipping per unit.
+
+    session_flips=True averages each contrast, and each cell's unit means for p_vs_0, within
+    session before the sign flips (see average_within_session), so the flips are per session.
+    D, mean_d and n_units are then over sessions. The cells' mean, se and n_units are unchanged.
 
     Returns (stats, cells):
       stats: one row per contrast -- D, mean_d, n_units, p
       cells: per axis and cell, the mean and SE across (session, feat) units of the cell mean,
-             n_units, n_events
+             n_units, n_events, p_vs_0
     """
     unit_cols = list(unit_cols)
     norm_cols = [c for c in unit_cols if c != "session"]
-    kept = axes[~axes.dropped]
-    events = events.copy()
+    events = normalize_projections(events, axes, norm_cols, normalize, axis_names)
     unit_means = {}
-    for a in AXES:
-        if normalize:
-            norms = np.sqrt(kept.groupby(norm_cols)[f"sq_norm_{a}"].sum()).rename(f"norm_{a}")
-            events[f"proj_{a}_n"] = events[f"proj_{a}"] / events.join(norms, on=norm_cols)[f"norm_{a}"]
-        else:
-            events[f"proj_{a}_n"] = events[f"proj_{a}"]
-        unit_means[a] = (
-            events.groupby(unit_cols + [f"{a}_cell"])[f"proj_{a}_n"].mean()
-            .unstack(f"{a}_cell").reindex(columns=AXIS_CELLS[a])
-        )
+    for a in axis_names:
+        # a cell labelled by more than one column (conf's Low, by conf_cell and pref_cell) has the
+        # same events, so the same unit means, in each
+        means = None
+        for col in AXIS_CELL_COLS[a]:
+            col_means = events.groupby(unit_cols + [col])[f"proj_{a}_n"].mean().unstack(col)
+            means = col_means if means is None else means.combine_first(col_means)
+        unit_means[a] = means.reindex(columns=AXIS_CELLS[a])
 
     rng = np.random.default_rng(seed)
     stats = []
     for name, (a, plus, minus) in CONTRASTS.items():
+        if a not in axis_names:
+            continue
         d = (unit_means[a][plus] - unit_means[a][minus]).dropna()
+        if session_flips:
+            d = average_within_session(d, unit_cols)
         D, p = stats_utils.sign_flip_test(d.to_numpy(), num_flips, rng)
         stats.append({"contrast": name, "axis": a, "plus": plus, "minus": minus,
                       "D": D, "mean_d": d.mean(), "n_units": len(d), "p": p})
 
     cells = []
-    for a in AXES:
+    for a in axis_names:
         for cell in AXIS_CELLS[a]:
             vals = unit_means[a][cell].dropna()
+            in_cell = np.logical_or.reduce([events[col] == cell for col in AXIS_CELL_COLS[a]])
             cells.append({
                 "axis": a, "cell": cell, "mean": vals.mean(), "se": vals.std(ddof=1) / np.sqrt(len(vals)),
-                "n_units": len(vals), "n_events": int(events.loc[events[f"{a}_cell"] == cell, f"proj_{a}"].notna().sum()),
+                "n_units": len(vals), "n_events": int(events.loc[in_cell, f"proj_{a}"].notna().sum()),
+                "p_vs_0": p_vs_0(vals, unit_cols, num_flips, rng, session_flips),
             })
     return pd.DataFrame(stats), pd.DataFrame(cells)
+
+
+def condition_summaries(events, axes, num_flips, seed, unit_cols=("session", "feat"), normalize=True,
+                        session_flips=False, include_all_choice=True, axis_names=AXES):
+    """
+    Per axis and condition of CONDITIONS, the mean and SE across units of the unit's mean
+    projection, n_units, n_events, and p_vs_0, a two-sided sign-flip test of the unit means against
+    0 (per session with session_flips). Normalized as compute_stats. include_all_choice=False
+    leaves out the all-choice conditions, for events with no not-X trials.
+    """
+    unit_cols = list(unit_cols)
+    norm_cols = [c for c in unit_cols if c != "session"]
+    events = normalize_projections(events, axes, norm_cols, normalize, axis_names)
+    rng = np.random.default_rng(seed)
+    res = []
+    for a in axis_names:
+        for name, (chose_only, outcome) in CONDITIONS.items():
+            if not chose_only and not include_all_choice:
+                continue
+            mask = (events.outcome == outcome) & (events.chose | (not chose_only)) & events[f"proj_{a}"].notna()
+            vals = events[mask].groupby(unit_cols)[f"proj_{a}_n"].mean()
+            res.append({
+                "axis": a, "condition": name, "mean": vals.mean(), "se": vals.std(ddof=1) / np.sqrt(len(vals)),
+                "n_units": len(vals), "n_events": int(mask.sum()),
+                "p_vs_0": p_vs_0(vals, unit_cols, num_flips, rng, session_flips),
+            })
+    return pd.DataFrame(res)
+
+
+def average_within_session(vals, unit_cols):
+    """
+    vals, indexed by unit_cols, averaged within session over the unit_cols after session, from last
+    to first: with ("session", "feat", "split"), over splits, then over features.
+    """
+    for k in range(len(unit_cols) - 1, 0, -1):
+        vals = vals.groupby(level=unit_cols[:k]).mean()
+    return vals
+
+
+def p_vs_0(vals, unit_cols, num_flips, rng, session_flips=False):
+    """
+    Two-sided sign-flip p of unit means vals, indexed by unit_cols, against 0. With session_flips,
+    vals are first averaged within session.
+    """
+    if session_flips:
+        vals = average_within_session(vals, unit_cols)
+    return stats_utils.sign_flip_test(vals.to_numpy(), num_flips, rng, two_sided=True)[1]
 
 
 def file_prefix(args):

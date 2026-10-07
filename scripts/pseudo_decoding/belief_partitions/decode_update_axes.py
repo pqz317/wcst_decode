@@ -83,7 +83,9 @@ def chunk_split(sess_name, trials, seed, split_idx, test_len, train_frac):
     Adds `half` to label_trials output by position in the session's valid-trial sequence: cycles
     of round(test_len * train_frac / (1 - train_frac)) axis trials, then test_len test-block
     trials. In a test block, a chose-X trial whose next valid trial is in the same block is "test";
-    every other test-block trial is "reserved". Axis blocks are "axis".
+    every other test-block trial is "reserved". Axis blocks are "axis". Also adds `in_block_pair`,
+    true for every test-block trial, chose X or not, whose next valid trial is in the same block, so
+    decoder_update_projections.py can project the not-X ones too.
 
     The starting point within the cycle is drawn per (session, seed, split_idx).
     PROVISIONAL: it doesn't depend on the feature, so within a split every feature shares the same
@@ -98,7 +100,8 @@ def chunk_split(sess_name, trials, seed, split_idx, test_len, train_frac):
     # block edge
     next_in_block = np.append(in_test_block[1:] & (((np.arange(1, len(trials)) + phase) % cycle) != axis_len), False)
     next_is_next = np.append(trials.TrialNumber.to_numpy()[1:] == trials.NextTrialNumber.to_numpy()[:-1], False)
-    is_test = in_test_block & next_in_block & next_is_next & trials.chose.to_numpy()
+    trials["in_block_pair"] = in_test_block & next_in_block & next_is_next
+    is_test = trials.in_block_pair.to_numpy() & trials.chose.to_numpy()
     trials["half"] = np.where(~in_test_block, "axis", np.where(is_test, "test", "reserved"))
     # no trial of any test pair is an axis trial
     test = trials[trials.half == "test"]
