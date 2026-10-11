@@ -1,3 +1,4 @@
+import itertools
 import numpy as np
 import pandas as pd
 from lfp_tools import startup
@@ -940,6 +941,31 @@ def get_good_pairs_across_sessions(all_beh, block_thresh):
             pairs.append({"pair": [feat1, feat2], "sessions": joints, "num_sessions": len(joints), "dim_type": dim_type})
     pairs = pd.DataFrame(pairs)
     return pairs
+
+def get_good_quads_across_sessions(all_beh, block_thresh, min_sessions):
+    """
+    Find quadruples of features X, X', Y, Y', where X, X' share a dimension and Y, Y' share
+    another, and the sessions where each of the four shows up as the rule in at least
+    block_thresh blocks. Keeps quadruples with at least min_sessions such sessions.
+    Dimensions are taken in sorted order, features in FEATURES order, so row order is stable.
+    Input:
+        all_beh, concatenated beh with session column
+    output:
+        df of quad ([X, X', Y, Y']), dim_a, dim_b, sessions, num_sessions
+    """
+    num_blocks = all_beh.groupby(["session", "CurrentRule"]).BlockNumber.nunique().unstack(fill_value=0)
+    num_blocks = num_blocks.reindex(columns=FEATURES, fill_value=0)
+    dims = sorted(set(FEATURE_TO_DIM.values()))
+    dim_feats = {dim: [f for f in FEATURES if FEATURE_TO_DIM[f] == dim] for dim in dims}
+    quads = []
+    for dim_a, dim_b in itertools.combinations(dims, 2):
+        for x_pair in itertools.combinations(dim_feats[dim_a], 2):
+            for y_pair in itertools.combinations(dim_feats[dim_b], 2):
+                quad = list(x_pair) + list(y_pair)
+                sessions = num_blocks.index[(num_blocks[quad] >= block_thresh).all(axis=1)].values
+                if len(sessions) >= min_sessions:
+                    quads.append({"quad": quad, "dim_a": dim_a, "dim_b": dim_b, "sessions": sessions, "num_sessions": len(sessions)})
+    return pd.DataFrame(quads)
 
 def get_good_sessions_per_rule(all_beh, block_thresh):
     good_sess = []

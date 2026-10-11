@@ -368,7 +368,9 @@ def get_sig_units(args, units=None):
     )
     sig_units = pd.read_pickle(sig_path)
 
-    if "feat_pair" in args:
+    if "feat_quad" in args:
+        feat_sig_units = sig_units[sig_units.feat.isin(args.feat_quad)]
+    elif "feat_pair" in args:
         feat1, feat2 = args.feat_pair
         feat_sig_units = sig_units[(sig_units.feat == feat1) | (sig_units.feat == feat2)]
     elif "feat" in args:
