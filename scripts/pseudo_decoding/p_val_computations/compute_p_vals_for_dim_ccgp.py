@@ -26,9 +26,9 @@ NUM_SHUFFLES = 10
 MEASURES = ["ccgp_acc", "train_pair_acc"]
 
 
-def compute_p_vals(res):
+def compute_p_vals(res, measures=MEASURES):
     p_res = []
-    for measure in MEASURES:
+    for measure in measures:
         for (time_idx, time), time_res in res.groupby(["TimeIdx", "Time"]):
             p = stats_utils.compute_p_per_group(time_res, measure, "shuffle_type")
             p_res.append({"measure": measure, "Time": time, "TimeIdx": time_idx, "p": p})

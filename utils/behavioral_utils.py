@@ -967,6 +967,29 @@ def get_good_quads_across_sessions(all_beh, block_thresh, min_sessions):
                     quads.append({"quad": quad, "dim_a": dim_a, "dim_b": dim_b, "sessions": sessions, "num_sessions": len(sessions)})
     return pd.DataFrame(quads)
 
+def get_good_dim_pairs_across_sessions(all_beh, block_thresh, min_feats):
+    """
+    For each pair of dimensions, find sessions where each of the two dimensions has at least
+    min_feats distinct features showing up as the rule in at least block_thresh blocks.
+    Features can differ across sessions. Dimension pairs are in sorted order, so row order is stable.
+    Input:
+        all_beh, concatenated beh with session column
+    output:
+        df of dim_a, dim_b, sessions, num_sessions
+    """
+    num_blocks = all_beh.groupby(["session", "CurrentRule"]).BlockNumber.nunique().unstack(fill_value=0)
+    num_blocks = num_blocks.reindex(columns=FEATURES, fill_value=0)
+    dims = sorted(set(FEATURE_TO_DIM.values()))
+    num_feats = pd.DataFrame({
+        dim: (num_blocks[[f for f in FEATURES if FEATURE_TO_DIM[f] == dim]] >= block_thresh).sum(axis=1)
+        for dim in dims
+    })
+    dim_pairs = []
+    for dim_a, dim_b in itertools.combinations(dims, 2):
+        sessions = num_feats.index[(num_feats[dim_a] >= min_feats) & (num_feats[dim_b] >= min_feats)].values
+        dim_pairs.append({"dim_a": dim_a, "dim_b": dim_b, "sessions": sessions, "num_sessions": len(sessions)})
+    return pd.DataFrame(dim_pairs)
+
 def get_good_sessions_per_rule(all_beh, block_thresh):
     good_sess = []
     num_blocks = all_beh.groupby(["session", "CurrentRule"]).apply(lambda x: len(x.BlockNumber.unique())).reset_index()
@@ -1023,8 +1046,15 @@ def shuffle_beh_by_session_permute(beh, session, args):
     seed = int(session) * 100 + args.shuffle_idx
     rng = np.random.default_rng(seed)
     other_session = rng.choice(other_sessions)
+    return get_session_permuted_beh(beh, other_session)
+
+def get_session_permuted_beh(beh, other_session):
+    """
+    Replaces beh with other_session's behavior, truncated to the shorter of the two,
+    and relabelled with beh's TrialNumbers
+    """
     other_sub = get_sub_for_session(other_session)
-    other_beh = get_valid_belief_beh_for_sub_sess(other_sub, other_session)    
+    other_beh = get_valid_belief_beh_for_sub_sess(other_sub, other_session)
     min_trials = np.min((len(beh), len(other_beh)))
     other_beh = other_beh[:min_trials]
     other_beh["TrialNumber"] = sorted(beh[:min_trials].TrialNumber.unique())
