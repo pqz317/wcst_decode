@@ -17,15 +17,20 @@ The null is NUM_SHUFFLES circular shifts of the session's behavior, shuffle_beh_
 true behavior; a rotation keeps every trial, so their counts are unchanged. A unit is selective for
 the pair if its statistic exceeds its own 99th shuffle percentile in any window.
 
+With --per_fold, all of the above is done once per fold of dim_ccgp_heldout_feat_beliefs.py, on only
+the four features of the fold's training roles, so a fold's held-out pair (A{k+1}, B{k+1}) never
+enters its selection. Results get a fold column, units are selected per (dim_pair, fold), and the
+run name and level get _fold / FOLD_SIG_LEVEL, leaving the all-six-feature results in place.
+
 Writes, per subject:
     OUTPUT_PATH/{sub}_StimOnset_Dimension_window_500_pre_stim/{dim_pair}.pickle
         one row per (unit, window): statistic, total variance, shuffle quantiles, significance, and
         the shuffle values themselves
-    SIG_UNITS_PATH with level SIG_LEVEL
-        the selective units, columns dim_pair, structure_level2, structure_level2_cleaned,
+    SIG_UNITS_PATH with level SIG_LEVEL (FOLD_SIG_LEVEL with --per_fold)
+        the selective units, columns dim_pair, (fold,) structure_level2, structure_level2_cleaned,
         PseudoUnitID, session
 
-    python3 scripts/anova_analysis/dim_pair_anova.py
+    python3 scripts/anova_analysis/dim_pair_anova.py [--per_fold]
 """
 
 import os
@@ -41,11 +46,13 @@ from constants.decoding_constants import *
 
 from scripts.pseudo_decoding.belief_partitions.belief_partition_configs import BeliefPartitionConfigs
 from scripts.pseudo_decoding.belief_partitions.generate_dim_heldout_sessions import DIM_PAIRS_PATH
-from scripts.pseudo_decoding.belief_partitions.dim_ccgp_heldout_feat_beliefs import assign_roles, is_qualifying
+from scripts.pseudo_decoding.belief_partitions.dim_ccgp_heldout_feat_beliefs import assign_roles, is_qualifying, MIN_FEATS
 
 OUTPUT_PATH = "/data/patrick_res/anova/dim_pairs"
 RUN_NAME = "{sub}_StimOnset_Dimension_window_500_pre_stim"
 SIG_LEVEL = "dim_pair_99th_pre_stim_window_filter_drift"
+FOLD_RUN_SUFFIX = "_fold"
+FOLD_SIG_LEVEL = "dim_pair_fold_99th_pre_stim_window_filter_drift"
 TRIAL_EVENT = "StimOnset"
 PRE_STIM_RANGE = [-1000, 0]
 WINDOW_SIZE = 500
@@ -95,16 +102,34 @@ def select_balanced(beh, feat_to_dim, dim_a, rng):
 
 def session_fracvars(sess_name, args, window_starts, window_bins):
     """
-    Per unit and window of a session: the true statistic and the num_shuffles circular shift values
+    Per unit and window of a session: the true statistic and the num_shuffles circular shift values.
+    With args.per_fold, once per fold, on the features of that fold's training roles only, with a
+    fold column
     """
     beh = behavioral_utils.get_valid_belief_beh_for_sub_sess(args.subject, sess_name)
     if not is_qualifying(beh, args):
         print(f"Skipping session {sess_name}, not three qualifying features per dimension")
         return None
     role_to_feat = assign_roles(beh, sess_name, args)
-    feat_to_dim = {f: FEATURE_TO_DIM[f] for f in role_to_feat.values()}
     trial_nums, units, X = load_frs_array(sess_name, args)
+    # roles each fold holds out; without folds, none, so all six features
+    held_outs = [[f"A{fold + 1}", f"B{fold + 1}"] for fold in range(MIN_FEATS)] if args.per_fold else [[]]
+    res = []
+    for fold, held_out in enumerate(held_outs):
+        feats = [f for role, f in role_to_feat.items() if role not in held_out]
+        fold_res = feats_fracvars(sess_name, args, beh, feats, trial_nums, units, X, window_starts, window_bins)
+        if args.per_fold:
+            fold_res["fold"] = fold
+        res.append(fold_res)
+    return pd.concat(res, ignore_index=True)
 
+
+def feats_fracvars(sess_name, args, beh, feats, trial_nums, units, X, window_starts, window_bins):
+    """
+    Per unit and window: the statistic on the balanced High trials of feats, true and under the
+    num_shuffles circular shifts
+    """
+    feat_to_dim = {f: FEATURE_TO_DIM[f] for f in feats}
     runs = []
     for k in [None] + list(range(args.num_shuffles)):
         run_beh = beh if k is None else behavioral_utils.shuffle_beh_by_shift(beh.copy(), buffer=SHUFFLE_BUFFER, seed=k)
@@ -132,7 +157,7 @@ def session_fracvars(sess_name, args, window_starts, window_bins):
         "Dimension_99th": q99.ravel(),
         "p": p.ravel(),
         "n_trials_per_feat": min_count,
-        "feats": ["_".join(role_to_feat.values())] * unit_grid.size,
+        "feats": ["_".join(feats)] * unit_grid.size,
     })
     res["shuffle_fracvars"] = list(shuffles.reshape(-1, shuffles.shape[-1]))
     return res
@@ -141,7 +166,8 @@ def session_fracvars(sess_name, args, window_starts, window_bins):
 def run_sub(sub, dim_pairs, args):
     args.subject = sub
     window_starts, window_bins = get_windows(args.trial_interval)
-    output_dir = os.path.join(args.base_output_path, RUN_NAME.format(sub=sub))
+    run_name = RUN_NAME.format(sub=sub) + (FOLD_RUN_SUFFIX if args.per_fold else "")
+    output_dir = os.path.join(args.base_output_path, run_name)
     os.makedirs(output_dir, exist_ok=True)
 
     sig_units = []
@@ -158,17 +184,25 @@ def run_sub(sub, dim_pairs, args):
         res["dim_pair"] = dim_pair
         res.to_pickle(os.path.join(output_dir, f"{dim_pair}.pickle"))
 
-        sig = res[res.p == "99th"].PseudoUnitID.unique()
-        print(f"{sub} {dim_pair}: {len(sig)} of {res.PseudoUnitID.nunique()} units selective", flush=True)
-        sig_units.append(pd.DataFrame({"dim_pair": dim_pair, "PseudoUnitID": sig}))
+        if args.per_fold:
+            for fold, fold_res in res.groupby("fold"):
+                sig = fold_res[fold_res.p == "99th"].PseudoUnitID.unique()
+                print(f"{sub} {dim_pair} fold {fold}: {len(sig)} of {fold_res.PseudoUnitID.nunique()} units selective", flush=True)
+                sig_units.append(pd.DataFrame({"dim_pair": dim_pair, "fold": fold, "PseudoUnitID": sig}))
+        else:
+            sig = res[res.p == "99th"].PseudoUnitID.unique()
+            print(f"{sub} {dim_pair}: {len(sig)} of {res.PseudoUnitID.nunique()} units selective", flush=True)
+            sig_units.append(pd.DataFrame({"dim_pair": dim_pair, "PseudoUnitID": sig}))
 
     sig_units = pd.concat(sig_units, ignore_index=True)
     positions = spike_utils.get_good_subject_units(sub)[["PseudoUnitID", "structure_level2", "structure_level2_cleaned"]]
     sig_units = pd.merge(sig_units, positions, on="PseudoUnitID")
     sig_units["session"] = (sig_units.PseudoUnitID // 100).astype(int)
-    sig_units = sig_units[["dim_pair", "structure_level2", "structure_level2_cleaned", "PseudoUnitID", "session"]]
+    fold_col = ["fold"] if args.per_fold else []
+    sig_units = sig_units[["dim_pair"] + fold_col + ["structure_level2", "structure_level2_cleaned", "PseudoUnitID", "session"]]
     if not args.dry_run:
-        sig_units.to_pickle(SIG_UNITS_PATH.format(sub=sub, event=TRIAL_EVENT, level=SIG_LEVEL))
+        level = FOLD_SIG_LEVEL if args.per_fold else SIG_LEVEL
+        sig_units.to_pickle(SIG_UNITS_PATH.format(sub=sub, event=TRIAL_EVENT, level=level))
     return sig_units
 
 
@@ -177,6 +211,7 @@ def main():
     parser.add_argument("--num_shuffles", default=100, type=int)
     parser.add_argument("--base_output_path", default=OUTPUT_PATH)
     parser.add_argument("--dry_run", action="store_true", help="skip writing the unit lists")
+    parser.add_argument("--per_fold", action="store_true", help="select per held-out fold, on its training features only")
     cli = parser.parse_args()
 
     args = argparse.Namespace(**BeliefPartitionConfigs()._asdict())
@@ -187,11 +222,12 @@ def main():
     args.num_shuffles = cli.num_shuffles
     args.base_output_path = cli.base_output_path
     args.dry_run = cli.dry_run
+    args.per_fold = cli.per_fold
 
     dim_pairs = pd.read_pickle(DIM_PAIRS_PATH)
     for sub in ["SA", "BL"]:
         sig_units = run_sub(sub, dim_pairs, args)
-        print(sig_units.groupby("dim_pair").PseudoUnitID.nunique())
+        print(sig_units.groupby(["dim_pair"] + (["fold"] if args.per_fold else [])).PseudoUnitID.nunique())
 
 
 if __name__ == "__main__":

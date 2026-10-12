@@ -385,6 +385,22 @@ def get_sig_units(args, units=None):
         return feat_sig_units.copy()
 
 
+def get_sig_units_by_fold(args):
+    """
+    For per-fold unit levels (a fold column, as dim_pair_anova.py --per_fold writes), the units of
+    args.dim_a x args.dim_b selected in each fold, across both subjects: {fold: set of PseudoUnitIDs}.
+    None for levels without a fold column
+    """
+    sig_units = pd.concat([
+        pd.read_pickle(SIG_UNITS_PATH.format(sub=sub, event=args.trial_event, level=args.sig_unit_level))
+        for sub in ["SA", "BL"]
+    ])
+    if "fold" not in sig_units.columns:
+        return None
+    sig_units = sig_units[sig_units.dim_pair == f"{args.dim_a}_{args.dim_b}"]
+    return {fold: set(fold_units.PseudoUnitID) for fold, fold_units in sig_units.groupby("fold")}
+
+
 def regress_out_trial_number(frs):
     def regress_per_unit_timebin(group):
         y = group.FiringRate

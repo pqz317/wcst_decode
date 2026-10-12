@@ -17,11 +17,17 @@ sessions, truncated to the session's length. A donor without three features per 
 blocks and >= 2 High trials is redrawn, up to MAX_DONOR_DRAWS donors, after which the session is
 dropped from that run and counted in n_dropped_sessions.
 
+A --sig_unit_level with a fold column (dim_pair_anova.py --per_fold) gives each fold its own units,
+selected on that fold's training roles only: all units are loaded, and fold k decodes with the fold
+k units alone, sessions without any left out of that fold. Other levels apply one unit set to every
+fold, as get_frs_from_args does.
+
 Writes per run {stem}.pickle, one row per (fold, split, bin), with the held-out accuracy on the
-training roles (train_acc) and the accuracy on the held-out pair (ccgp_acc), and {stem}_roles.pickle,
-each kept session's role -> feature mapping, balanced trial count and donor. True runs also write
-{stem}_fold_{k}_models.npy per fold (bins x splits) and {stem}_unit_ids.csv, the PseudoUnitIDs in
-the decoder's input order.
+training roles (train_acc), the accuracy on the held-out pair (ccgp_acc) and the fold's n_sessions,
+n_units, and {stem}_roles.pickle, each kept session's role -> feature mapping, balanced trial count
+and donor. True runs also write {stem}_fold_{k}_models.npy per fold (bins x splits) and the
+PseudoUnitIDs in the decoder's input order, {stem}_unit_ids.csv, or {stem}_fold_{k}_unit_ids.csv per
+fold with per-fold units.
 """
 
 import os
@@ -112,8 +118,13 @@ def load_session(row, args):
     sub_args = copy.deepcopy(args)
     sub_args.subject = behavioral_utils.get_sub_for_session(sess_name)
 
+    if args.fold_units is not None:
+        # all units, then those any fold selected; each fold takes its own subset later
+        sub_args.sig_unit_level = None
     frs = spike_utils.get_frs_from_args(sub_args, sess_name)
     frs = frs.rename(columns={DATA_MODE: "Value"})
+    if args.fold_units is not None:
+        frs = frs[frs.PseudoUnitID.isin(set().union(*args.fold_units.values()))]
     if len(frs) == 0:
         print(f"No units for session {sess_name}, skipping")
         return None, False
@@ -141,6 +152,26 @@ def load_session(row, args):
     return {"session": sess_name, "beh": beh, "frs": frs, "roles": roles}, False
 
 
+def get_fold_sessions(sessions, fold, args):
+    """
+    Sessions restricted to the fold's units, leaving out those with none, with per-fold units.
+    All sessions as they are otherwise
+    """
+    if args.fold_units is None:
+        return sessions
+    fold_units = args.fold_units.get(fold, set())
+    fold_sessions = []
+    for sess in sessions:
+        frs = sess["frs"][sess["frs"].PseudoUnitID.isin(fold_units)]
+        if len(frs) > 0:
+            fold_sessions.append({**sess, "frs": frs})
+    return fold_sessions
+
+
+def get_unit_ids(sessions):
+    return np.sort(np.concatenate([sess["frs"].PseudoUnitID.unique() for sess in sessions]))
+
+
 def dim_ccgp_heldout(args):
     file_name = belief_partitions_io.get_dim_ccgp_heldout_file_name(args)
     output_dir = belief_partitions_io.get_dir_name(args)
@@ -150,8 +181,7 @@ def dim_ccgp_heldout(args):
     n_dropped = sum(dropped for _, dropped in loaded)
     if len(sessions) == 0:
         raise ValueError("no sessions left to decode")
-    unit_ids = np.sort(np.concatenate([sess["frs"].PseudoUnitID.unique() for sess in sessions]))
-    print(f"{len(sessions)} sessions, {len(unit_ids)} units, {n_dropped} sessions dropped")
+    print(f"{len(sessions)} sessions, {len(get_unit_ids(sessions))} units, {n_dropped} sessions dropped")
 
     classes = [args.dim_a, args.dim_b]
     label_map = {role: args.dim_a if role.startswith("A") else args.dim_b for role in ROLES}
@@ -165,17 +195,23 @@ def dim_ccgp_heldout(args):
     for fold in range(MIN_FEATS):
         held_out = [f"A{fold + 1}", f"B{fold + 1}"]
         train_roles = [role for role in ROLES if role not in held_out]
-        print(f"Fold {fold}: train {train_roles}, test {held_out}", flush=True)
-        train_datas = make_sess_datas(sessions, train_roles, args)
+        fold_sessions = get_fold_sessions(sessions, fold, args)
+        if len(fold_sessions) == 0:
+            raise ValueError(f"no units in fold {fold}")
+        fold_unit_ids = get_unit_ids(fold_sessions)
+        print(f"Fold {fold}: train {train_roles}, test {held_out}, {len(fold_sessions)} sessions, {len(fold_unit_ids)} units", flush=True)
+        train_datas = make_sess_datas(fold_sessions, train_roles, args)
         train_accs, models = train_dim_decoder(train_datas, args, classes, label_map, time_bins)
 
-        test_datas = make_sess_datas(sessions, held_out, test_args)
+        test_datas = make_sess_datas(fold_sessions, held_out, test_args)
         ccgp_accs = pseudo_classifier_utils.evaluate_model_with_data(
             models, test_datas, time_bins,
             num_test_per_cond=args.num_test_per_cond, condition_label_map=label_map
         )
         if args.shuffle_idx is None:
             np.save(os.path.join(output_dir, f"{file_name}_fold_{fold}_models.npy"), models)
+            if args.fold_units is not None:
+                pd.DataFrame({"PseudoUnitID": fold_unit_ids}).to_csv(os.path.join(output_dir, f"{file_name}_fold_{fold}_unit_ids.csv"))
 
         for (time_idx, split_idx), ccgp_acc in np.ndenumerate(ccgp_accs):
             # bin end, as in belief_partitions_io.transform_np_acc_to_df
@@ -184,6 +220,7 @@ def dim_ccgp_heldout(args):
                 "fold": fold, "held_out": "_".join(held_out),
                 "split_idx": split_idx, "TimeIdx": int(round(time * 10)), "Time": time,
                 "train_acc": train_accs[time_idx, split_idx], "ccgp_acc": ccgp_acc,
+                "n_sessions": len(fold_sessions), "n_units": len(fold_unit_ids),
             })
     res = pd.DataFrame(rows)
     res.insert(0, "dim_pair_idx", args.dim_pair_idx)
@@ -191,14 +228,12 @@ def dim_ccgp_heldout(args):
     res.insert(2, "dim_b", args.dim_b)
     res["shuffle_idx"] = np.nan if args.shuffle_idx is None else args.shuffle_idx
     res["mode"] = MODE if args.shuffle_idx is None else f"{MODE}_shuffle"
-    res["n_sessions"] = len(sessions)
-    res["n_units"] = len(unit_ids)
     res["n_dropped_sessions"] = n_dropped
     res.to_pickle(os.path.join(output_dir, f"{file_name}.pickle"))
 
     pd.concat([sess["roles"] for sess in sessions], ignore_index=True).to_pickle(os.path.join(output_dir, f"{file_name}_roles.pickle"))
-    if args.shuffle_idx is None:
-        pd.DataFrame({"PseudoUnitID": unit_ids}).to_csv(os.path.join(output_dir, f"{file_name}_unit_ids.csv"))
+    if args.shuffle_idx is None and args.fold_units is None:
+        pd.DataFrame({"PseudoUnitID": get_unit_ids(sessions)}).to_csv(os.path.join(output_dir, f"{file_name}_unit_ids.csv"))
 
 
 def process_args(args):
@@ -219,6 +254,8 @@ def process_args(args):
     args.trial_interval = get_trial_interval(args.trial_event)
     args.time_range = PRE_STIM_RANGE
     args.mode = MODE
+    # per-fold units, for levels with a fold column; None otherwise
+    args.fold_units = spike_utils.get_sig_units_by_fold(args) if args.sig_unit_level else None
 
     print(f"Held-out dimension CCGP for {args.dim_a} vs {args.dim_b} using {len(args.sessions)} sessions", flush=True)
     print(f"Shuffle {args.shuffle_idx}", flush=True)
