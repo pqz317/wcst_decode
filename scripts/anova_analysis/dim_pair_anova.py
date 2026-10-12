@@ -20,20 +20,28 @@ the pair if its statistic exceeds its own 99th shuffle percentile in any window.
 With --per_fold, all of the above is done once per fold of dim_ccgp_heldout_feat_beliefs.py, on only
 the four features of the fold's training roles, so a fold's held-out pair (A{k+1}, B{k+1}) never
 enters its selection. Results get a fold column, units are selected per (dim_pair, fold), and the
-run name and level get _fold / FOLD_SIG_LEVEL, leaving the all-six-feature results in place.
+run name and level get _fold, leaving the all-six-feature results in place.
+
+--trial_event with --full_interval slides the windows over the event's whole interval instead of
+[-1, 0]s of StimOnset, a unit still selective if any window passes. --beh_filters (e.g.
+{"Response": "Correct", "PreferredChosen": true}) restricts the High trials, after the circular
+shift for shuffles as run_anova does, and the High trials a feature needs to qualify. Both enter the
+run name and level (get_run_name, get_sig_level), which are unchanged without them.
 
 Writes, per subject:
-    OUTPUT_PATH/{sub}_StimOnset_Dimension_window_500_pre_stim/{dim_pair}.pickle
+    OUTPUT_PATH/{get_run_name}/{dim_pair}.pickle
         one row per (unit, window): statistic, total variance, shuffle quantiles, significance, and
         the shuffle values themselves
-    SIG_UNITS_PATH with level SIG_LEVEL (FOLD_SIG_LEVEL with --per_fold)
+    SIG_UNITS_PATH with the event and level get_sig_level
         the selective units, columns dim_pair, (fold,) structure_level2, structure_level2_cleaned,
         PseudoUnitID, session
 
-    python3 scripts/anova_analysis/dim_pair_anova.py [--per_fold]
+    python3 scripts/anova_analysis/dim_pair_anova.py [--per_fold] [--trial_event FeedbackOnsetLong --full_interval]
+        [--beh_filters '{"Response":"Correct","PreferredChosen":true}']
 """
 
 import os
+import json
 import argparse
 import numpy as np
 import pandas as pd
@@ -45,27 +53,53 @@ from constants.behavioral_constants import *
 from constants.decoding_constants import *
 
 from scripts.pseudo_decoding.belief_partitions.belief_partition_configs import BeliefPartitionConfigs
+from scripts.pseudo_decoding.belief_partitions.belief_partitions_io import get_filter_str
 from scripts.pseudo_decoding.belief_partitions.generate_dim_heldout_sessions import DIM_PAIRS_PATH
 from scripts.pseudo_decoding.belief_partitions.dim_ccgp_heldout_feat_beliefs import assign_roles, is_qualifying, MIN_FEATS
 
 OUTPUT_PATH = "/data/patrick_res/anova/dim_pairs"
-RUN_NAME = "{sub}_StimOnset_Dimension_window_500_pre_stim"
-SIG_LEVEL = "dim_pair_99th_pre_stim_window_filter_drift"
-FOLD_RUN_SUFFIX = "_fold"
-FOLD_SIG_LEVEL = "dim_pair_fold_99th_pre_stim_window_filter_drift"
-TRIAL_EVENT = "StimOnset"
 PRE_STIM_RANGE = [-1000, 0]
 WINDOW_SIZE = 500
 SHUFFLE_BUFFER = 50
 
 
-def get_windows(trial_interval):
+def get_name_parts(args):
     """
-    Window starts in ms, and each window's bin indices into the PRE_STIM_RANGE bins
+    The optional parts of run names and levels: _pre_stim, and the filter string
     """
-    step = trial_interval.interval_size
-    starts = np.arange(PRE_STIM_RANGE[0], PRE_STIM_RANGE[1] - WINDOW_SIZE + 1, step)
-    window_bins = [np.arange((s - PRE_STIM_RANGE[0]) // step, (s - PRE_STIM_RANGE[0] + WINDOW_SIZE) // step) for s in starts]
+    pre_stim_str = "" if args.full_interval else "_pre_stim"
+    filt_str = f"_{get_filter_str(args.beh_filters)}" if args.beh_filters else ""
+    return pre_stim_str, filt_str
+
+
+def get_run_name(sub, args):
+    """
+    e.g. SA_StimOnset_Dimension_window_500_pre_stim(_fold), the names of runs before --trial_event,
+    --full_interval and --beh_filters
+    """
+    pre_stim_str, filt_str = get_name_parts(args)
+    fold_str = "_fold" if args.per_fold else ""
+    return f"{sub}_{args.trial_event}_Dimension_window_{WINDOW_SIZE}{pre_stim_str}{filt_str}{fold_str}"
+
+
+def get_sig_level(args):
+    """
+    e.g. dim_pair(_fold)_99th_pre_stim_window_filter_drift, the levels of runs before --trial_event,
+    --full_interval and --beh_filters
+    """
+    pre_stim_str, filt_str = get_name_parts(args)
+    fold_str = "_fold" if args.per_fold else ""
+    return f"dim_pair{fold_str}_99th{pre_stim_str}{filt_str}_window_filter_drift"
+
+
+def get_windows(args):
+    """
+    Window starts in ms, and each window's bin indices into the args.time_range bins
+    """
+    step = args.trial_interval.interval_size
+    start, end = args.time_range
+    starts = np.arange(start, end - WINDOW_SIZE + 1, step)
+    window_bins = [np.arange((s - start) // step, (s - start + WINDOW_SIZE) // step) for s in starts]
     return starts, window_bins
 
 
@@ -77,7 +111,7 @@ def load_frs_array(sess_name, args):
     frs = spike_utils.get_frs_from_args(args, sess_name)
     trials = np.sort(frs.TrialNumber.unique())
     units = np.sort(frs.PseudoUnitID.unique())
-    bin_idx = np.round((frs.TimeBins.values - PRE_STIM_RANGE[0] / 1000 - args.trial_interval.pre_interval / 1000) * 10).astype(int)
+    bin_idx = np.round((frs.TimeBins.values - args.time_range[0] / 1000 - args.trial_interval.pre_interval / 1000) * 10).astype(int)
     X = np.full((len(trials), len(units), bin_idx.max() + 1), np.nan)
     X[np.searchsorted(trials, frs.TrialNumber.values), np.searchsorted(units, frs.PseudoUnitID.values), bin_idx] = frs.FiringRate.values
     if np.isnan(X).any():
@@ -133,6 +167,7 @@ def feats_fracvars(sess_name, args, beh, feats, trial_nums, units, X, window_sta
     runs = []
     for k in [None] + list(range(args.num_shuffles)):
         run_beh = beh if k is None else behavioral_utils.shuffle_beh_by_shift(beh.copy(), buffer=SHUFFLE_BUFFER, seed=k)
+        run_beh = behavioral_utils.filter_behavior(run_beh, args.beh_filters)
         rng = np.random.default_rng([args.train_test_seed, int(sess_name), 0 if k is None else k + 1])
         trials, dims, min_count = select_balanced(run_beh, feat_to_dim, args.dim_a, rng)
         keep = np.isin(trials, trial_nums)
@@ -165,9 +200,8 @@ def feats_fracvars(sess_name, args, beh, feats, trial_nums, units, X, window_sta
 
 def run_sub(sub, dim_pairs, args):
     args.subject = sub
-    window_starts, window_bins = get_windows(args.trial_interval)
-    run_name = RUN_NAME.format(sub=sub) + (FOLD_RUN_SUFFIX if args.per_fold else "")
-    output_dir = os.path.join(args.base_output_path, run_name)
+    window_starts, window_bins = get_windows(args)
+    output_dir = os.path.join(args.base_output_path, get_run_name(sub, args))
     os.makedirs(output_dir, exist_ok=True)
 
     sig_units = []
@@ -201,8 +235,7 @@ def run_sub(sub, dim_pairs, args):
     fold_col = ["fold"] if args.per_fold else []
     sig_units = sig_units[["dim_pair"] + fold_col + ["structure_level2", "structure_level2_cleaned", "PseudoUnitID", "session"]]
     if not args.dry_run:
-        level = FOLD_SIG_LEVEL if args.per_fold else SIG_LEVEL
-        sig_units.to_pickle(SIG_UNITS_PATH.format(sub=sub, event=TRIAL_EVENT, level=level))
+        sig_units.to_pickle(SIG_UNITS_PATH.format(sub=sub, event=args.trial_event, level=get_sig_level(args)))
     return sig_units
 
 
@@ -212,12 +245,20 @@ def main():
     parser.add_argument("--base_output_path", default=OUTPUT_PATH)
     parser.add_argument("--dry_run", action="store_true", help="skip writing the unit lists")
     parser.add_argument("--per_fold", action="store_true", help="select per held-out fold, on its training features only")
+    parser.add_argument("--trial_event", default="StimOnset")
+    parser.add_argument("--full_interval", action="store_true", help="windows over the event's whole interval, not [-1, 0]s")
+    parser.add_argument("--beh_filters", default={}, type=json.loads, help="restricts the High trials, as JSON")
     cli = parser.parse_args()
 
     args = argparse.Namespace(**BeliefPartitionConfigs()._asdict())
-    args.trial_event = TRIAL_EVENT
-    args.trial_interval = get_trial_interval(TRIAL_EVENT)
-    args.time_range = PRE_STIM_RANGE
+    if not cli.full_interval and cli.trial_event != "StimOnset":
+        raise ValueError("the pre-stimulus range is only defined for StimOnset, use --full_interval")
+    args.trial_event = cli.trial_event
+    args.trial_interval = get_trial_interval(cli.trial_event)
+    ti = args.trial_interval
+    args.time_range = [-ti.pre_interval, ti.post_interval] if cli.full_interval else PRE_STIM_RANGE
+    args.full_interval = cli.full_interval
+    args.beh_filters = cli.beh_filters
     args.sig_unit_level = None
     args.num_shuffles = cli.num_shuffles
     args.base_output_path = cli.base_output_path

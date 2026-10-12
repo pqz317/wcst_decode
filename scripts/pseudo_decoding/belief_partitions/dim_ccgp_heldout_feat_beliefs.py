@@ -10,7 +10,12 @@ balanced to the minimum count over its six features.
 
 Fold k (0-2) holds out (A{k+1}, B{k+1}): a decoder labelled by dimension is trained on the other two
 roles of each dimension, and tested on all trials of the held-out pair. Decoding is over the
-pre-stimulus bins, [-1, 0]s around StimOnset, on all units.
+pre-stimulus bins, [-1, 0]s around StimOnset, or with --full_interval over every bin of
+--trial_event's interval (mode dim_ccgp_heldout_full, so the two never share files).
+
+--beh_filters (e.g. {"Response": "Correct", "PreferredChosen": true}) restricts the High trials
+decoded and balanced, and the High trials a feature needs to qualify; blocks are counted on all
+trials. The filter is part of the output directory name.
 
 With --shuffle_idx set, each session's behavior is replaced by a donor's from the dimension pair's
 sessions, truncated to the session's length. A donor without three features per dimension with >= 2
@@ -33,6 +38,7 @@ fold with per-fold units.
 import os
 import copy
 import argparse
+from distutils.util import strtobool
 import numpy as np
 import pandas as pd
 
@@ -54,13 +60,14 @@ ROLES = [f"{prefix}{i + 1}" for prefix in ["A", "B"] for i in range(MIN_FEATS)]
 MAX_DONOR_DRAWS = 10
 
 
-def get_qualifying_feats(beh, dim):
+def get_qualifying_feats(beh, dim, beh_filters={}):
     """
     Features of dim that were the rule for >= BLOCK_THRESH blocks and have >= MIN_TRIALS_PER_COND
-    High trials, in FEATURES order
+    High trials passing beh_filters, in FEATURES order
     """
     num_blocks = beh.groupby("CurrentRule").BlockNumber.nunique()
-    num_high = beh[beh.PreferredBeliefProb > BELIEF_PARTITION_THRESH].PreferredBelief.value_counts()
+    filt_beh = behavioral_utils.filter_behavior(beh, beh_filters)
+    num_high = filt_beh[filt_beh.PreferredBeliefProb > BELIEF_PARTITION_THRESH].PreferredBelief.value_counts()
     return [
         f for f in FEATURES
         if FEATURE_TO_DIM[f] == dim and num_blocks.get(f, 0) >= BLOCK_THRESH and num_high.get(f, 0) >= MIN_TRIALS_PER_COND
@@ -68,7 +75,7 @@ def get_qualifying_feats(beh, dim):
 
 
 def is_qualifying(beh, args):
-    return all(len(get_qualifying_feats(beh, dim)) >= MIN_FEATS for dim in [args.dim_a, args.dim_b])
+    return all(len(get_qualifying_feats(beh, dim, args.beh_filters)) >= MIN_FEATS for dim in [args.dim_a, args.dim_b])
 
 
 def load_beh(sess_name, args):
@@ -102,7 +109,7 @@ def assign_roles(beh, sess_name, args):
     rng = np.random.default_rng([args.train_test_seed, int(sess_name), shuffle_seed])
     role_to_feat = {}
     for prefix, dim in [("A", args.dim_a), ("B", args.dim_b)]:
-        chosen = rng.permutation(get_qualifying_feats(beh, dim))[:MIN_FEATS]
+        chosen = rng.permutation(get_qualifying_feats(beh, dim, args.beh_filters))[:MIN_FEATS]
         for i, feat in enumerate(chosen):
             role_to_feat[f"{prefix}{i + 1}"] = feat
     return role_to_feat
@@ -136,6 +143,7 @@ def load_session(row, args):
 
     role_to_feat = assign_roles(beh, sess_name, args)
     feat_to_role = {feat: role for role, feat in role_to_feat.items()}
+    beh = behavioral_utils.filter_behavior(beh, args.beh_filters)
     beh = beh[(beh.PreferredBeliefProb > BELIEF_PARTITION_THRESH) & beh.PreferredBelief.isin(feat_to_role)].copy()
     beh["condition"] = beh.PreferredBelief.map(feat_to_role)
     beh = behavioral_utils.balance_trials_by_condition(beh, ["condition"])
@@ -186,7 +194,8 @@ def dim_ccgp_heldout(args):
     classes = [args.dim_a, args.dim_b]
     label_map = {role: args.dim_a if role.startswith("A") else args.dim_b for role in ROLES}
     ti = args.trial_interval
-    time_bins = np.arange(0, ti.pre_interval / 1000, ti.interval_size / 1000)
+    interval_ms = ti.pre_interval + (ti.post_interval if args.full_interval else 0)
+    time_bins = np.arange(0, interval_ms / 1000, ti.interval_size / 1000)
     # the held-out pair is never trained on, so all of its trials are test trials
     test_args = copy.copy(args)
     test_args.test_ratio = 1.0
@@ -227,7 +236,7 @@ def dim_ccgp_heldout(args):
     res.insert(1, "dim_a", args.dim_a)
     res.insert(2, "dim_b", args.dim_b)
     res["shuffle_idx"] = np.nan if args.shuffle_idx is None else args.shuffle_idx
-    res["mode"] = MODE if args.shuffle_idx is None else f"{MODE}_shuffle"
+    res["mode"] = args.mode if args.shuffle_idx is None else f"{args.mode}_shuffle"
     res["n_dropped_sessions"] = n_dropped
     res.to_pickle(os.path.join(output_dir, f"{file_name}.pickle"))
 
@@ -252,13 +261,14 @@ def process_args(args):
     # shuffle donors are drawn from here
     args.all_sessions = args.sessions
     args.trial_interval = get_trial_interval(args.trial_event)
-    args.time_range = PRE_STIM_RANGE
-    args.mode = MODE
+    # None keeps every bin of the interval
+    args.time_range = None if args.full_interval else PRE_STIM_RANGE
+    args.mode = f"{MODE}_full" if args.full_interval else MODE
     # per-fold units, for levels with a fold column; None otherwise
     args.fold_units = spike_utils.get_sig_units_by_fold(args) if args.sig_unit_level else None
 
     print(f"Held-out dimension CCGP for {args.dim_a} vs {args.dim_b} using {len(args.sessions)} sessions", flush=True)
-    print(f"Shuffle {args.shuffle_idx}", flush=True)
+    print(f"Shuffle {args.shuffle_idx}, event {args.trial_event}, full interval {args.full_interval}, filters {args.beh_filters}", flush=True)
     print(f"Using units {args.sig_unit_level}", flush=True)
     return args
 
@@ -267,6 +277,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser = add_defaults_to_parser(BeliefPartitionConfigs(), parser)
     parser.add_argument("--dim_pair_idx", type=int, required=True)
+    parser.add_argument("--full_interval", default=False, type=lambda x: bool(strtobool(x)))
     args = parser.parse_args()
 
     process_args(args)

@@ -8,13 +8,16 @@ Reads the tables scripts/pseudo_decoding/belief_partitions/dim_ccgp_heldout_feat
 for every dimension pair of generate_dim_heldout_sessions.py, and writes
     dim_ccgp_heldout_p_vals.pickle   (columns measure, Time, TimeIdx, p)
 to the true runs' dir. Runs locally. --sig_unit_level picks the runs of that unit preselection,
-matching the launcher's flag; omit it for the all-unit runs.
+matching the launcher's flag; omit it for the all-unit runs. --trial_event, --beh_filters and
+--full_interval likewise pick the runs of slurm_launch_dim_ccgp_heldout_full.sh; their defaults are
+the pre-stimulus, unfiltered runs.
 
     python3 scripts/pseudo_decoding/p_val_computations/compute_p_vals_for_dim_ccgp_heldout.py \
         --sig_unit_level dim_pair_99th_pre_stim_window_filter_drift
 """
 
 import os
+import json
 import argparse
 import pandas as pd
 
@@ -32,12 +35,16 @@ def main():
     parser = argparse.ArgumentParser()
     # unit preselection the runs used, as passed to the launcher; None for all units
     parser.add_argument("--sig_unit_level", default=None, type=str)
+    parser.add_argument("--trial_event", default="StimOnset")
+    parser.add_argument("--beh_filters", default={}, type=json.loads)
+    parser.add_argument("--full_interval", action="store_true")
     cli_args = parser.parse_args()
 
     args = argparse.Namespace(**BeliefPartitionConfigs()._asdict())
     args.subject = "both"
-    args.trial_event = "StimOnset"
-    args.mode = "dim_ccgp_heldout"
+    args.trial_event = cli_args.trial_event
+    args.beh_filters = cli_args.beh_filters
+    args.mode = "dim_ccgp_heldout_full" if cli_args.full_interval else "dim_ccgp_heldout"
     args.base_output_path = BASE_OUTPUT_PATH
     args.sig_unit_level = cli_args.sig_unit_level
 
