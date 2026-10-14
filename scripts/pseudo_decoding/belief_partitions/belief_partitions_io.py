@@ -58,6 +58,13 @@ def get_dim_ccgp_heldout_file_name(args):
     shuffle_str = "" if args.shuffle_idx is None else f"_shuffle_{args.shuffle_idx}"
     return f"{args.dim_a}_{args.dim_b}_{args.mode}{shuffle_str}"
 
+def get_dim_ccgp_tuple_file_name(args):
+    """
+    Naming convention for dimension CCGP runs on fixed feature 6-tuples, one per tuple
+    """
+    shuffle_str = "" if args.shuffle_idx is None else f"_shuffle_{args.shuffle_idx}"
+    return f"tuple_{args.tuple_idx}_{args.mode}{shuffle_str}"
+
 def get_filter_str(beh_filters):
     """
     Naming convention for behavioral filters, e.g. {"Response": "Correct"} -> "Response_Correct"
@@ -300,6 +307,28 @@ def read_dim_ccgp_heldout_results(args, dim_pairs, num_shuffles=10):
         for _, row in dim_pairs.iterrows():
             args.dim_a, args.dim_b = row.dim_a, row.dim_b
             full_path = os.path.join(dir, f"{get_dim_ccgp_heldout_file_name(args)}.pickle")
+            if shuffle_idx is not None and not os.path.exists(full_path):
+                print(f"Warning, shuffle not found: {full_path}")
+                continue
+            res.append(pd.read_pickle(full_path))
+    res = pd.concat(res, ignore_index=True)
+    res["shuffle_type"] = res["mode"].apply(lambda x: "shuffle" if "shuffle" in x else "true")
+    return res
+
+def read_dim_ccgp_tuple_results(args, tuples, num_shuffles=10):
+    """
+    Reads the fixed-tuple dimension CCGP tables of every tuple in tuples (row index = tuple_idx),
+    true runs and shuffles, into one df, adding shuffle_type ("true" or "shuffle"). Missing shuffle
+    files are warned about and skipped
+    """
+    args = copy.deepcopy(args)
+    res = []
+    for shuffle_idx in [None] + list(range(num_shuffles)):
+        args.shuffle_idx = shuffle_idx
+        dir = get_dir_name(args, make_dir=False)
+        for tuple_idx in tuples.index:
+            args.tuple_idx = tuple_idx
+            full_path = os.path.join(dir, f"{get_dim_ccgp_tuple_file_name(args)}.pickle")
             if shuffle_idx is not None and not os.path.exists(full_path):
                 print(f"Warning, shuffle not found: {full_path}")
                 continue

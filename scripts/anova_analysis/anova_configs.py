@@ -26,6 +26,10 @@ class AnovaConfigs(NamedTuple):
 
     split_idx: int = None
 
+    # per-subject pickle of feat -> sessions to run, in the shape of feats_at_least_3blocks.pickle,
+    # with {sub} in the path. Only run_anova2.py reads it; None uses feats_at_least_3blocks.pickle
+    feats_path: str = None
+
     # label the belief partitions "High X" / "High Not X" rather than "High CIRCLE" / etc, so a
     # --beh_filters value can name a partition without naming a feature. The decoding path already
     # runs this way; the anova path did not, since load_data never passed it through

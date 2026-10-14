@@ -137,10 +137,13 @@ def run_fracvars(beh, trials, units, X, window_starts, window_bins, args):
 
 
 def process_feat(args):
-    feat_sessions = pd.read_pickle(FEATS_PATH.format(sub=args.subject))
+    feat_sessions = pd.read_pickle((args.feats_path or FEATS_PATH).format(sub=args.subject))
     valid_sess = pd.read_pickle(SESSIONS_PATH.format(sub=args.subject))
-    row = feat_sessions[feat_sessions.feat == args.feat].iloc[0]
-    sessions = valid_sess[valid_sess.session_name.isin(row.sessions)].session_name
+    feat_rows = feat_sessions[feat_sessions.feat == args.feat]
+    if len(feat_rows) == 0 or len(feat_rows.iloc[0].sessions) == 0:
+        print(f"No sessions for {args.feat}, skipping", flush=True)
+        return
+    sessions = valid_sess[valid_sess.session_name.isin(feat_rows.iloc[0].sessions)].session_name
     splits = pd.read_pickle(io_utils.get_anova_split_path(args)) if args.split_idx is not None else None
     print(f"Anova for {args.feat} using {len(sessions)} sessions, conditions {args.conditions}, {args.num_shuffles} shuffles", flush=True)
 

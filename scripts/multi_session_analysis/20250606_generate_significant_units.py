@@ -105,7 +105,8 @@ def get_sig_level_str(args):
     filter_str = "filter_drift" if args.filter_drift else None
     thresh_str = args.sig_thresh if args.sig_type != "all" else None
     no_cond_str = "no_cond" if args.no_cond else None
-    parts = [args.sig_type, thresh_str, no_cond_str, window_str, filter_str]
+    # e.g. dim_tuples, for units selected on a session list other than feats_at_least_3blocks
+    parts = [args.sig_type, thresh_str, args.level_tag, no_cond_str, window_str, filter_str]
     return "_".join(x for x in parts if x)
 
 def main():
@@ -119,6 +120,9 @@ def main():
     parser.add_argument('--no_cond', default=False, type=lambda x: bool(strtobool(x)))
     parser.add_argument('--dry_run', default=True, type=lambda x: bool(strtobool(x)))
     parser.add_argument('--events', default=["StimOnset", "FeedbackOnsetLong"], type=lambda x: x.split(","))
+    # inserted into the level name after the threshold, so runs read from another --base_output_path
+    # get their own level, e.g. pref_99th_dim_tuples_window_filter_drift
+    parser.add_argument('--level_tag', default=None, type=str)
     args = parser.parse_args()
 
     all_units = []
@@ -126,7 +130,7 @@ def main():
         args.subject = sub
         sub_units = find_sig_units_for_sub(args)
         if args.filter_drift:
-            sub_units = spike_utils.filter_drift(sub_units, args)
+            sub_units = spike_utils.filter_drift(sub_units, args.subject)
         if args.filter_bad_regions:
             sub_units = spike_utils.filter_bad_regions(sub_units)
         print(len(sub_units))

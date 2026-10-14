@@ -370,6 +370,8 @@ def get_sig_units(args, units=None):
 
     if "feat_quad" in args:
         feat_sig_units = sig_units[sig_units.feat.isin(args.feat_quad)]
+    elif "feat_tuple" in args:
+        feat_sig_units = sig_units[sig_units.feat.isin(args.feat_tuple)]
     elif "dim_a" in args and "dim_b" in args:
         feat_sig_units = sig_units[sig_units.dim_pair == f"{args.dim_a}_{args.dim_b}"]
     elif "feat_pair" in args:
