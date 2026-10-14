@@ -149,6 +149,33 @@ def pickle_path(args, run, feat, shuffle_idx):
                         f"{io_utils.get_anova_file_name(a)}.pickle")
 
 
+def shuffles_path(args, run, feat):
+    """Where run_anova2.py put all of one (run, feat)'s shuffles, in place of a pickle per shuffle."""
+    a = run_args(args, run, feat)
+    return os.path.join(io_utils.get_anova_output_dir(a, make_dir=False), f"{feat}_shuffles.pickle")
+
+
+def read_shuffles(args, run, feat):
+    """
+    One (run, feat)'s run_anova2.py shuffles, as a (unit, window) x shuffle_idx frame of the run's
+    statistic. None if there is no such file, when the shuffles are a pickle each.
+    """
+    path = shuffles_path(args, run, feat)
+    if not os.path.exists(path):
+        return None
+    try:
+        shuffles = pd.read_pickle(path)
+    except Exception as e:
+        raise BadGridFile(describe_bad_file(path, e)) from e
+    shuffles = shuffles.set_index(ITEM_KEY + ["shuffle_idx"])[RUNS[run]["stat_col"]].unstack("shuffle_idx")
+    missing = sorted(set(range(args.num_shuffles)) - set(shuffles.columns))
+    if missing:
+        raise BadGridFile(f"{path}\n  shuffles {missing} are missing -- run_anova2.py drops a shuffle in "
+                          f"which a session has no trials.\n"
+                          f"  The permutation null would otherwise be built on the wrong number of shuffles.")
+    return shuffles
+
+
 def describe_bad_file(path, exc):
     """
     Why one grid file could not be read, and what to do about it.
@@ -183,20 +210,27 @@ def check_grid(args):
         sub_args.subject = subject
         for feat in FEATURES:
             for run in RUNS:
-                for shuffle_idx in [None] + list(range(args.num_shuffles)):
+                # run_anova2.py's one file of shuffles, else a pickle per shuffle
+                shuffle_idxs = list(range(args.num_shuffles))
+                if os.path.exists(shuffles_path(sub_args, run, feat)):
+                    shuffle_idxs = []
+                    try:
+                        read_shuffles(sub_args, run, feat)
+                    except BadGridFile as e:
+                        bad.append(str(e))
+                for shuffle_idx in [None] + shuffle_idxs:
                     path = pickle_path(sub_args, run, feat, shuffle_idx)
                     try:
                         pd.read_pickle(path)
                     except Exception as e:
                         bad.append(describe_bad_file(path, e))
         print(f"  checked {subject}", flush=True)
-    n_total = len(SUBJECTS) * len(FEATURES) * len(RUNS) * (args.num_shuffles + 1)
     if bad:
-        print(f"\n{len(bad)} of {n_total} files unusable for {args.trial_event}:\n", flush=True)
+        print(f"\n{len(bad)} files unusable for {args.trial_event}:\n", flush=True)
         for b in bad:
             print(b + "\n", flush=True)
     else:
-        print(f"\nall {n_total} files for {args.trial_event} load", flush=True)
+        print(f"\nall files for {args.trial_event} load", flush=True)
     return bad
 
 
@@ -224,8 +258,9 @@ def read_run_feat(args, run, feat):
         raise ValueError(f"{run}/{feat}: duplicated (unit, window) in the true run")
     eta = np.empty((args.num_shuffles + 1, len(true)), dtype=np.float64)
     eta[0] = true.to_numpy()
+    shuffles = read_shuffles(args, run, feat)
     for j in range(args.num_shuffles):
-        eta[j + 1] = read(j).reindex(true.index).to_numpy()
+        eta[j + 1] = (read(j) if shuffles is None else shuffles[j]).reindex(true.index).to_numpy()
 
     index = true.index.to_frame(index=False)
     index["feat"] = feat

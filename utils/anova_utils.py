@@ -80,6 +80,101 @@ def cell_fracvar(X, dim_idx, window_bins):
         total_var.append(ss_tot / (num_rows - 1))
     return np.stack(fracvar, axis=1), np.stack(total_var, axis=1)
 
+def factorial_fracvar(X, labels, conditions, window_bins):
+    """
+    The anova_factors -> calc_unit_var decomposition with conditions ["TimeBins"] + conditions, per
+    unit and window, computed from cell sums rather than per row. Reproduces its sequential mean
+    subtraction exactly: a comb's term is the mean of the residual left by all lower-order combs.
+    Every term is constant within a finest cell (condition levels x bin), so all of it follows from
+    each finest cell's trial count and per-unit sum, plus each unit's sum of squares for the total
+    and residual variances.
+    Args:
+    - X: firing rates, trials x units x bins
+    - labels: dataframe with one column per condition, one row per trial of X
+    - conditions: condition columns of labels, not including TimeBins
+    - window_bins: list of arrays of bin indices, one per window
+    Returns:
+    - dict of column name to units x windows array, the columns and order of calc_unit_var:
+      total_var, x_{comb}_fracvar per comb, residual_fracvar, sum_fracvar
+    """
+    if labels[conditions].isna().any().any():
+        raise ValueError("NaN condition labels")
+    codes = np.stack([pd.factorize(labels[c])[0] for c in conditions], axis=1)
+    cell_codes, g = np.unique(codes, axis=0, return_inverse=True)
+    g = g.ravel()
+    n = np.bincount(g).astype(float)
+    num_trials, num_units, num_bins = X.shape
+    one_hot = np.zeros((len(n), num_trials))
+    one_hot[g, np.arange(num_trials)] = 1
+    S = (one_hot @ X.reshape(num_trials, -1)).reshape(len(n), num_units, num_bins)
+    SS = (X ** 2).sum(axis=0)
+
+    # per comb: each finest cell's group, and whether bins stay separate
+    all_conds = ["TimeBins"] + conditions
+    combs = get_combs_of_conds(all_conds)
+    comb_groups = []
+    for comb in combs:
+        idx = [conditions.index(c) for c in comb if c != "TimeBins"]
+        _, h = np.unique(cell_codes[:, idx], axis=0, return_inverse=True)
+        h = h.ravel()
+        M = np.zeros((h.max() + 1, len(n)))
+        M[h, np.arange(len(n))] = 1
+        comb_groups.append((len(comb), h, M, "TimeBins" in comb))
+
+    res = {"total_var": [], **{f"x_{''.join(comb)}_fracvar": [] for comb in combs}, "residual_fracvar": [], "sum_fracvar": []}
+    nw = n[:, None, None]
+    # a unit silent through a window has no variance, so its fractions are 0/0 = NaN, as in calc_unit_var
+    with np.errstate(divide="ignore", invalid="ignore"):
+        for bins in window_bins:
+            Sw = S[:, :, bins]
+            N = n.sum() * len(bins)
+            m = Sw / nw
+            SS_w = SS[:, bins].sum(axis=1)
+            total_var = (SS_w - Sw.sum(axis=(0, 2)) ** 2 / N) / (N - 1)
+            r = m - (Sw.sum(axis=(0, 2)) / N)[None, :, None]
+            level_terms = []
+            for i, (level, h, M, keep_bins) in enumerate(comb_groups):
+                num = np.tensordot(M, nw * r, axes=(1, 0))
+                den = M @ n
+                if keep_bins:
+                    mean = num / den[:, None, None]
+                else:
+                    mean = (num.sum(axis=2) / (den * len(bins))[:, None])[:, :, None]
+                x = np.broadcast_to(mean[h], r.shape)
+                var = ((nw * x ** 2).sum(axis=(0, 2)) - (nw * x).sum(axis=(0, 2)) ** 2 / N) / (N - 1)
+                res[f"x_{''.join(combs[i])}_fracvar"].append(var / total_var)
+                level_terms.append(x)
+                # all combs of a level are means of the same residual, subtracted together
+                if i + 1 == len(comb_groups) or comb_groups[i + 1][0] != level:
+                    r = r - sum(level_terms)
+                    level_terms = []
+            res_ss = SS_w - (nw * m ** 2).sum(axis=(0, 2)) + (nw * r ** 2).sum(axis=(0, 2))
+            res_var = (res_ss - (nw * r).sum(axis=(0, 2)) ** 2 / N) / (N - 1)
+            res["total_var"].append(total_var)
+            res["residual_fracvar"].append(res_var / total_var)
+            res["sum_fracvar"].append(sum(res[f"x_{''.join(comb)}_fracvar"][-1] for comb in combs) + res["residual_fracvar"][-1])
+    return {k: np.stack(v, axis=1) for k, v in res.items()}
+
+def shuffle_stats(shuffles, conditions, keys):
+    """
+    95th and 99th percentiles over shuffles of each x_{comb}_comb_time_fracvar, per keys group, the
+    columns of 20250329_aggregate_shuffles.compute_stats. NaNs are skipped, as Series.quantile does.
+    Args:
+    - shuffles: run_anova results of all shuffles, concatenated
+    - conditions: conditions of the run, not including TimeBins
+    - keys: e.g. ["PseudoUnitID", "WindowStartMilli"]
+    """
+    names = ["".join(comb) for comb in get_combs_of_conds(conditions)]
+    # HACK: mirrors run_anova.run_anova -- BeliefPref only exists when Conf is a factor too
+    if "BeliefPartition" in conditions and "BeliefConf" in conditions:
+        names.append("BeliefPref")
+    q = shuffles.groupby(keys)[[f"x_{name}_comb_time_fracvar" for name in names]].quantile([0.95, 0.99]).unstack()
+    stats = pd.DataFrame(index=q.index)
+    for name in names:
+        stats[f"{name}_95th"] = q[(f"x_{name}_comb_time_fracvar", 0.95)]
+        stats[f"{name}_99th"] = q[(f"x_{name}_comb_time_fracvar", 0.99)]
+    return stats.reset_index()
+
 def get_combs_of_conds(conditions):
     """
     Helper to return a list of all possible combinations of the conditions list
